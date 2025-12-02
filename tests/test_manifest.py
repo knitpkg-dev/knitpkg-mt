@@ -165,7 +165,7 @@ def test_invalid_git_url(tmp_path: Path):
 
     error_msg = str(exc.value)
     assert "Dependência 'badlib' inválida" in error_msg
-    assert "URL git ou ref mal formada" in error_msg
+    assert "Erro de validação no helix.json" in error_msg
 
 
 def test_invalid_semver(tmp_path: Path):

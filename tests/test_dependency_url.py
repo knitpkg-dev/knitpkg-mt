@@ -53,6 +53,11 @@ INVALID_URLS = [
     "https://github.com/user/lib.git#",
     "git@github.com:user/lib.git#",
 
+    # === SemVer inválido ===
+    "https://github.com/user/lib.git#v1.2",           # faltou patch
+    "https://github.com/user/lib.git#v1.2.3.4",        # 4 números
+    "https://github.com/user/lib.git#v1.2.3-alpha..beta",
+
     # === Apenas branch (sem versão SemVer) — seu validador atual aceita, mas aqui marcamos como inválido se quiser forçar SemVer puro ===
     # "https://github.com/user/lib.git#main",           # ← aceito hoje (com branch=)
     # "git@github.com:user/lib.git#dev",                # ← aceito hoje
@@ -110,7 +115,7 @@ def test_invalid_dependency_urls(tmp_path: Path, url: str):
 
     error_msg = str(exc.value)
     assert "Dependência 'mylib' inválida" in error_msg
-    assert "URL git mal formada" in error_msg or "Fornecido:" in error_msg
+    assert "Erro de validação no helix.json" in error_msg
 
 
 # === Teste extra: aceitar branch=main (seu caso real) ===

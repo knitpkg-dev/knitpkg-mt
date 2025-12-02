@@ -17,6 +17,9 @@ from pydantic import (
     model_validator,
 )
 
+from urllib.parse import urlparse
+from pathlib import Path
+
 
 class MQLTarget(str, Enum):
     MQL4 = "MQL4"
@@ -72,7 +75,7 @@ class DistRelease(BaseModel):
 
     id: str = Field(..., pattern=r"^[a-zA-Z0-9_-]+$", description="ID único do release")
     name: str = Field(..., description="Nome do pacote (pode ter ${version})")
-    items: List[DistItem] = Field(..., min_items=1)
+    items: List[DistItem] = Field(..., min_length=1)
 
 
 class DistSection(BaseModel):
@@ -118,6 +121,24 @@ class HelixSection(BaseModel):
 # ================================================================
 # HelixManifest — FINAL, exatamente como você quer
 # ================================================================
+
+# Regex aceita:
+# • v1.2.3, 1.2.3
+# • v1.0.0-alpha, v1.0.0-alpha.1+build.123
+# • tag=v2.5.0, branch=main, commit=abc123
+SEMVER_OR_PREFIXED_REF = re.compile(
+    r"^"
+    r"(?P<prefix>tag|branch|commit)=[A-Za-z0-9._-]+$"
+    r"|"
+    r"(?:v|V)?"                              # v opcional
+    r"(?:0|[1-9]\d*)\."                       # major
+    r"(?:0|[1-9]\d*)\."                      # minor
+    r"(?:0|[1-9]\d*)"                        # patch
+    r"(?:-[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?" # pre-release (permite ponto, hífen, alfanum)
+    r"(?:\+[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?" # build metadata
+    r"$"
+)
+
 class HelixManifest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -189,6 +210,7 @@ class HelixManifest(BaseModel):
             self.entrypoints = []
         return self
 
+
     # SemVer
     @field_validator("version")
     @classmethod
@@ -203,57 +225,72 @@ class HelixManifest(BaseModel):
             raise ValueError("version deve seguir o padrão SemVer (ex: 1.0.0, 2.1.3-beta.1)")
         return v
 
+
     @field_validator("dependencies", mode="before")
     @classmethod
-    def validate_git_urls(cls, v: Any) -> Dict[str, str]:
+    def validate_dependencies(cls, v: Any) -> Dict[str, str]:
         if v is None:
             return {}
         if not isinstance(v, dict):
             raise ValueError("dependencies deve ser um dicionário")
 
-        # Regex final – aceita tudo real e rejeita EXATAMENTE o caso com ".."
-        pattern = re.compile(
-            r"^"
-            r"(https?://|git@)"
-            r"([\w.\-]+)"
-            r"[:/]"
-            r"([\w.\-~]+/)+"           # pelo menos um / (aceita caminhos profundos)
-            r"[\w.\-~]+"
-            r"\.git"
-            r"#"
-            r"(?:"
-            r"([a-zA-Z0-9._-]+)"                                      # branch simples, tag, etc.
-            r"|(?:tag|branch|commit)[=:]?[a-zA-Z0-9._-]+"
-            r"|v?"
-            r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
-            r"(?:-"
-            r"(?=[^\.])"                                           # garante que começa com algo que não é ponto
-            r"[0-9a-zA-Z-]+"
-            r"(?:\.[0-9a-zA-Z-]+)*"
-            r"(?<![\.])"                                           # garante que não termina com ponto
-            r")?"
-            r"(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?"               # build metadata
-            r")$",
-            re.IGNORECASE,
-        )
+        for dep_name, spec in v.items():
+            if not isinstance(spec, str):
+                raise ValueError(f"Dependência '{dep_name}' deve ser string")
+            spec = spec.strip()
+            if not spec:
+                raise ValueError(f"Dependência '{dep_name}' está vazia")
 
-        for name, url in v.items():
-            if not isinstance(url, str):
-                raise ValueError(f"Dependência '{name}' deve ser string")
-            url_clean = url.strip()
+            # 1. file:// → caminho local explícito (novo padrão Helix)
+            if spec.startswith("file://"):
+                local_path = spec[7:]  # remove file://
+                if not Path(local_path).exists():
+                    raise ValueError(f"Dependência local '{dep_name}' não encontrada: {local_path}")
+                if not (Path(local_path) / "helix.json").exists():
+                    raise ValueError(f"Dependência local '{dep_name}' não tem helix.json: {local_path}")
+                continue
 
-            if not pattern.match(url_clean):
+            # 2. Caminho relativo/absolute sem protocolo → também aceito como local
+            if spec.startswith(("./", "../", "/", "~")):
+                continue
+            if Path(spec).exists() or (Path.cwd() / spec).exists():
+                continue
+
+            # 3. Git remoto → regras rígidas
+            if not any(spec.startswith(p) for p in ("https://", "http://", "git@", "ssh://")):
                 raise ValueError(
-                    f"Dependência '{name}' inválida → URL git ou ref mal formada\n"
-                    f"Fornecido: {url_clean!r}\n"
-                    f"Exemplos válidos:\n"
-                    f"  https://github.com/user/lib.git#v1.2.3\n"
-                    f"  https://github.com/user/lib.git#v1.2.3+build.123\n"
-                    f"  https://github.com/user/lib.git#v1.0.0-alpha.beta\n"
-                    f"  git@github.com:user/lib.mql.git#branch=main"
+                    f"Dependência '{dep_name}' inválida → formato não reconhecido\n"
+                    f"Fornecido: {spec!r}"
                 )
 
-        return v
+            # Deve ter exatamente um # e ref não vazia
+            if spec.count("#") != 1:
+                raise ValueError(f"Dependência '{dep_name}' inválida → deve ter exatamente um #ref")
+            base_url, ref = spec.split("#", 1)
+
+            if not ref:
+                raise ValueError(f"Dependência '{dep_name}' inválida → ref não pode ser vazia após #")
+
+            # URL deve terminar em .git
+            if not base_url.endswith(".git"):
+                raise ValueError(
+                    f"Dependência '{dep_name}' inválida → URL deve terminar em .git\n"
+                    f"URL: {base_url}"
+                )
+
+            # Ref deve seguir padrão SemVer completo ou tag/branch/commit
+            if not SEMVER_OR_PREFIXED_REF.match(ref):
+                raise ValueError(
+                    f"Dependência '{dep_name}' inválida → ref não reconhecida: #{ref}\n"
+                    f"Exemplos válidos:\n"
+                    f"  v1.2.3\n"
+                    f"  1.2.3\n"
+                    f"  v1.0.0-alpha.1+build.123\n"
+                    f"  branch=main\n"
+                    f"  tag=v2.5.0"
+                )
+
+        return v    
 
     # Renderiza nome do pacote com versão
     def get_package_name(self, release_id: str = "release") -> str:
