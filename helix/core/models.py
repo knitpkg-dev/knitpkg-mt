@@ -38,6 +38,63 @@ class OAuthProvider(str, Enum):
     GOOGLE = "google"
 
 
+class BuildMode(str, Enum):
+    INCLUDES = "includes"      # default — só copia .mqh para Includes/
+    FLAT = "flat"              # gera arquivos _flat.mq5 autocontidos    
+
+
+# ================================================================
+# Seção dist
+# ================================================================
+# helix/core/models.py (adicionar esses modelos)
+
+class DistItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dependency_id: Optional[str] = Field(
+        default=None,
+        alias="dependencyId",
+        description="Nome da dependência ou 'this' (ou omitido) para o projeto atual"
+    )
+    src: str = Field(..., description="Caminho relativo do arquivo de origem")
+    dst: str = Field(..., description="Caminho relativo no pacote de distribuição")
+
+    @field_validator("dependency_id")
+    @classmethod
+    def normalize_dependency_id(cls, v: Optional[str]) -> str:
+        if v is None or v == "this" or v == "":
+            return "this"
+        return v.lower()  # normaliza para comparação
+
+
+class DistRelease(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(..., pattern=r"^[a-zA-Z0-9_-]+$", description="ID único do release")
+    name: str = Field(..., description="Nome do pacote (pode ter ${version})")
+    items: List[DistItem] = Field(..., min_items=1)
+
+
+class DistSection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dist: List[DistRelease] = Field(
+        default_factory=list,
+        description="Configuração de distribuição do projeto"
+    )
+
+    def get_release_by_id(self, release_id: str) -> Optional[DistRelease]:
+        for r in self.dist:
+            if r.id == release_id:
+                return r
+        return None
+
+    def render_name(self, release_id: str, version: str) -> str:
+        release = self.get_release_by_id(release_id)
+        if not release:
+            return f"{release_id}-{version}.zip"
+        return release.name.replace("${version}", version)
+    
 # ================================================================
 # Seções helix.pro / enterprise
 # ================================================================
@@ -75,13 +132,21 @@ class HelixManifest(BaseModel):
     target: MQLTarget = Field(default=MQLTarget.MQL5, description="MQL4 ou MQL5")
 
     dependencies: Dict[str, str] = Field(default_factory=dict)
-    helix: Optional[HelixSection] = None
+
+    build_mode: BuildMode = Field(
+        default=BuildMode.INCLUDES,
+        description="Modo de preparação para compilação: 'includes' (padrão) ou 'flat'"
+    )
 
     # Lista de entrypoints — obrigatória apenas se type != include
     entrypoints: Optional[List[str]] = Field(
         default=None,
         description="Lista de arquivos .mq4/.mq5. Obrigatório exceto para type='include'"
     )
+
+    dist: Optional[DistSection] = Field(default=None)
+
+    helix: Optional[HelixSection] = None
 
     # Validação inteligente de entrypoints
     @model_validator(mode="before")
@@ -91,12 +156,7 @@ class HelixManifest(BaseModel):
             proj_type = data.get("type")
             has_entrypoints = "entrypoints" in data and data["entrypoints"] is not None
 
-            if proj_type == "include":
-                # include: entrypoints deve ser ausente ou vazio
-                if has_entrypoints and len(data["entrypoints"]) > 0:
-                    raise ValueError("Projetos do tipo 'include' não devem ter entrypoints")
-                data["entrypoints"] = []  # garante lista vazia
-            else:
+            if proj_type != "include":
                 # todos os outros tipos: entrypoints é obrigatório e não vazio
                 if not has_entrypoints or len(data["entrypoints"]) == 0:
                     raise ValueError(f"Projetos do tipo '{proj_type}' devem ter pelo menos um entrypoint")
@@ -195,6 +255,11 @@ class HelixManifest(BaseModel):
 
         return v
 
+    # Renderiza nome do pacote com versão
+    def get_package_name(self, release_id: str = "release") -> str:
+        if not self.dist or not self.dist.dist:
+            return f"{self.name}-{self.version}.zip"
+        return self.dist.render_name(release_id, self.version)
 
 # ================================================================
 # Carregamento
