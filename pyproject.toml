@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "helix"
+version = "0.1.0"
+description = "Helix package manager for Metatrader"
+authors = ["Douglas Rechia <rechia@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+pydantic = "^2.12.5"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.1"
+pytest-cov = "^7.0.0"
+pytest-mock = "^3.15.1"
+pytest-xdist = "^3.8.0"
+pytest-sugar = "^1.1.1"
+taskipy = "^1.14.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.taskipy.tasks]
+test = "pytest"
+tests = "pytest -xvs"
+cov = "pytest --cov=helix --cov-report=term-missing --cov-report=html:htmlcov"
+ci = "pytest --junitxml=reports/junit.xml --cov=helix --cov-report=xml"
+watch = "pytest-watch -- -xvs"
+manifest = "pytest tests/test_manifest.py -v"
