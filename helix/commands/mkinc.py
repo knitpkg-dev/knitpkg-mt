@@ -22,16 +22,61 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from helix.core.models import load_helix_manifest, BuildMode, MQLProjectType
 
+from typer import Typer
+import re
+
 console = Console()
 CACHE_DIR = Path(".helix/cache")
-INCLUDES_DIR = Path("Includes")
-FLAT_DIR = Path(".helix/includes")
+INCLUDE_DIR = Path("helix/include")
+FLAT_DIR = Path("helix/flat")
 LOCKFILE = Path("helix-lock.json")
 
 
 # ==============================================================
 # UTILIDADES
 # ==============================================================
+
+import chardet
+
+def detect_encoding(path: Path) -> str:
+    """
+    Detecta encoding real do arquivo (UTF-8, UTF-16 LE, UTF-16 BE, Windows-1252, etc.)
+    """
+    try:
+        raw = path.read_bytes()
+        # Primeiro tenta BOM
+        if raw.startswith(b"\xff\xfe") or raw.startswith(b"\xfe\xff"):
+            return "utf-16"
+        if raw.startswith(b"\xef\xbb\xbf"):
+            return "utf-8-sig"
+
+        # Se não tiver BOM, usa chardet
+        result = chardet.detect(raw[:10000])  # primeiros 10KB bastam
+        enc = result["encoding"] or "utf-8"
+        confidence = result["confidence"]
+
+        if confidence < 0.7:
+            # Fallback seguro para arquivos MQL antigos
+            return "windows-1252" if b"\x00" not in raw[:100] else "utf-16"
+
+        return enc.lower()
+    except:
+        return "utf-8"
+
+
+def read_file_smart(path: Path) -> str:
+    """
+    Lê arquivo .mqh/.mq5 com encoding correto → sempre retorna str em UTF-8
+    """
+    enc = detect_encoding(path)
+    try:
+        text = path.read_text(encoding=enc, errors="replace")
+    except:
+        text = path.read_text(encoding="utf-8", errors="replace")
+
+    # Garante que o resultado final seja limpo UTF-8
+    return text.encode("utf-8", errors="replace").decode("utf-8")
+
 
 def is_local_path(spec: str) -> bool:
     """Detecta se a dependência é um caminho local (relativo ou absoluto)"""
@@ -42,6 +87,7 @@ def is_local_path(spec: str) -> bool:
 
 
 def resolve_local_dependency(name: str, path_spec: str) -> Path:
+    path_spec = path_spec.removeprefix("file://")
     path = Path(path_spec)
     if path_spec.startswith("~"):
         path = Path.home() / path.relative_to("~")
@@ -49,7 +95,7 @@ def resolve_local_dependency(name: str, path_spec: str) -> Path:
 
     if not path.exists():
         raise ValueError(f"Dependência local '{name}' não encontrada: {path}")
-    if not (path / "helix.json").exists() is False:
+    if not (path / "helix.json").exists():
         raise ValueError(f"Dependência local '{name}' não é um projeto Helix (falta helix.json): {path}")
 
     console.log(f"[bold magenta]Local[/] {name} → {path}")
@@ -172,32 +218,57 @@ def download_dependency(name: str, specifier: str) -> Path:
 # FLATTENING (opcional)
 # ==============================================================
 
-def resolve_includes(content: str, base_path: Path, visited: Set[Path]) -> str:
+# ==============================================================
+# RESOLVE INCLUDES COM SUPORTE TOTAL A DEPENDÊNCIAS
+# ==============================================================
+
+def find_include_file(inc_file: str, base_path: Path, deps_paths: Dict[str, Path]) -> Path:
+    candidates = [
+        (base_path.parent / inc_file).resolve(),
+        (INCLUDE_DIR / inc_file).resolve() if INCLUDE_DIR.exists() else None,
+        *( (dep_path / inc_file).resolve() for dep_path in deps_paths.values() )
+    ]
+
+    for path in candidates:
+        if path and path.exists() and path.suffix.lower() in {".mqh", ".mq4", ".mq5"}:
+            return path
+
+    raise FileNotFoundError(f"Include não encontrado: {inc_file}")
+
+
+def resolve_includes(content: str, base_path: Path, visited: Set[Path], deps_paths: Dict[str, Path]) -> str:
     import re
     pattern = re.compile(r'^\s*#\s*include\s+[<"]([^>"]+)[>"]', re.MULTILINE)
 
     def replace(match):
         inc_file = match.group(1)
-        inc_path = (base_path.parent / inc_file).resolve()
+        try:
+            inc_path = find_include_file(inc_file, base_path, deps_paths)
+        except FileNotFoundError as e:
+            return f"// ERROR: {e}"
 
         if inc_path in visited:
             return f"// RECURSIVE INCLUDE SKIPPED: {inc_file}"
-        if not inc_path.exists():
-            return f"// MISSING INCLUDE: {inc_file}"
-
         visited.add(inc_path)
-        raw = inc_path.read_text(encoding="utf-8", errors="ignore")
+
+        # ← AQUI ESTÁ A MÁGICA: lê com encoding correto
+        raw = read_file_smart(inc_path)
+
+        # Preserva #property
         preserved = [l for l in raw.splitlines() if l.strip().startswith(("#property copyright", "#property link", "#property version"))]
 
-        resolved = resolve_includes(raw, inc_path, visited)
+        resolved = resolve_includes(raw, inc_path, visited, deps_paths)
+
         lines = [f"// {l.strip()}" if l.strip().startswith("#include") else l for l in resolved.splitlines()]
 
         result = []
         if preserved:
-            result.extend(preserved); result.append("")
+            result.extend(preserved)
+            result.append("")
         result.extend(lines)
         if preserved:
-            result.append(""); result.append("// " + "="*60)
+            result.append("")
+            result.append("// " + "="*70)
         return "\n".join(result)
 
     return pattern.sub(replace, content)
@@ -216,7 +287,7 @@ def mkinc_command():
     console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | modo: [bold]{effective_mode.value}[/]")
 
     # Limpa saídas anteriores
-    for d in (INCLUDES_DIR, FLAT_DIR):
+    for d in (INCLUDE_DIR, FLAT_DIR):
         if d.exists():
             shutil.rmtree(d)
 
@@ -229,15 +300,16 @@ def mkinc_command():
             progress.update(task, advance=1)
 
     # MODO FLAT
+    # Dentro do mkinc_command(), no modo FLAT:
     if effective_mode == BuildMode.FLAT:
-        FLAT_DIR.mkdir(parents=True)
+        FLAT_DIR.mkdir(parents=True, exist_ok=True)
         for entry in manifest.entrypoints:
             src = Path(entry)
             if not src.exists():
                 console.log(f"[red]Erro:[/red] Entrypoint não encontrado: {entry}")
                 continue
 
-            content = src.read_text(encoding="utf-8", errors="ignore")
+            content = read_file_smart(src)
             header = f"""// {'='*70}
 // HELIX FLATTEN — DO NOT EDIT
 // Project : {manifest.name} v{manifest.version}
@@ -246,28 +318,29 @@ def mkinc_command():
             content = header + content
 
             visited: Set[Path] = set()
-            content = resolve_includes(content, src, visited)
+            try:
+                content = resolve_includes(content, src, visited, deps_paths)  # ← deps_paths aqui!
+            except Exception as e:
+                console.log(f"[red]Erro ao resolver includes em {entry}: {e}[/]")
+                continue
 
             flat_file = FLAT_DIR / f"{src.stem}_flat{src.suffix}"
             flat_file.write_text(content, encoding="utf-8")
-            console.log(f"[green]Check[/] {flat_file.name} gerado")
-
-        console.log(f"\n[bold green]Check mkinc (flat) concluído![/] → {FLAT_DIR}/")
+            console.log(f"[green]Check[/] {flat_file.name} gerado ({len(content.splitlines())} linhas)")
 
     # MODO INCLUDES (padrão)
     else:
-        INCLUDES_DIR.mkdir(parents=True)
+        INCLUDE_DIR.mkdir(parents=True)
         total = 0
         for dep_name, dep_path in deps_paths.items():
             for mqh in dep_path.rglob("*.mqh"):
-                rel = mqh.relative_to(dep_path)
-                target = INCLUDES_DIR / rel
+                rel = mqh.relative_to(dep_path / INCLUDE_DIR)
+                target = INCLUDE_DIR / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(mqh, target)
                 total += 1
 
         console.log(f"\n[bold green]Check mkinc concluído![/] {total} arquivo(s) → [bold]Includes/[/]")
-        console.log("   Agora use: helix build  MetaEditor  helix build")
 
 
 # CLI
