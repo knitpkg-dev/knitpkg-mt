@@ -120,13 +120,14 @@ def resolve_local_dependency(name: str, specifier: str) -> Path:
         path = (Path.cwd() / specifier).resolve()
 
     if not path.exists():
-        console.log(f"[red]Erro:[/] Dependência local '{name}' não encontrada: {path}")
+        console.log(f"[red]Error:[/] Local dependency '{name}' not found: {path}")
         raise SystemExit(1)
 
     if not (path / "helix.yaml").exists() and not (path / "helix.json").exists():
-        console.log(f"[red]Erro fatal:[/] Dependência local '{name}' não é um projeto Helix")
+        console.log(f"[red]Fatal error:[/] Local dependency '{name}' is not a Helix project")
         console.log(f"    → {path}")
-        console.log("    Motivo: falta helix.yaml ou helix.json")
+        console.log("    Reason: missing helix.yaml or helix.json")
+
         raise SystemExit(1)
 
     console.log(f"[bold magenta]Local[/] {name} → {path}")
@@ -164,8 +165,8 @@ def resolve_includes(
         try:
             inc_path = find_include_file(inc_file, base_path, resolved_deps)
         except FileNotFoundError:
-            console.log(f"[red]ERRO:[/] Include não encontrado em {base_path} → {inc_file}")
-            return f"// ERRO: Include não encontrado → {inc_file}"
+            console.log(f"[red]ERROR:[/] Include not found in {base_path} → {inc_file}")
+            return f"// ERROR: Include not found → {inc_file}"
 
         if inc_path in visited:
             return f"// RECURSIVE INCLUDE SKIPPED: {inc_file}"
@@ -231,7 +232,7 @@ def resolve_version_from_spec(name: str, specifier: str, repo: git.Repo) -> str:
             return tags[version]
 
     # Fallback: HEAD
-    console.log(f"[yellow]Aviso:[/] Nenhuma versão compatível com '{specifier}' encontrada em {name}. Usando HEAD.")
+    console.log(f"[yellow]Warning:[/] No version compatible with '{specifier}' found in {name}. Falling back to HEAD.")
     return "HEAD"
 
 
@@ -256,7 +257,7 @@ def _download_from_git(name: str, specifier: str) -> Path:
         console.log(f"[dim]Cache[/] {name} → {final_ref}")
     else:
         if not dep_path.exists():
-            console.log(f"[bold blue]Clonando[/] {name} ← {base_url}")
+            console.log(f"[bold blue]Cloning[/] {name} ← {base_url}")
             dep_path.mkdir(parents=True, exist_ok=True)
             git.Repo.clone_from(base_url, dep_path, single_branch=True, depth=50)
 
@@ -269,7 +270,7 @@ def _download_from_git(name: str, specifier: str) -> Path:
         try:
             repo.git.checkout(final_ref, force=True)
         except git.exc.GitCommandError as e:
-            console.log(f"[red]Erro:[/] Não foi possível fazer checkout de '{final_ref}' em {name}")
+            console.log(f"[red]Error:[/] Could not checkout '{final_ref}' for {name}")
             console.log(f"    → {e}")
             repo.git.checkout("HEAD", force=True)
             final_ref = "HEAD"
@@ -288,7 +289,7 @@ def _download_from_git(name: str, specifier: str) -> Path:
 
     # Validação rígida
     if not any((dep_path / f).exists() for f in ("helix.yaml", "helix.json")):
-        console.log(f"[red]Erro fatal:[/] Dependência remota '{name}' não é um projeto Helix")
+        console.log(f"[red]Fatal error:[/] Remote dependency '{name}' is not a Helix project")
         console.log(f"    → {base_url}#{ref_spec}")
         raise SystemExit(1)
 
@@ -303,12 +304,12 @@ def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps
         validate_include_project_structure(sub_manifest, dep_path, True)
 
         if sub_manifest.type == MQLProjectType.INCLUDE and sub_manifest.dependencies:
-            console.log(f"[dim]Recursivo:[/] {dep_name} → {len(sub_manifest.dependencies)} dep(s)")
+            console.log(f"[dim]Recursive:[/] {dep_name} → {len(sub_manifest.dependencies)} dep(s)")
             for sub_name, sub_spec in sub_manifest.dependencies.items():
                 if sub_name.lower() not in {n.lower() for n, _ in resolved_deps}:
                     download_dependency(sub_name, sub_spec, resolved_deps)
     except Exception as e:
-        console.log(f"[yellow]Aviso:[/] Falha ao processar dependências de {dep_name}: {e}")
+        console.log(f"[yellow]Warning:[/] Failed to process dependencies of {dep_name}: {e}")
 
 
 def download_dependency(name: str, specifier: str, resolved_deps: ResolvedDeps) -> Path:
@@ -353,23 +354,23 @@ def validate_include_project_structure(
     prefix = "[dep]" if is_dependency else "[projeto]"
 
     if not include_dir.exists():
-        console.log(f"[bold yellow]AVISO {prefix}:[/] Projeto 'include' sem pasta 'helix/include/'")
+        console.log(f"[bold yellow]WARNING {prefix}:[/] Include-type project missing 'helix/include/' folder")
         console.log(f"    → {project_dir}")
-        console.log(f"    Seus .mqh não serão exportados para quem depender deste projeto!")
-        console.log(f"    Crie a pasta e mova os arquivos:")
-        console.log(f"       mkdir -p helix/include")
-        console.log(f"       git mv *.mqh helix/include/ 2>/dev/null || true")
+        console.log("    Your .mqh files will not be exported to projects that depend on this one!")
+        console.log("    Create the folder and move the files:")
+        console.log("       mkdir -p helix/include")
+        console.log("       git mv *.mqh helix/include/ 2>/dev/null || true")
         console.log("")
         return
 
     mqh_files = list(include_dir.rglob("*.mqh"))
     if not mqh_files:
-        console.log(f"[bold yellow]AVISO {prefix}:[/] Pasta 'helix/include/' existe, mas está vazia!")
+        console.log(f"[bold yellow]WARNING {prefix}:[/] 'helix/include/' folder exists but is empty!")
         console.log(f"    → {project_dir}")
-        console.log(f"    Nenhum .mqh será exportado. Mova seus headers para lá.")
+        console.log("    No .mqh files will be exported. Move your headers there.")
         console.log("")
     else:
-        console.log(f"[green]Check {prefix}[/] {len(mqh_files)} .mqh encontrado(s) em helix/include/")
+        console.log(f"[green]Check {prefix}[/] {len(mqh_files)} .mqh file(s) found in helix/include/")
 
 # ==============================================================
 # DETECÇÃO DE CONFLITOS NO MODO INCLUDE (SEGURANÇA PROFISSIONAL)
@@ -402,18 +403,18 @@ def safe_copy_with_conflict_warning(src: Path, dst_dir: Path, dep_name: str) -> 
             dst_content = read_file_smart(dst)
             if src_content.strip() != dst_content.strip():
                 console.log(
-                    f"[bold red]CONFLITO DETECTADO:[/] {dst.name} "
-                    f"será sobrescrito por '{dep_name}'"
+                    f"[bold red]CONFLICT DETECTED:[/] {dst.name} "
+                    f"will be overwritten by '{dep_name}'"
                 )
-                console.log(f"    → Conflito de conteúdo diferente!")
-                console.log(f"       De: {dep_name}")
-                console.log(f"       Já existe de outra dependência")
+                console.log(f"    → Different content conflict!")
+                console.log(f"       From: {dep_name}")
+                console.log("       Already exists from another dependency")
                 console.log("")
             else:
-                console.log(f"[dim]header duplicado[/] {dst.name} (mesmo conteúdo, ignorado)")
+                console.log(f"[dim]duplicate header[/] {dst.name} (same content, skipped)")
                 return
         except Exception as e:
-            console.log(f"[yellow]Aviso:[/] Não foi possível comparar conteúdo de {dst.name}: {e}")
+            console.log(f"[yellow]Warning:[/] Could not compare content of {dst.name}: {e}")
 
     # Copia
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -427,12 +428,12 @@ def mkinc_command():
     try:
         manifest = load_helix_manifest()
         effective_mode = (
-            IncludeMode.INCLUDE
+            "include"
             if manifest.type == MQLProjectType.INCLUDE
-            else manifest.include_mode
+            else "flat"
         )
 
-        console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | modo: [bold]{effective_mode}[/]")
+        console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | mode: [bold]{effective_mode}[/]")
 
         # Validação do projeto principal
         validate_include_project_structure(manifest, Path.cwd(), False)
@@ -443,7 +444,7 @@ def mkinc_command():
 
         resolved_deps: ResolvedDeps = []
 
-        with Progress(SpinnerColumn(), TextColumn("[bold blue]Resolvendo dependências...")) as progress:
+        with Progress(SpinnerColumn(), TextColumn("[bold blue]Solving dependencies...")) as progress:
             task = progress.add_task("", total=len(manifest.dependencies or {}))
             for name, spec in (manifest.dependencies or {}).items():
                 download_dependency(name, spec, resolved_deps)
@@ -456,25 +457,25 @@ def mkinc_command():
             for dep, dep_path in resolved_deps:
                 dep_include_dir = dep_path / "helix" / "include"
                 if not dep_include_dir.exists():
-                    console.log(f"[dim]sem include[/] {dep} → sem helix/include/")
+                    console.log(f"[dim]no include[/] {dep} → no helix/include/")
                     continue
 
                 mqh_files = list(dep_include_dir.rglob("*.mqh"))
                 if not mqh_files:
                     continue
 
-                console.log(f"[dim]copiando[/] {dep} → {len(mqh_files)} arquivo(s)")
+                console.log(f"[dim]copying[/] {dep} → {len(mqh_files)} file(s)")
                 for src in mqh_files:
                     safe_copy_with_conflict_warning(src, INCLUDE_DIR, dep)
                     total_copied += 1
 
-            console.log(f"[bold green]Check modo include concluído![/] {total_copied} arquivo(s) → helix/include/")
+            console.log(f"[bold green]Check Include mode completed![/] {total_copied} file(s) → helix/include/")
         else:
             FLAT_DIR.mkdir(parents=True, exist_ok=True)
             for entry in manifest.entrypoints or []:
                 src = Path(entry)
                 if not src.exists():
-                    console.log(f"[red]Erro:[/] entrypoint não encontrado: {entry}")
+                    console.log(f"[red]Error:[/] entrypoint not found: {entry}")
                     continue
 
                 content = read_file_smart(src)
@@ -486,11 +487,11 @@ def mkinc_command():
 
                 flat_file = FLAT_DIR / f"{src.stem}_flat{src.suffix}"
                 flat_file.write_text(content, encoding="utf-8")
-                console.log(f"[green]Check[/] {flat_file.name} gerado")
+                console.log(f"[green]Check[/] {flat_file.name} generated")
 
-        console.log(f"\n[bold green]Check mkinc (flat) concluído![/] → {FLAT_DIR}/")
+        console.log(f"\n[bold green]Check mkinc (flat) completed![/] → {FLAT_DIR}/")
     except Exception as e:
-        console.log(f"[red]Erro:[/] {e}")
+        console.log(f"[red]Error:[/] {e}")
 
 # ==============================================================
 # CLI

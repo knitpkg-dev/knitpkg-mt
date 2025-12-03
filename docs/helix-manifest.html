@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>helix.yaml – Helix Manifest Specification</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+  <style>
+    body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#0d1117; color:#c9d1d9; margin:0; padding:0; }
+    .markdown-body { box-sizing:border-box; min-width:200px; max-width:980px; margin:40px auto; padding:45px; background:#161b22; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+    @media (max-width:767px) { .markdown-body { padding:20px; margin:20px; } }
+    pre, code { background:#0d1117 !important; border-radius:8px; }
+    h1,h2,h3 { color:#58a6ff; border-bottom:1px solid #30363d; padding-bottom:8px; }
+    table { width:100%; border-collapse:collapse; margin:20px 0; }
+    th,td { border:1px solid #30363d; padding:12px; text-align:left; }
+    th { background:#21262d; }
+    .required { color:#f85149; }
+    .optional { color:#7ee787; }
+    .default { font-size:0.9em; color:#a5d6ff; }
+  </style>
+</head>
+<body>
+<article class="markdown-body">
+  <h1>helix.yaml – Helix Project Manifest</h1>
+  <p><strong>The official configuration file for all Helix-powered MQL5/MQL4 projects.</strong></p>
+  
+  <hr>
+
+  <h2>Fields</h2>
+  <table>
+    <tr><th>Field</th><th>Required</th><th>Type</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>name</code></td><td class="required">Yes</td><td>str</td><td>—</td><td>—</td></tr>
+    <tr><td><code>version</code></td><td class="required">Yes</td><td>str</td><td>—</td><td>Required SemVer version</td></tr>
+    <tr><td><code>description</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
+    <tr><td><code>author</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
+    <tr><td><code>license</code></td><td class="optional">No</td><td>Optional</td><td><code>MIT</code></td><td>—</td></tr>
+    <tr><td><code>type</code></td><td class="required">Yes</td><td>MQLProjectType</td><td>—</td><td>expert, indicator, library, include, etc.</td></tr>
+    <tr><td><code>target</code></td><td class="optional">No</td><td>MQLTarget</td><td><code>MQL5</code></td><td>MQL4 or MQL5</td></tr>
+    <tr><td><code>dependencies</code></td><td class="optional">No</td><td>object</td><td><code>{}</code></td><td>—</td></tr>
+    <tr><td><code>include_mode</code></td><td class="optional">No</td><td>IncludeMode</td><td><code>include</code></td><td>Build preparation mode: 'include' (default) or 'flat'</td></tr>
+    <tr><td><code>entrypoints</code></td><td class="optional">No*</td><td>Optional</td><td><code>None</code></td><td>.mq4/.mq5 file list. Required except for type='include'</td></tr>
+    <tr><td><code>dist</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
+    <tr><td><code>helix</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
+  </table>
+
+  <h2>Project Types (<code>type</code>)</h2>
+  <ul>
+    <li><code>expert</code> → Expert Advisor</li>
+    <li><code>indicator</code> → Custom indicator</li>
+    <li><code>script</code> → Script</li>
+    <li><code>library</code> → Reusable library</li>
+    <li><code>include</code> → <strong>Only .mqh headers</strong> (no entrypoints allowed)</li>
+  </ul>
+
+  <h2>Dependency Formats (supported)</h2>
+  <ul>
+    <li><code>https://github.com/user/repo.git#v1.2.3</code> → Git + version/tag/branch/commit</li>
+    <li><code>file://../my-lib</code> → Local Helix project</li>
+    <li><code>./libs/utils</code> or <code>../common</code> → Relative path</li>
+  </ul>
+
+  <h2>Full Example</h2>
+  <pre><code class="language-yaml">
+name: QuantumEA
+version: 3.1.0
+description: Advanced multi-timeframe Expert Advisor
+author: John Trader
+license: MIT
+type: expert
+target: MQL5
+include_mode: flat
+
+entrypoints:
+  - Strategy.mqh
+  - QuantumEA.mq5
+
+dependencies:
+  bars: https://github.com/trader/bars.git#v2.1.0
+  utils: file://../common/utils
+  indicators: ./local/indicators
+
+dist:
+  dist:
+    - id: release
+      name: QuantumEA-${version}.zip
+      items:
+        - dependencyId: this
+          src: QuantumEA.mq5
+          dst: Experts/QuantumEA.mq5
+  </code></pre>
+
+  <hr>
+  <p style="text-align:center; color:#8b949e; font-size:0.9em;">
+    Helix 2025 – The future of MQL5 development
+  </p>
+</article>
+</body>
+</html>
