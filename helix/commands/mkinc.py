@@ -372,6 +372,54 @@ def validate_include_project_structure(
         console.log(f"[green]Check {prefix}[/] {len(mqh_files)} .mqh encontrado(s) em helix/include/")
 
 # ==============================================================
+# DETECÇÃO DE CONFLITOS NO MODO INCLUDE (SEGURANÇA PROFISSIONAL)
+# ==============================================================
+
+def safe_copy_with_conflict_warning(src: Path, dst_dir: Path, dep_name: str) -> None:
+    """
+    Copia arquivo do helix/include/ da dependência → helix/include/ do projeto principal
+    com detecção de conflito inteligente.
+    """
+    # O src SEMPRE vem de dentro de um helix/include/ (de uma dependência)
+    # Vamos extrair apenas o caminho relativo a partir do helix/include/
+    try:
+        # Encontra o helix/include mais próximo na árvore do src
+        for parent in src.parents:
+            if parent.name == "include" and parent.parent.name == "helix":
+                rel_path = src.relative_to(parent)  # remove helix/include/
+                break
+        else:
+            # Fallback seguro: usa apenas o nome do arquivo (raro)
+            rel_path = src.name
+    except Exception:
+        rel_path = src.name
+
+    dst = dst_dir / rel_path
+
+    if dst.exists():
+        try:
+            src_content = read_file_smart(src)
+            dst_content = read_file_smart(dst)
+            if src_content.strip() != dst_content.strip():
+                console.log(
+                    f"[bold red]CONFLITO DETECTADO:[/] {dst.name} "
+                    f"será sobrescrito por '{dep_name}'"
+                )
+                console.log(f"    → Conflito de conteúdo diferente!")
+                console.log(f"       De: {dep_name}")
+                console.log(f"       Já existe de outra dependência")
+                console.log("")
+            else:
+                console.log(f"[dim]header duplicado[/] {dst.name} (mesmo conteúdo, ignorado)")
+                return
+        except Exception as e:
+            console.log(f"[yellow]Aviso:[/] Não foi possível comparar conteúdo de {dst.name}: {e}")
+
+    # Copia
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+
+# ==============================================================
 # COMANDO PRINCIPAL
 # ==============================================================
 
@@ -403,16 +451,24 @@ def mkinc_command():
 
         if effective_mode == IncludeMode.INCLUDE:
             INCLUDE_DIR.mkdir(parents=True, exist_ok=True)
-            total = 0
-            for _name, dep_path in resolved_deps:
-                for mqh in dep_path.rglob("*.mqh"):
-                    rel = mqh.relative_to(dep_path / INCLUDE_DIR)
-                    target = INCLUDE_DIR / rel
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(mqh, target)
-                    total += 1
-            console.log(f"\n[bold green]Check mkinc concluído![/] {total} arquivo(s) → [bold]Include/[/]")
+            total_copied = 0
 
+            for dep, dep_path in resolved_deps:
+                dep_include_dir = dep_path / "helix" / "include"
+                if not dep_include_dir.exists():
+                    console.log(f"[dim]sem include[/] {dep} → sem helix/include/")
+                    continue
+
+                mqh_files = list(dep_include_dir.rglob("*.mqh"))
+                if not mqh_files:
+                    continue
+
+                console.log(f"[dim]copiando[/] {dep} → {len(mqh_files)} arquivo(s)")
+                for src in mqh_files:
+                    safe_copy_with_conflict_warning(src, INCLUDE_DIR, dep)
+                    total_copied += 1
+
+            console.log(f"[bold green]Check modo include concluído![/] {total_copied} arquivo(s) → helix/include/")
         else:
             FLAT_DIR.mkdir(parents=True, exist_ok=True)
             for entry in manifest.entrypoints or []:
