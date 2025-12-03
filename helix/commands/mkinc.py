@@ -1,232 +1,147 @@
 # helix/commands/mkinc.py
-# Helix 2025 — mkinc definitivo
-# Suporte completo a:
-# • git + semver (^ ~ >=) + lockfile
-# • path local (../minha-lib)
-# • include_mode + regra especial para type: include
-# • helix-lock.json com commit travado
-# • cache inteligente + reproducibilidade total
+# HELIX 2025 — mkinc
+
+from __future__ import annotations
 
 import hashlib
 import json
 import re
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Set, Dict
+from typing import List, Tuple, Set, Dict
 
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version, InvalidVersion
+
+import chardet
 import git
-from packaging import version as semver_version, specifiers
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from helix.core.models import load_helix_manifest, IncludeMode, MQLProjectType
+from helix.core.models import (
+    load_helix_manifest,
+    HelixManifest,
+    MQLProjectType,
+    IncludeMode,
+)
 
-from typer import Typer
-import re
-
-console = Console()
-CACHE_DIR = Path(".helix/cache")
+# ==============================================================
+# CONSTANTES
+# ==============================================================
 INCLUDE_DIR = Path("helix/include")
 FLAT_DIR = Path("helix/flat")
-LOCKFILE = Path("helix-lock.json")
+CACHE_DIR = Path(".helix/cache")
+LOCKFILE = Path("helix/lock.json")
+
+console = Console()
+
+ResolvedDep = Tuple[str, Path]
+ResolvedDeps = List[ResolvedDep]
 
 
 # ==============================================================
-# UTILIDADES
+# LOCKFILE
 # ==============================================================
-
-import chardet
-
-def detect_encoding(path: Path) -> str:
-    """
-    Detecta encoding real do arquivo (UTF-8, UTF-16 LE, UTF-16 BE, Windows-1252, etc.)
-    """
-    try:
-        raw = path.read_bytes()
-        # Primeiro tenta BOM
-        if raw.startswith(b"\xff\xfe") or raw.startswith(b"\xfe\xff"):
-            return "utf-16"
-        if raw.startswith(b"\xef\xbb\xbf"):
-            return "utf-8-sig"
-
-        # Se não tiver BOM, usa chardet
-        result = chardet.detect(raw[:10000])  # primeiros 10KB bastam
-        enc = result["encoding"] or "utf-8"
-        confidence = result["confidence"]
-
-        if confidence < 0.7:
-            # Fallback seguro para arquivos MQL antigos
-            return "windows-1252" if b"\x00" not in raw[:100] else "utf-16"
-
-        return enc.lower()
-    except:
-        return "utf-8"
-
-
-def read_file_smart(path: Path) -> str:
-    """
-    Lê arquivo .mqh/.mq5 com encoding correto → sempre retorna str em UTF-8
-    """
-    enc = detect_encoding(path)
-    try:
-        text = path.read_text(encoding=enc, errors="replace")
-    except:
-        text = path.read_text(encoding="utf-8", errors="replace")
-
-    # Garante que o resultado final seja limpo UTF-8
-    return text.encode("utf-8", errors="replace").decode("utf-8")
-
-
-def is_local_path(spec: str) -> bool:
-    """Detecta se a dependência é um caminho local (relativo ou absoluto)"""
-    if spec.startswith(("http://", "https://", "git@", "ssh://")):
-        return False
-    path = Path(spec)
-    return path.exists() or (Path.cwd() / path).exists() or (Path.home() / path.relative_to("~") if spec.startswith("~") else Path()).exists()
-
-
-def resolve_local_dependency(name: str, path_spec: str) -> Path:
-    path_spec = path_spec.removeprefix("file://")
-    path = Path(path_spec)
-    if path_spec.startswith("~"):
-        path = Path.home() / path.relative_to("~")
-    path = (Path.cwd() / path).resolve()
-
-    if not path.exists():
-        raise ValueError(f"Dependência local '{name}' não encontrada: {path}")
-    if not (path / "helix.json").exists():
-        raise ValueError(f"Dependência local '{name}' não é um projeto Helix (falta helix.json): {path}")
-
-    console.log(f"[bold magenta]Local[/] {name} → {path}")
-    return path.resolve()
-
-
-def resolve_version_from_spec(dep_name: str, full_spec: str, repo: git.Repo) -> str:
-    """Resolve ^ ~ >= <= = ou retorna branch/commit/tag direto"""
-    if "#" not in full_spec:
-        return "HEAD"
-
-    _, ref_spec = full_spec.split("#", 1)
-
-    # Casos diretos
-    if ref_spec.startswith(("branch=", "commit=", "tag=")):
-        return ref_spec.split("=", 1)[-1]
-    if re.match(r"^\d+\.\d+\.\d+$", ref_spec):
-        return ref_spec
-
-    # Busca tags semver
-    try:
-        raw_tags = repo.git.tag("-l").splitlines()
-        candidates = []
-        for tag in raw_tags:
-            clean = tag.lstrip("vV")
-            try:
-                v = semver_version.parse(clean)
-                if isinstance(v, semver_version.Version):
-                    candidates.append((tag, v))
-            except:
-                continue
-
-        if not candidates:
-            return "HEAD"
-
-        candidates.sort(key=lambda x: x[1], reverse=True)
-
-        spec_set = specifiers.SpecifierSet(ref_spec)
-        for tag, ver in candidates:
-            if ver in spec_set:
-                console.log(f"[green]Resolvido[/] {dep_name}: {ref_spec} → {tag}")
-                return tag
-
-        latest = candidates[0][0]
-        console.log(f"[yellow]Sem match exato para {ref_spec}, usando mais recente: {latest}[/]")
-        return latest
-    except Exception:
-        return "HEAD"
-
 
 def load_lockfile() -> Dict:
     if LOCKFILE.exists():
         try:
             return json.loads(LOCKFILE.read_text(encoding="utf-8"))
         except:
-            pass
+            return {"version": "1", "dependencies": {}}
     return {"version": "1", "dependencies": {}}
 
 
 def save_lockfile(data: Dict):
+    data.setdefault("version", "1")
+    LOCKFILE.parent.mkdir(parents=True, exist_ok=True)
     LOCKFILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    console.log("[bold green]Check[/] helix-lock.json atualizado")
 
 
 # ==============================================================
-# DOWNLOAD / RESOLVE DEPENDÊNCIA
+# LEITURA DE ARQUIVOS
 # ==============================================================
 
-def download_dependency(name: str, specifier: str) -> Path:
-    name = name.lower()
+def read_file_smart(path: Path) -> str:
+    """
+    Lê qualquer .mqh com encoding correto (UTF-8, UTF-16, etc.)
+    e REMOVE O PROBLEMA DAS LINHAS EM BRANCO DO UTF-16!
+    """
+    raw = path.read_bytes()
 
-    # 1. PATH LOCAL → prioridade máxima
-    if is_local_path(specifier):
-        return resolve_local_dependency(name, specifier)
+    # 1. Tenta decodificar com BOM (o mais seguro)
+    for encoding in ("utf-8-sig", "utf-16", "utf-16-le", "utf-16-be"):
+        try:
+            text = raw.decode(encoding)
+            # CRÍTICO: normaliza quebras de linha e remove \x00 residual do UTF-16
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
+            text = text.replace("\x00", "")  # remove null bytes do UTF-16
+            return text
+        except UnicodeDecodeError:
+            continue
 
-    # 2. GIT REMOTO
-    base_url = specifier.split("#")[0]
-    ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
-    cache_key = hashlib.sha256(specifier.encode()).hexdigest()[:16]
-    dep_path = CACHE_DIR / f"{name}_{cache_key}"
+    # 2. Fallback com chardet
+    detected = chardet.detect(raw)
+    encoding = detected["encoding"] or "utf-8"
+    try:
+        text = raw.decode(encoding)
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        text = text.replace("\x00", "")
+        return text
+    except:
+        pass
 
-    lock_data = load_lockfile()
-    locked = lock_data["dependencies"].get(name, {})
-
-    # Se já está travado no lock e o commit existe → usa direto
-    if dep_path.exists() and locked.get("commit"):
-        repo = git.Repo(dep_path)
-        if repo.head.commit.hexsha == locked["commit"]:
-            console.log(f"[green]Lock[/] {name} → {locked.get('resolved', 'HEAD')} (commit travado)")
-            return dep_path
-
-    # Senão: clona ou atualiza
-    if not dep_path.exists():
-        console.log(f"[bold blue]Clonando[/] {name} ← {base_url}")
-        dep_path.mkdir(parents=True, exist_ok=True)
-        git.Repo.clone_from(base_url, dep_path, single_branch=True, depth=50)
-
-    repo = git.Repo(dep_path)
-    repo.remotes.origin.fetch(tags=True)
-
-    resolved_ref = resolve_version_from_spec(name, specifier, repo)
-    repo.git.checkout(resolved_ref, force=True)
-    final_commit = repo.commit("HEAD").hexsha
-
-    # Atualiza lockfile
-    lock_data["dependencies"][name] = {
-        "source": base_url,
-        "specifier": ref_spec,
-        "resolved": resolved_ref,
-        "commit": final_commit,
-        "fetched_at": datetime.utcnow().isoformat() + "Z"
-    }
-    save_lockfile(lock_data)
-
-    console.log(f"[green]Check[/] {name} → {resolved_ref} @ {final_commit[:8]}")
-    return dep_path
+    # 3. Último recurso: força UTF-8 com replace
+    text = raw.decode("utf-8", errors="replace")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\x00", "")
+    return text
 
 
 # ==============================================================
-# FLATTENING (opcional)
+# UTILS
 # ==============================================================
 
+def is_local_path(spec: str) -> bool:
+    spec = spec.strip()
+    if spec.startswith("file://"):
+        return True
+    if spec.startswith(("http://", "https://", "git@", "ssh://")):
+        return False
+    return any(spec.startswith(p) for p in ("./", "../", "/", "~")) or Path(spec).is_absolute()
+
+
+def resolve_local_dependency(name: str, specifier: str) -> Path:
+    if specifier.startswith("file://"):
+        path = Path(specifier[7:])
+    else:
+        path = (Path.cwd() / specifier).resolve()
+
+    if not path.exists():
+        console.log(f"[red]Erro:[/] Dependência local '{name}' não encontrada: {path}")
+        raise SystemExit(1)
+
+    if not (path / "helix.yaml").exists() and not (path / "helix.json").exists():
+        console.log(f"[red]Erro fatal:[/] Dependência local '{name}' não é um projeto Helix")
+        console.log(f"    → {path}")
+        console.log("    Motivo: falta helix.yaml ou helix.json")
+        raise SystemExit(1)
+
+    console.log(f"[bold magenta]Local[/] {name} → {path}")
+    return path.resolve()
+
+
 # ==============================================================
-# RESOLVE INCLUDES COM SUPORTE TOTAL A DEPENDÊNCIAS
+# RESOLVE INCLUDES
 # ==============================================================
 
-def find_include_file(inc_file: str, base_path: Path, deps_paths: Dict[str, Path]) -> Path:
+def find_include_file(inc_file: str, base_path: Path, resolved_deps: ResolvedDeps) -> Path:
     candidates = [
         (base_path.parent / inc_file).resolve(),
         (INCLUDE_DIR / inc_file).resolve() if INCLUDE_DIR.exists() else None,
-        *( (dep_path / inc_file).resolve() for dep_path in deps_paths.values() )
+        *[(dep_path / inc_file).resolve() for _name, dep_path in resolved_deps]
     ]
 
     for path in candidates:
@@ -236,29 +151,30 @@ def find_include_file(inc_file: str, base_path: Path, deps_paths: Dict[str, Path
     raise FileNotFoundError(f"Include não encontrado: {inc_file}")
 
 
-def resolve_includes(content: str, base_path: Path, visited: Set[Path], deps_paths: Dict[str, Path]) -> str:
-    import re
+def resolve_includes(
+    content: str,
+    base_path: Path,
+    visited: Set[Path],
+    resolved_deps: ResolvedDeps,
+) -> str:
     pattern = re.compile(r'^\s*#\s*include\s+[<"]([^>"]+)[>"]', re.MULTILINE)
 
     def replace(match):
         inc_file = match.group(1)
         try:
-            inc_path = find_include_file(inc_file, base_path, deps_paths)
-        except FileNotFoundError as e:
-            return f"// ERROR: {e}"
+            inc_path = find_include_file(inc_file, base_path, resolved_deps)
+        except FileNotFoundError:
+            console.log(f"[red]ERRO:[/] Include não encontrado em {base_path} → {inc_file}")
+            return f"// ERRO: Include não encontrado → {inc_file}"
 
         if inc_path in visited:
             return f"// RECURSIVE INCLUDE SKIPPED: {inc_file}"
         visited.add(inc_path)
 
-        # ← AQUI ESTÁ A MÁGICA: lê com encoding correto
         raw = read_file_smart(inc_path)
-
-        # Preserva #property
         preserved = [l for l in raw.splitlines() if l.strip().startswith(("#property copyright", "#property link", "#property version"))]
 
-        resolved = resolve_includes(raw, inc_path, visited, deps_paths)
-
+        resolved = resolve_includes(raw, inc_path, visited, resolved_deps)
         lines = [f"// {l.strip()}" if l.strip().startswith("#include") else l for l in resolved.splitlines()]
 
         result = []
@@ -273,79 +189,259 @@ def resolve_includes(content: str, base_path: Path, visited: Set[Path], deps_pat
 
     return pattern.sub(replace, content)
 
+# ==============================================================
+# DOWNLOAD DEPENDENCY — RECURSIVO + VALIDAÇÃO RÍGIDA
+# ==============================================================
+
+# ==============================================================
+# RESOLVE VERSION FROM SPECIFIER (A MÁGICA DO HELIX)
+# ==============================================================
+
+def resolve_version_from_spec(name: str, specifier: str, repo: git.Repo) -> str:
+    """
+    Resolve o que o usuário pediu em specifier → retorna o commit/tag exato
+    Suporta: v1.8.2, ^1.8.0, branch=main, tag=v2.0.0, commit=abc123
+    """
+    if specifier.startswith(("branch=", "tag=", "commit=")):
+        prefix, value = specifier.split("=", 1)
+        if prefix == "commit":
+            return value[:7]  # aceita parcial
+        return value
+
+    # Extrai versão semver (com ou sem v)
+    clean_spec = specifier.lstrip("vV")
+    try:
+        version = Version(clean_spec)
+        spec = SpecifierSet(f"=={version}")
+    except InvalidVersion:
+        spec = SpecifierSet(specifier)
+
+    # Lista todas as tags
+    tags = {}
+    for tag in repo.tags:
+        tag_name = tag.name.lstrip("vV")
+        try:
+            tags[Version(tag_name)] = tag.name
+        except InvalidVersion:
+            continue
+
+    # Encontra a melhor versão compatível
+    for version in sorted(tags.keys(), reverse=True):
+        if str(version) in spec:
+            return tags[version]
+
+    # Fallback: HEAD
+    console.log(f"[yellow]Aviso:[/] Nenhuma versão compatível com '{specifier}' encontrada em {name}. Usando HEAD.")
+    return "HEAD"
+
+
+# ==============================================================
+# DOWNLOAD REMOTO (GIT)
+# ==============================================================
+
+def _download_from_git(name: str, specifier: str) -> Path:
+    base_url = specifier.split("#")[0].rstrip("/")
+    ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
+    cache_key = hashlib.sha256(specifier.encode()).hexdigest()[:16]
+    dep_path = CACHE_DIR / f"{name}_{cache_key}"
+
+    lock_data = load_lockfile()
+    locked = lock_data["dependencies"].get(name, {})
+
+    # Usa lock se for o mesmo source + specifier
+    if (locked.get("source") == base_url and
+        locked.get("specifier") == ref_spec and
+        dep_path.exists()):
+        final_ref = locked.get("resolved", "HEAD")
+        console.log(f"[dim]Cache[/] {name} → {final_ref}")
+    else:
+        if not dep_path.exists():
+            console.log(f"[bold blue]Clonando[/] {name} ← {base_url}")
+            dep_path.mkdir(parents=True, exist_ok=True)
+            git.Repo.clone_from(base_url, dep_path, single_branch=True, depth=50)
+
+        repo = git.Repo(dep_path)
+        repo.remotes.origin.fetch(tags=True, prune=True)
+
+        # AQUI ESTÁ A MÁGICA: resolve_version_from_spec
+        final_ref = resolve_version_from_spec(name, ref_spec, repo)
+
+        try:
+            repo.git.checkout(final_ref, force=True)
+        except git.exc.GitCommandError as e:
+            console.log(f"[red]Erro:[/] Não foi possível fazer checkout de '{final_ref}' em {name}")
+            console.log(f"    → {e}")
+            repo.git.checkout("HEAD", force=True)
+            final_ref = "HEAD"
+
+        commit = repo.head.commit.hexsha
+
+        # Atualiza lockfile
+        lock_data["dependencies"][name] = {
+            "source": base_url,
+            "specifier": ref_spec,
+            "resolved": final_ref,
+            "commit": commit,
+            "fetched_at": datetime.utcnow().isoformat() + "Z"
+        }
+        save_lockfile(lock_data)
+
+    # Validação rígida
+    if not any((dep_path / f).exists() for f in ("helix.yaml", "helix.json")):
+        console.log(f"[red]Erro fatal:[/] Dependência remota '{name}' não é um projeto Helix")
+        console.log(f"    → {base_url}#{ref_spec}")
+        raise SystemExit(1)
+
+    return dep_path
+
+
+def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps: ResolvedDeps):
+    """Processa dependências recursivas — usado tanto para local quanto remoto"""
+    try:
+        sub_manifest = load_helix_manifest(dep_path)
+
+        validate_include_project_structure(sub_manifest, dep_path, True)
+
+        if sub_manifest.type == MQLProjectType.INCLUDE and sub_manifest.dependencies:
+            console.log(f"[dim]Recursivo:[/] {dep_name} → {len(sub_manifest.dependencies)} dep(s)")
+            for sub_name, sub_spec in sub_manifest.dependencies.items():
+                if sub_name.lower() not in {n.lower() for n, _ in resolved_deps}:
+                    download_dependency(sub_name, sub_spec, resolved_deps)
+    except Exception as e:
+        console.log(f"[yellow]Aviso:[/] Falha ao processar dependências de {dep_name}: {e}")
+
+
+def download_dependency(name: str, specifier: str, resolved_deps: ResolvedDeps) -> Path:
+    name = name.lower()
+
+    if is_local_path(specifier):
+        dep_path = resolve_local_dependency(name, specifier)
+    else:
+        dep_path = _download_from_git(name, specifier)  # sua lógica git
+
+    if (name, dep_path) not in resolved_deps:
+        resolved_deps.append((name, dep_path))
+
+    # RECURSÃO ACONTECE SEMPRE
+    _process_recursive_dependencies(dep_path, name, resolved_deps)
+
+    console.log(f"[green]Check[/] {name} → {dep_path.name}")
+    return dep_path
+
+# ==============================================================
+# VALIDAÇÃO DE PROJETO INCLUDE (centralizada e reutilizável)
+# ==============================================================
+
+def validate_include_project_structure(
+    manifest: HelixManifest,
+    project_dir: Path,
+    is_dependency: bool = False,
+) -> None:
+    """
+    Valida que projetos do tipo 'include' tenham seus .mqh em helix/include/
+    
+    Chamada em:
+    - mkinc_command() → projeto principal
+    - _process_recursive_dependencies() → dependências recursivas
+    
+    Nível 1: apenas AVISO amigável (não quebra o build)
+    """
+    if manifest.type != MQLProjectType.INCLUDE:
+        return  # só valida projetos include
+
+    include_dir = project_dir / "helix" / "include"
+    prefix = "[dep]" if is_dependency else "[projeto]"
+
+    if not include_dir.exists():
+        console.log(f"[bold yellow]AVISO {prefix}:[/] Projeto 'include' sem pasta 'helix/include/'")
+        console.log(f"    → {project_dir}")
+        console.log(f"    Seus .mqh não serão exportados para quem depender deste projeto!")
+        console.log(f"    Crie a pasta e mova os arquivos:")
+        console.log(f"       mkdir -p helix/include")
+        console.log(f"       git mv *.mqh helix/include/ 2>/dev/null || true")
+        console.log("")
+        return
+
+    mqh_files = list(include_dir.rglob("*.mqh"))
+    if not mqh_files:
+        console.log(f"[bold yellow]AVISO {prefix}:[/] Pasta 'helix/include/' existe, mas está vazia!")
+        console.log(f"    → {project_dir}")
+        console.log(f"    Nenhum .mqh será exportado. Mova seus headers para lá.")
+        console.log("")
+    else:
+        console.log(f"[green]Check {prefix}[/] {len(mqh_files)} .mqh encontrado(s) em helix/include/")
 
 # ==============================================================
 # COMANDO PRINCIPAL
 # ==============================================================
 
 def mkinc_command():
-    manifest = load_helix_manifest()
+    try:
+        manifest = load_helix_manifest()
+        effective_mode = (
+            IncludeMode.INCLUDE
+            if manifest.type == MQLProjectType.INCLUDE
+            else manifest.include_mode
+        )
 
-    # Regra de ouro: type=include NUNCA faz flatten
-    effective_mode = IncludeMode.INCLUDE if manifest.type == MQLProjectType.INCLUDE else manifest.include_mode
+        console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | modo: [bold]{effective_mode}[/]")
 
-    console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | modo: [bold]{effective_mode.value}[/]")
+        # Validação do projeto principal
+        validate_include_project_structure(manifest, Path.cwd(), False)
 
-    # Limpa saídas anteriores
-    for d in (INCLUDE_DIR, FLAT_DIR):
-        if d.exists():
-            shutil.rmtree(d)
+        for d in (INCLUDE_DIR, FLAT_DIR):
+            if d.exists():
+                shutil.rmtree(d, ignore_errors=True)
 
-    # Resolve todas as dependências (locais ou remotas)
-    deps_paths: Dict[str, Path] = {}
-    with Progress(SpinnerColumn(), TextColumn("[bold blue]Resolvendo dependências...")) as progress:
-        task = progress.add_task("", total=len(manifest.dependencies))
-        for name, spec in manifest.dependencies.items():
-            deps_paths[name] = download_dependency(name, spec)
-            progress.update(task, advance=1)
+        resolved_deps: ResolvedDeps = []
 
-    # MODO FLAT
-    # Dentro do mkinc_command(), no modo FLAT:
-    if effective_mode == IncludeMode.FLAT:
-        FLAT_DIR.mkdir(parents=True, exist_ok=True)
-        for entry in manifest.entrypoints:
-            src = Path(entry)
-            if not src.exists():
-                console.log(f"[red]Erro:[/red] Entrypoint não encontrado: {entry}")
-                continue
+        with Progress(SpinnerColumn(), TextColumn("[bold blue]Resolvendo dependências...")) as progress:
+            task = progress.add_task("", total=len(manifest.dependencies or {}))
+            for name, spec in (manifest.dependencies or {}).items():
+                download_dependency(name, spec, resolved_deps)
+                progress.update(task, advance=1)
 
-            content = read_file_smart(src)
-            header = f"""// {'='*70}
-// HELIX FLATTEN — DO NOT EDIT
-// Project : {manifest.name} v{manifest.version}
-// File    : {entry}
-// {'='*70}\n\n"""
-            content = header + content
+        if effective_mode == IncludeMode.INCLUDE:
+            INCLUDE_DIR.mkdir(parents=True, exist_ok=True)
+            total = 0
+            for _name, dep_path in resolved_deps:
+                for mqh in dep_path.rglob("*.mqh"):
+                    rel = mqh.relative_to(dep_path / INCLUDE_DIR)
+                    target = INCLUDE_DIR / rel
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(mqh, target)
+                    total += 1
+            console.log(f"\n[bold green]Check mkinc concluído![/] {total} arquivo(s) → [bold]Include/[/]")
 
-            visited: Set[Path] = set()
-            try:
-                content = resolve_includes(content, src, visited, deps_paths)  # ← deps_paths aqui!
-            except Exception as e:
-                console.log(f"[red]Erro ao resolver includes em {entry}: {e}[/]")
-                continue
+        else:
+            FLAT_DIR.mkdir(parents=True, exist_ok=True)
+            for entry in manifest.entrypoints or []:
+                src = Path(entry)
+                if not src.exists():
+                    console.log(f"[red]Erro:[/] entrypoint não encontrado: {entry}")
+                    continue
 
-            flat_file = FLAT_DIR / f"{src.stem}_flat{src.suffix}"
-            flat_file.write_text(content, encoding="utf-8")
-            console.log(f"[green]Check[/] {flat_file.name} gerado ({len(content.splitlines())} linhas)")
+                content = read_file_smart(src)
+                header = f"// {'='*70}\n// HELIX FLAT — DO NOT EDIT\n// Project: {manifest.name} v{manifest.version}\n// File: {entry}\n// {'='*70}\n\n"
+                content = header + content
 
-    # MODO INCLUDES (padrão)
-    else:
-        INCLUDE_DIR.mkdir(parents=True)
-        total = 0
-        for dep_name, dep_path in deps_paths.items():
-            for mqh in dep_path.rglob("*.mqh"):
-                rel = mqh.relative_to(dep_path / INCLUDE_DIR)
-                target = INCLUDE_DIR / rel
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(mqh, target)
-                total += 1
+                visited = set()
+                content = resolve_includes(content, src, visited, resolved_deps)
 
-        console.log(f"\n[bold green]Check mkinc concluído![/] {total} arquivo(s) → [bold]Includes/[/]")
+                flat_file = FLAT_DIR / f"{src.stem}_flat{src.suffix}"
+                flat_file.write_text(content, encoding="utf-8")
+                console.log(f"[green]Check[/] {flat_file.name} gerado")
 
+        console.log(f"\n[bold green]Check mkinc (flat) concluído![/] → {FLAT_DIR}/")
+    except Exception as e:
+        console.log(f"[red]Erro:[/] {e}")
 
+# ==============================================================
 # CLI
+# ==============================================================
+
 def register(app):
     @app.command()
     def mkinc():
-        """Prepara o projeto: sincroniza includes ou gera arquivos flat"""
+        """Prepara o projeto: sincroniza includes recursivamente ou gera arquivos flat"""
         mkinc_command()

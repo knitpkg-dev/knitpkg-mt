@@ -115,7 +115,7 @@ def test_invalid_dependency_urls(tmp_path: Path, url: str):
 
     error_msg = str(exc.value)
     assert "Dependência 'mylib' inválida" in error_msg
-    assert "Erro de validação no helix.json" in error_msg
+    assert "Erro ao ler helix." in error_msg
 
 
 # === Teste extra: aceitar branch=main (seu caso real) ===

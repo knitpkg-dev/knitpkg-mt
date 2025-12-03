@@ -195,8 +195,8 @@ class HelixManifest(BaseModel):
         for ep in v:
             if not isinstance(ep, str):
                 raise ValueError(f"entrypoint deve ser string: {ep!r}")
-            if not ep.lower().endswith((".mq4", ".mq5")):
-                raise ValueError(f"entrypoint deve ter extensão .mq4 ou .mq5: {ep}")
+            if not ep.lower().endswith((".mq4", ".mq5", "mqh")):
+                raise ValueError(f"entrypoint deve ter extensão .mq4, .mq5 ou .mqh: {ep}")
         return v
     
 
@@ -245,8 +245,8 @@ class HelixManifest(BaseModel):
                 local_path = spec[7:]  # remove file://
                 if not Path(local_path).exists():
                     raise ValueError(f"Dependência local '{dep_name}' não encontrada: {local_path}")
-                if not (Path(local_path) / "helix.json").exists():
-                    raise ValueError(f"Dependência local '{dep_name}' não tem helix.json: {local_path}")
+                if not (Path(local_path) / "helix.json").exists() and not (Path(local_path) / "helix.yaml").exists():
+                    raise ValueError(f"Dependência local '{dep_name}' não tem helix.yaml ou helix.json: {local_path}")
                 continue
 
             # 2. Caminho relativo/absolute sem protocolo → também aceito como local
@@ -303,19 +303,44 @@ class HelixManifest(BaseModel):
 from rich.console import Console
 console = Console()
 
-def load_helix_manifest() -> HelixManifest:
+def load_helix_manifest(path: Optional[str | Path] = None) -> HelixManifest:
     """
     Carrega helix.json OU helix.yaml (com prioridade no yaml se ambos existirem)
+    
+    Args:
+        path: None (usa diretório atual), caminho para arquivo (helix.yaml/helix.json),
+              ou caminho para diretório (busca helix.yaml/helix.json nele)
+    
+    Raises:
+        ValueError: Se path aponta para arquivo com nome inválido
+        FileNotFoundError: Se nenhum manifesto for encontrado
     """
-    yaml_path = Path("helix.yaml")
-    json_path = Path("helix.json")
+    if path is None:
+        yaml_path = Path("helix.yaml")
+        json_path = Path("helix.json")
+    else:
+        path = Path(path)
+        
+        if path.is_file():
+            # É um arquivo
+            if path.name not in ("helix.yaml", "helix.json"):
+                raise ValueError(
+                    f"Arquivo inválido: {path.name}\n"
+                    f"Esperado: helix.yaml ou helix.json"
+                )
+            yaml_path = path if path.name == "helix.yaml" else None
+            json_path = path if path.name == "helix.json" else None
+        elif path.is_dir():
+            # É um diretório
+            yaml_path = path / "helix.yaml"
+            json_path = path / "helix.json"
+        else:
+            # Não existe ou é inválido
+            raise FileNotFoundError(f"Caminho não encontrado: {path}")
 
-    if yaml_path.exists() and json_path.exists():
-        console.log("[bold yellow]Aviso:[/] Ambos helix.yaml e helix.json existem → usando helix.yaml")
-
-    if yaml_path.exists():
+    if yaml_path and yaml_path.exists():
         return _load_from_yaml(yaml_path)
-    elif json_path.exists():
+    elif json_path and json_path.exists():
         return _load_from_json(json_path)
     else:
         raise FileNotFoundError("Nenhum arquivo de manifesto encontrado: helix.yaml ou helix.json")
