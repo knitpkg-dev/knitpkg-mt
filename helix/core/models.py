@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 import json
+import yaml
 
 from pydantic import (
     BaseModel,
@@ -13,7 +14,6 @@ from pydantic import (
     field_validator,
     ConfigDict,
     AnyUrl,
-    ValidationError,
     model_validator,
 )
 
@@ -40,8 +40,8 @@ class OAuthProvider(str, Enum):
     GOOGLE = "google"
 
 
-class BuildMode(str, Enum):
-    INCLUDES = "includes"      # default — só copia .mqh para Includes/
+class IncludeMode(str, Enum):
+    INCLUDE = "include"        # default — só copia .mqh para Includes/
     FLAT = "flat"              # gera arquivos _flat.mq5 autocontidos    
 
 
@@ -153,8 +153,8 @@ class HelixManifest(BaseModel):
 
     dependencies: Dict[str, str] = Field(default_factory=dict)
 
-    build_mode: BuildMode = Field(
-        default=BuildMode.INCLUDES,
+    include_mode: IncludeMode = Field(
+        default=IncludeMode.INCLUDE,
         description="Modo de preparação para compilação: 'includes' (padrão) ou 'flat'"
     )
 
@@ -300,21 +300,41 @@ class HelixManifest(BaseModel):
 # ================================================================
 # Carregamento
 # ================================================================
-def load_helix_manifest(path: Union[str, Path] = "helix.json") -> HelixManifest:
-    p = Path(path)
-    if not p.exists():
-        raise FileNotFoundError(f"helix.json não encontrado em {p.resolve()}")
+from rich.console import Console
+console = Console()
 
-    try:
-        data = json.loads(p.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as e:
-        raise ValueError(f"helix.json contém JSON inválido: {e}") from e
+def load_helix_manifest() -> HelixManifest:
+    """
+    Carrega helix.json OU helix.yaml (com prioridade no yaml se ambos existirem)
+    """
+    yaml_path = Path("helix.yaml")
+    json_path = Path("helix.json")
 
+    if yaml_path.exists() and json_path.exists():
+        console.log("[bold yellow]Aviso:[/] Ambos helix.yaml e helix.json existem → usando helix.yaml")
+
+    if yaml_path.exists():
+        return _load_from_yaml(yaml_path)
+    elif json_path.exists():
+        return _load_from_json(json_path)
+    else:
+        raise FileNotFoundError("Nenhum arquivo de manifesto encontrado: helix.yaml ou helix.json")
+
+def _load_from_yaml(path: Path) -> HelixManifest:
     try:
+        raw = path.read_text(encoding="utf-8")
+        data = yaml.safe_load(raw)
+        if data is None:
+            raise ValueError("helix.yaml está vazio")
+        console.log(f"[bold green]Carregado:[/] {path.name}")
         return HelixManifest(**data)
-    except ValidationError as e:
-        errors = "\n".join(
-            f"  • {' → '.join(map(str, err['loc']))}: {err['msg']}"
-            for err in e.errors()
-        )
-        raise ValueError(f"Erro de validação no helix.json:\n{errors}") from e
+    except Exception as e:
+        raise ValueError(f"Erro ao ler helix.yaml: {e}")
+
+def _load_from_json(path: Path) -> HelixManifest:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        console.log(f"[bold green]Carregado:[/] {path.name}")
+        return HelixManifest(**data)
+    except Exception as e:
+        raise ValueError(f"Erro ao ler helix.json: {e}")

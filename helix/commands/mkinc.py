@@ -3,7 +3,7 @@
 # Suporte completo a:
 # • git + semver (^ ~ >=) + lockfile
 # • path local (../minha-lib)
-# • build_mode + regra especial para type: include
+# • include_mode + regra especial para type: include
 # • helix-lock.json com commit travado
 # • cache inteligente + reproducibilidade total
 
@@ -20,7 +20,7 @@ from packaging import version as semver_version, specifiers
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from helix.core.models import load_helix_manifest, BuildMode, MQLProjectType
+from helix.core.models import load_helix_manifest, IncludeMode, MQLProjectType
 
 from typer import Typer
 import re
@@ -203,7 +203,7 @@ def download_dependency(name: str, specifier: str) -> Path:
     # Atualiza lockfile
     lock_data["dependencies"][name] = {
         "source": base_url,
-        "specifier": ref,
+        "specifier": ref_spec,
         "resolved": resolved_ref,
         "commit": final_commit,
         "fetched_at": datetime.utcnow().isoformat() + "Z"
@@ -282,7 +282,7 @@ def mkinc_command():
     manifest = load_helix_manifest()
 
     # Regra de ouro: type=include NUNCA faz flatten
-    effective_mode = BuildMode.INCLUDES if manifest.type == MQLProjectType.INCLUDE else manifest.build_mode
+    effective_mode = IncludeMode.INCLUDE if manifest.type == MQLProjectType.INCLUDE else manifest.include_mode
 
     console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | modo: [bold]{effective_mode.value}[/]")
 
@@ -301,7 +301,7 @@ def mkinc_command():
 
     # MODO FLAT
     # Dentro do mkinc_command(), no modo FLAT:
-    if effective_mode == BuildMode.FLAT:
+    if effective_mode == IncludeMode.FLAT:
         FLAT_DIR.mkdir(parents=True, exist_ok=True)
         for entry in manifest.entrypoints:
             src = Path(entry)
