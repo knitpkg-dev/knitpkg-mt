@@ -445,13 +445,10 @@ def mkinc_command():
     """Main entry point for `helix mkinc` — resolves dependencies and generates output."""
     try:
         manifest = load_helix_manifest()
-        effective_mode = (
-            "include"
-            if manifest.type == MQLProjectType.INCLUDE
-            else "flat"
-        )
+        
+        effective_mode = IncludeMode.FLAT if manifest.type == MQLProjectType.INCLUDE else IncludeMode.INCLUDE
 
-        console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | mode: [bold]{effective_mode}[/]")
+        console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | {'' if effective_mode == manifest.include_mode else 'FORCING'} mode: [bold]{effective_mode.value}[/]")
 
         # Validate main project structure
         validate_include_project_structure(manifest, Path.cwd(), False)
