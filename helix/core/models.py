@@ -233,19 +233,6 @@ class HelixManifest(BaseModel):
                 raise ValueError(f"entrypoint must have .mq4, .mq5 or .mqh extension: {ep}")
         return v
 
-    @model_validator(mode="after")
-    def validate_include_project_rules(self) -> "HelixManifest":
-        """Apply special rules for include-type projects."""
-        if self.type == MQLProjectType.INCLUDE:
-            # Pure header library → always use flat mode (better developer experience)
-            self.include_mode = IncludeMode.FLAT
-            
-            # Allow local test scripts
-            if self.entrypoints is None:
-                self.entrypoints = []
-        
-        return self
-
     @field_validator("version")
     @classmethod
     def validate_semver(cls, v: str) -> str:
@@ -327,8 +314,6 @@ class HelixManifest(BaseModel):
 # ================================================================
 # Loading
 # ================================================================
-from rich.console import Console
-console = Console()
 
 def load_helix_manifest(path: Optional[str | Path] = None) -> HelixManifest:
     """
@@ -379,7 +364,6 @@ def _load_from_yaml(path: Path) -> HelixManifest:
         data = yaml.safe_load(raw)
         if data is None:
             raise ValueError("helix.yaml is empty")
-        console.log(f"[bold green]Loaded:[/] {path.name}")
         return HelixManifest(**data)
     except Exception as e:
         raise ValueError(f"Error reading helix.yaml: {e}")
@@ -389,7 +373,6 @@ def _load_from_json(path: Path) -> HelixManifest:
     """Load and parse a helix.json manifest file."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        console.log(f"[bold green]Loaded:[/] {path.name}")
         return HelixManifest(**data)
     except Exception as e:
         raise ValueError(f"Error reading helix.json: {e}")

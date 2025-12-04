@@ -324,6 +324,8 @@ def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps
     try:
         sub_manifest = load_helix_manifest(dep_path)
 
+        console.log(f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → {sub_manifest.name} v{sub_manifest.version}")
+
         validate_include_project_structure(sub_manifest, dep_path, True)
 
         if sub_manifest.type == MQLProjectType.INCLUDE and sub_manifest.dependencies:
@@ -448,14 +450,16 @@ def mkinc_command():
         
         effective_mode = IncludeMode.FLAT if manifest.type == MQLProjectType.INCLUDE else manifest.include_mode
 
-        console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | {'' if effective_mode == manifest.include_mode else 'FORCING'} mode: [bold]{effective_mode.value}[/]")
+        console.log(f"[bold magenta]helix mkinc[/] → [bold cyan]{manifest.name}[/] v{manifest.version} → {manifest.type.value} | {'' if effective_mode == manifest.include_mode else '[bold yellow]FORCING[/]'} mode: [bold]{effective_mode.value}[/]")
 
         # Validate main project structure
         validate_include_project_structure(manifest, Path.cwd(), False)
 
-        for d in (INCLUDE_DIR, FLAT_DIR):
-            if d.exists():
-                shutil.rmtree(d, ignore_errors=True)
+        shutil.rmtree(FLAT_DIR, ignore_errors=True)
+        if manifest.type != MQLProjectType.INCLUDE:
+            shutil.rmtree(INCLUDE_DIR, ignore_errors=True)
+        else:
+            console.log(f"[dim]Preserving[/] helix/include/ (project type is 'include')")
 
         resolved_deps: ResolvedDeps = []
 
@@ -504,7 +508,7 @@ def mkinc_command():
                 flat_file.write_text(content, encoding="utf-8")
                 console.log(f"[green]Check[/] {flat_file.name} generated")
 
-        console.log(f"\n[bold green]Check mkinc completed![/] → {FLAT_DIR}/")
+        console.log(f"\n[bold green]Check mkinc completed![/] → {FLAT_DIR.as_posix()}/")
     except Exception as e:
         console.log(f"[red]Error:[/] {e}")
 
