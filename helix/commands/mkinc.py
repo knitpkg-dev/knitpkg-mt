@@ -198,41 +198,79 @@ def resolve_includes(
 # RESOLVE VERSION FROM SPECIFIER (A MÁGICA DO HELIX)
 # ==============================================================
 
+# helix/commands/mkinc.py ou onde estiver
+
+from packaging.version import Version, InvalidVersion
+from packaging.specifiers import SpecifierSet
+from rich.console import Console
+
+console = Console()
+
+
+from packaging.version import Version, InvalidVersion
+from packaging.specifiers import SpecifierSet
+from rich.console import Console
+import git
+
+console = Console()
+
+
 def resolve_version_from_spec(name: str, specifier: str, repo: git.Repo) -> str:
-    """
-    Resolve o que o usuário pediu em specifier → retorna o commit/tag exato
-    Suporta: v1.8.2, ^1.8.0, branch=main, tag=v2.0.0, commit=abc123
-    """
+    specifier = specifier.strip()
+
+    # === 1. Casos diretos ===
     if specifier.startswith(("branch=", "tag=", "commit=")):
         prefix, value = specifier.split("=", 1)
-        if prefix == "commit":
-            return value[:7]  # aceita parcial
-        return value
+        return value[:7] if prefix == "commit" else value
 
-    # Extrai versão semver (com ou sem v)
-    clean_spec = specifier.lstrip("vV")
+    # === 2. Normaliza o specifier ===
+    clean = specifier.lstrip("vV")
+
     try:
-        version = Version(clean_spec)
-        spec = SpecifierSet(f"=={version}")
-    except InvalidVersion:
-        spec = SpecifierSet(specifier)
+        if clean.startswith("^"):
+            base = Version(clean[1:].split("+", 1)[0])
+            spec = SpecifierSet(f">={base},<{base.major + 1}.0.0")
+        elif clean.startswith("~"):
+            base = Version(clean[1:].split("+", 1)[0])
+            spec = SpecifierSet(f">={base},<{base.major}.{base.minor + 1}.0")
+        elif not any(op in clean for op in (">", "<", "=", " ", ",", "^", "~")):
+            clean_ver = clean.split("+", 1)[0]
+            spec = SpecifierSet(f"=={clean_ver}")
+        else:
+            normalized = clean.replace(" ", "")
+            normalized = re.sub(r'([0-9])([<>]=?)', r'\1,\2', normalized)
+            normalized = re.sub(r'([0-9])([<>])', r'\1,\2', normalized)
+            normalized = normalized.replace(",,", ",").lstrip(",")
+            spec = SpecifierSet(normalized)
+    except Exception:
+        console.log(f"[yellow]Warning:[/] Invalid specifier '{specifier}' for {name}. Accepting any version.")
+        spec = SpecifierSet()
 
-    # Lista todas as tags
-    tags = {}
+    # === 3. Coleta candidatos ===
+    candidates = []
     for tag in repo.tags:
-        tag_name = tag.name.lstrip("vV")
+        tag_name = tag.name
+        version_str = tag_name.lstrip("vV").split("+", 1)[0]
         try:
-            tags[Version(tag_name)] = tag.name
+            version = Version(version_str)
+            candidates.append((version, tag_name))
         except InvalidVersion:
             continue
 
-    # Encontra a melhor versão compatível
-    for version in sorted(tags.keys(), reverse=True):
-        if str(version) in spec:
-            return tags[version]
+    if not candidates:
+        console.log(f"[yellow]Warning:[/] No valid SemVer tags in {name}. Using HEAD.")
+        return "HEAD"
 
-    # Fallback: HEAD
-    console.log(f"[yellow]Warning:[/] No version compatible with '{specifier}' found in {name}. Falling back to HEAD.")
+    # === 4. Ordena: maior versão → +build ganha ===
+    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+    # === 5. Procura compatível ===
+    for version, tag_name in candidates:
+        if version in spec:
+            return tag_name
+
+    # === 6. Fallback com log ===
+    console.log(f"[yellow]Warning:[/] No compatible version for '{specifier}' in {name}. Falling back to HEAD.")
     return "HEAD"
 
 
