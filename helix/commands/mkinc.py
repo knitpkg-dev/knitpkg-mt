@@ -7,7 +7,6 @@ import hashlib
 import json
 import re
 import shutil
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Set, Dict
@@ -27,6 +26,8 @@ from helix.core.models import (
     IncludeMode,
 )
 
+console = Console()
+
 # ==============================================================
 # CONSTANTES
 # ==============================================================
@@ -34,8 +35,6 @@ INCLUDE_DIR = Path("helix/include")
 FLAT_DIR = Path("helix/flat")
 CACHE_DIR = Path(".helix/cache")
 LOCKFILE = Path("helix/lock.json")
-
-console = Console()
 
 ResolvedDep = Tuple[str, Path]
 ResolvedDeps = List[ResolvedDep]
@@ -189,30 +188,6 @@ def resolve_includes(
         return "\n".join(result)
 
     return pattern.sub(replace, content)
-
-# ==============================================================
-# DOWNLOAD DEPENDENCY — RECURSIVO + VALIDAÇÃO RÍGIDA
-# ==============================================================
-
-# ==============================================================
-# RESOLVE VERSION FROM SPECIFIER (A MÁGICA DO HELIX)
-# ==============================================================
-
-# helix/commands/mkinc.py ou onde estiver
-
-from packaging.version import Version, InvalidVersion
-from packaging.specifiers import SpecifierSet
-from rich.console import Console
-
-console = Console()
-
-
-from packaging.version import Version, InvalidVersion
-from packaging.specifiers import SpecifierSet
-from rich.console import Console
-import git
-
-console = Console()
 
 
 def resolve_version_from_spec(name: str, specifier: str, repo: git.Repo) -> str:
