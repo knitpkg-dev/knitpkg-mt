@@ -147,7 +147,7 @@ def resolve_local_dependency(name: str, specifier: str) -> Path:
             rel_str = path.name  # último recurso
 
     console.log(f"[bold magenta]Local[/] {name} → [dim]{rel_str}[/]")
-    
+
     return path.resolve()
 
 
@@ -334,23 +334,38 @@ def _download_from_git(name: str, specifier: str) -> Path:
     return dep_path
 
 
-def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps: ResolvedDeps):
-    """Process recursive dependencies for both local and remote projects."""
+def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps: ResolvedDeps) -> bool:
+    """
+    Process recursive dependencies.
+    Return True if the dependency was accepted (is 'include'), False if skipped.
+    """
     try:
         sub_manifest = load_helix_manifest(dep_path)
+
+        # mkinc accepts dependencies of type 'include' only
+        if sub_manifest.type != MQLProjectType.INCLUDE:
+            console.log(
+                f"[bold yellow]Skipping dependency[/] '{dep_name}' → {sub_manifest.name} v{sub_manifest.version}\n"
+                f"    → type is '{sub_manifest.type.value}', but `helix mkinc` only supports 'include' projects.\n"
+                f"    Use `helix build` (Pro) to bundle experts, indicators, etc."
+            )
+            return False  # ← rejeitada
 
         console.log(f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → {sub_manifest.name} v{sub_manifest.version}")
 
         validate_include_project_structure(sub_manifest, dep_path, True)
 
-        if sub_manifest.type == MQLProjectType.INCLUDE and sub_manifest.dependencies:
+        if sub_manifest.dependencies:
             console.log(f"[dim]Recursive:[/] {dep_name} → {len(sub_manifest.dependencies)} dep(s)")
             for sub_name, sub_spec in sub_manifest.dependencies.items():
                 if sub_name.lower() not in {n.lower() for n, _ in resolved_deps}:
                     download_dependency(sub_name, sub_spec, resolved_deps)
+
+        return True  # ← aceita
+
     except Exception as e:
         console.log(f"[yellow]Warning:[/] Failed to process dependencies of {dep_name}: {e}")
-
+        return False
 
 def download_dependency(name: str, specifier: str, resolved_deps: ResolvedDeps) -> Path:
     """Download (or resolve) a dependency and recursively process its own dependencies."""
@@ -364,10 +379,11 @@ def download_dependency(name: str, specifier: str, resolved_deps: ResolvedDeps) 
     if (name, dep_path) not in resolved_deps:
         resolved_deps.append((name, dep_path))
 
-    # Always process recursive dependencies
-    _process_recursive_dependencies(dep_path, name, resolved_deps)
+    if _process_recursive_dependencies(dep_path, name, resolved_deps):
+        if (name, dep_path) not in resolved_deps:
+            resolved_deps.append((name, dep_path))
+        console.log(f"[green]Check[/] {name} → {dep_path.name}")
 
-    console.log(f"[green]Check[/] {name} → {dep_path.name}")
     return dep_path
 
 # ==============================================================
