@@ -446,7 +446,7 @@ def mkinc_command():
     try:
         manifest = load_helix_manifest()
         
-        effective_mode = IncludeMode.FLAT if manifest.type == MQLProjectType.INCLUDE else IncludeMode.INCLUDE
+        effective_mode = IncludeMode.FLAT if manifest.type == MQLProjectType.INCLUDE else manifest.include_mode
 
         console.log(f"[bold magenta]helix mkinc[/] → {manifest.type.value} | {'' if effective_mode == manifest.include_mode else 'FORCING'} mode: [bold]{effective_mode.value}[/]")
 
