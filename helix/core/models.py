@@ -82,12 +82,14 @@ class DistSection(BaseModel):
     )
 
     def get_release_by_id(self, release_id: str) -> Optional[DistRelease]:
+        """Return the DistRelease with the given id, or None if not found."""
         for r in self.dist:
             if r.id == release_id:
                 return r
         return None
 
     def render_name(self, release_id: str, version: str) -> str:
+        """Render the final package filename, replacing ${version} placeholder."""
         release = self.get_release_by_id(release_id)
         if not release:
             return f"{release_id}-{version}.zip"
@@ -118,23 +120,23 @@ class HelixSection(BaseModel):
 # HelixManifest — FINAL VERSION
 # ================================================================
 
-# === Regex principal: cobre TODOS os casos SemVer + ranges NPM + prefixed refs ===
+# Main regex: covers all SemVer + NPM-style ranges + prefixed refs (branch=, tag=, commit=)
 REF_PATTERN = re.compile(
     r"^"
-    r"(?:"                              # Grupo 1: operadores de range (NPM style)
-        r"(\^|~|>=|<=|>|<|\s*)"         # ^ ~ >= <= > < (ou espaços
-        r"(v?)(\d+\.\d+\.\d+)"          # versão base (com ou sem v)
-        r"(-[A-Za-z0-9\.\-]+)?"         # pre-release opcional
-        r"(\+[A-Za-z0-9\.\-]+)?"        # build metadata opcional
-        r"(?:\s+(<|<=)\s*(v?)(\d+\.\d+\.\d+))?"  # segundo lado do range (< ou <=)
+    r"(?:"                              # Group 1: NPM-style range operators
+        r"(\^|~|>=|<=|>|<|\s*)"         # ^ ~ >= <= > < (or spaces)
+        r"(v?)(\d+\.\d+\.\d+)"          # base version (with or without v)
+        r"(-[A-Za-z0-9\.\-]+)?"         # optional pre-release
+        r"(\+[A-Za-z0-9\.\-]+)?"        # optional build metadata
+        r"(?:\s+(<|<=)\s*(v?)(\d+\.\d+\.\d+))?"  # second side of range (< or <=)
     r")"
-    r"|"                                # OU
-    r"(branch|tag|commit)=[A-Za-z0-9._-]+$"  # prefixed refs
+    r"|"                                # OR
+    r"(branch|tag|commit)=[A-Za-z0-9._-]+$"  # prefixed references
     r"$",
     re.IGNORECASE
 )
 
-# === Regex auxiliar: SemVer puro (para validar versão isolada) ===
+# Auxiliary regex: pure SemVer (for isolated version validation)
 SEMVER_PATTERN = re.compile(
     r"^(?P<major>0|[1-9]\d*)\."
     r"(?P<minor>0|[1-9]\d*)\."
@@ -145,19 +147,21 @@ SEMVER_PATTERN = re.compile(
 
 
 def _is_valid_ref(ref: str) -> bool:
+    """Validate a dependency reference (version range or prefixed ref)."""
     ref = ref.strip()
 
-    # 1. Prefixed: branch=, tag=, commit=
+    # 1. Prefixed refs: branch=, tag=, commit=
     if "=" in ref and ref.split("=", 1)[0].lower() in ("branch", "tag", "commit"):
         return bool(REF_PATTERN.match(ref))
 
-    # 2. NPM-style ranges: ^ ~ >= <= > < ou intervalos como ">=1.0.0 <2.0.0"
+    # 2. NPM-style ranges: ^ ~ >= <= > < or intervals like ">=1.0.0 <2.0.0"
     if any(op in ref for op in ("^", "~", ">=", "<=", ">", "<", " ")):
-        return bool(REF_PATTERN.match(ref.replace(" ", "")))  # remove espaços
+        return bool(REF_PATTERN.match(ref.replace(" ", "")))  # remove spaces for matching
 
-    # 3. SemVer puro (com ou sem v)
+    # 3. Pure SemVer (with or without leading v/V)
     cleaned = ref.lstrip("vV")
     return bool(SEMVER_PATTERN.match(cleaned))
+
 
 class HelixManifest(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -201,6 +205,7 @@ class HelixManifest(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def validate_entrypoints_presence(cls, data: Any) -> Any:
+        """Ensure non-include projects have at least one entrypoint."""
         if isinstance(data, dict):
             proj_type = data.get("type")
             has_entrypoints = "entrypoints" in data and data["entrypoints"] is not None
@@ -214,6 +219,7 @@ class HelixManifest(BaseModel):
     @field_validator("entrypoints", mode="before")
     @classmethod
     def validate_entrypoints_format(cls, v: Any) -> List[str]:
+        """Normalize and validate entrypoints list."""
         if v is None or v == []:
             return []
         if isinstance(v, str):
@@ -229,11 +235,12 @@ class HelixManifest(BaseModel):
 
     @model_validator(mode="after")
     def validate_include_project_rules(self) -> "HelixManifest":
+        """Apply special rules for include-type projects."""
         if self.type == MQLProjectType.INCLUDE:
-            # Biblioteca pura → sempre flat (melhor DX)
+            # Pure header library → always use flat mode (better developer experience)
             self.include_mode = IncludeMode.FLAT
             
-            # Permite scripts de teste locais
+            # Allow local test scripts
             if self.entrypoints is None:
                 self.entrypoints = []
         
@@ -242,6 +249,7 @@ class HelixManifest(BaseModel):
     @field_validator("version")
     @classmethod
     def validate_semver(cls, v: str) -> str:
+        """Strict SemVer validation (without build metadata in comparison)."""
         v = v.strip()
         pattern = re.compile(
             r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
@@ -256,6 +264,7 @@ class HelixManifest(BaseModel):
     @field_validator("dependencies", mode="before")
     @classmethod
     def validate_dependencies(cls, v: Any) -> Dict[str, str]:
+        """Comprehensive validation of dependency specifications."""
         if v is None:
             return {}
         if not isinstance(v, dict):
@@ -268,7 +277,7 @@ class HelixManifest(BaseModel):
             if not spec:
                 raise ValueError(f"Dependency '{dep_name}' is empty")
 
-            # === 1. Local file:// ===
+            # 1. Local file:// protocol
             if spec.startswith("file://"):
                 local_path = spec[7:]
                 if not Path(local_path).exists():
@@ -277,11 +286,11 @@ class HelixManifest(BaseModel):
                     raise ValueError(f"Local dependency '{dep_name}' missing helix.yaml or helix.json")
                 continue
 
-            # === 2. Caminho relativo/absoluto (sem protocolo) ===
+            # 2. Relative or absolute local path
             if spec.startswith(("./", "../", "/", "~")) or Path(spec).exists() or (Path.cwd() / spec).exists():
                 continue
 
-            # === 3. Remote Git (https, http, git@, ssh://) ===
+            # 3. Remote Git dependency
             if not any(spec.startswith(proto) for proto in ("https://", "http://", "git@", "ssh://")):
                 raise ValueError(f"Invalid dependency '{dep_name}': must use https://, git@, ssh://, file:// or local path")
 
@@ -309,6 +318,7 @@ class HelixManifest(BaseModel):
 
 
     def get_package_name(self, release_id: str = "release") -> str:
+        """Return the final package name for a given release configuration."""
         if not self.dist or not self.dist.dist:
             return f"{self.name}-{self.version}.zip"
         return self.dist.render_name(release_id, self.version)
@@ -322,15 +332,17 @@ console = Console()
 
 def load_helix_manifest(path: Optional[str | Path] = None) -> HelixManifest:
     """
-    Loads helix.json OR helix.yaml (yaml takes precedence if both exist)
+    Load helix.json OR helix.yaml (YAML takes precedence if both exist).
     
     Args:
-        path: None (current dir), path to file (helix.yaml/helix.json),
-              or directory (searches helix.yaml/helix.json inside it)
+        path: 
+            - None: current directory
+            - Path to file (helix.yaml/helix.json)
+            - Directory (searches for manifest inside it)
     
     Raises:
-        ValueError: If path points to invalid filename
-        FileNotFoundError: If no manifest found
+        ValueError: Invalid filename
+        FileNotFoundError: No manifest found
     """
     if path is None:
         yaml_path = Path("helix.yaml")
@@ -359,7 +371,9 @@ def load_helix_manifest(path: Optional[str | Path] = None) -> HelixManifest:
     else:
         raise FileNotFoundError("No manifest file found: helix.yaml or helix.json")
 
+
 def _load_from_yaml(path: Path) -> HelixManifest:
+    """Load and parse a helix.yaml manifest file."""
     try:
         raw = path.read_text(encoding="utf-8")
         data = yaml.safe_load(raw)
@@ -370,7 +384,9 @@ def _load_from_yaml(path: Path) -> HelixManifest:
     except Exception as e:
         raise ValueError(f"Error reading helix.yaml: {e}")
 
+
 def _load_from_json(path: Path) -> HelixManifest:
+    """Load and parse a helix.json manifest file."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         console.log(f"[bold green]Loaded:[/] {path.name}")
