@@ -32,18 +32,18 @@
   <h2>Fields</h2>
   <table>
     <tr><th>Field</th><th>Required</th><th>Type</th><th>Default</th><th>Description</th></tr>
-    <tr><td><code>name</code></td><td class="required">Yes</td><td>str</td><td>—</td><td>—</td></tr>
-    <tr><td><code>version</code></td><td class="required">Yes</td><td>str</td><td>—</td><td>Required SemVer version</td></tr>
-    <tr><td><code>description</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
-    <tr><td><code>author</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
-    <tr><td><code>license</code></td><td class="optional">No</td><td>Optional</td><td><code>MIT</code></td><td>—</td></tr>
-    <tr><td><code>type</code></td><td class="required">Yes</td><td>MQLProjectType</td><td>—</td><td>expert, indicator, library, include, etc.</td></tr>
-    <tr><td><code>target</code></td><td class="optional">No</td><td>MQLTarget</td><td><code>MQL5</code></td><td>MQL4 or MQL5</td></tr>
-    <tr><td><code>dependencies</code></td><td class="optional">No</td><td>object</td><td><code>{}</code></td><td>—</td></tr>
-    <tr><td><code>include_mode</code></td><td class="optional">No</td><td>IncludeMode</td><td><code>include</code></td><td>Build preparation mode: 'include' (default) or 'flat'</td></tr>
-    <tr><td><code>entrypoints</code></td><td class="optional">No*</td><td>Optional</td><td><code>None</code></td><td>.mq4/.mq5 file list. Required except for type='include'</td></tr>
-    <tr><td><code>dist</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
-    <tr><td><code>helix</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>—</td></tr>
+    <tr><td><code>name</code></td><td class="required">Yes</td><td>str</td><td>—</td><td>Project name (alphanumeric, hyphens, underscores, dots only)</td></tr>
+    <tr><td><code>version</code></td><td class="required">Yes</td><td>str</td><td>—</td><td>Required Semantic Versioning string (e.g. 1.0.0)</td></tr>
+    <tr><td><code>description</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>Short project description</td></tr>
+    <tr><td><code>author</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>Author or team name</td></tr>
+    <tr><td><code>license</code></td><td class="optional">No</td><td>Optional</td><td><code>MIT</code></td><td>License identifier (default: MIT)</td></tr>
+    <tr><td><code>type</code></td><td class="required">Yes</td><td>MQLProjectType</td><td>—</td><td>Project type: expert, indicator, script, library or include</td></tr>
+    <tr><td><code>target</code></td><td class="optional">No</td><td>MQLTarget</td><td><code>MQL5</code></td><td>Target platform: MQL4 or MQL5 (default: MQL5)</td></tr>
+    <tr><td><code>dependencies</code></td><td class="optional">No</td><td>object</td><td><code>{}</code></td><td>Dependencies with Git URLs or local paths and version constraints</td></tr>
+    <tr><td><code>include_mode</code></td><td class="optional">No</td><td>IncludeMode</td><td><code>include</code></td><td>Mode: 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='include'</td></tr>
+    <tr><td><code>entrypoints</code></td><td class="optional">No*</td><td>Optional</td><td><code>None</code></td><td>Main source files (.mq4/.mq5/.mqh). Required except for type='include'</td></tr>
+    <tr><td><code>dist</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>Distribution package configuration</td></tr>
+    <tr><td><code>helix</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>Helix Pro and Enterprise settings</td></tr>
   </table>
 
   <h2>Project Types (<code>type</code>)</h2>
@@ -52,7 +52,7 @@
     <li><code>indicator</code> → Custom indicator</li>
     <li><code>script</code> → Script</li>
     <li><code>library</code> → Reusable library</li>
-    <li><code>include</code> → <strong>Only .mqh headers</strong> (no entrypoints allowed)</li>
+    <li><code>include</code> → Header-only library (.mqh). <strong>Allows entrypoints</strong> for test scripts (automatically uses <code>flat</code> mode)</li>
   </ul>
 
   <h2>Dependency Formats (supported)</h2>

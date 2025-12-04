@@ -112,22 +112,6 @@ def test_include_type_has_no_entrypoint(include_only_project: Path):
     assert manifest.entrypoints == []
 
 
-def test_invalid_entrypoint_for_include(tmp_path: Path):
-    d = tmp_path / "invalid-include"
-    d.mkdir()
-    data = {
-        "name": "bad-lib",
-        "version": "1.0.0",
-        "type": "include",
-        "entrypoints": ["Bad.mq5"]
-    }
-    (d / "helix.json").write_text(json.dumps(data), encoding="utf-8")
-
-    with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "helix.json")
-
-    assert "Projetos do tipo 'include' não devem ter entrypoints" in str(exc.value)
-
 
 def test_missing_entrypoint_for_indicator(tmp_path: Path):
     d = tmp_path / "missing-entrypoint"
@@ -142,7 +126,7 @@ def test_missing_entrypoint_for_indicator(tmp_path: Path):
     with pytest.raises(ValueError) as exc:
         load_helix_manifest(d / "helix.json")
 
-    assert "Projetos do tipo 'indicator' devem ter pelo menos um entrypoint" in str(exc.value)
+    assert "Projects of type 'indicator' must have at least one entrypoint" in str(exc.value)
 
 
 def test_invalid_git_url(tmp_path: Path):
@@ -164,8 +148,8 @@ def test_invalid_git_url(tmp_path: Path):
         load_helix_manifest(d / "helix.json")
 
     error_msg = str(exc.value)
-    assert "Dependência 'badlib' inválida" in error_msg
-    assert "Erro ao ler helix." in error_msg
+    assert "Invalid dependency 'badlib'" in error_msg
+    assert "Error reading helix." in error_msg
 
 
 def test_invalid_semver(tmp_path: Path):
@@ -183,7 +167,7 @@ def test_invalid_semver(tmp_path: Path):
     with pytest.raises(ValueError) as exc:
         load_helix_manifest(d / "helix.json")
 
-    assert "version deve seguir o padrão SemVer" in str(exc.value)
+    assert "version must follow SemVer format" in str(exc.value)
 
 
 def test_file_not_found():

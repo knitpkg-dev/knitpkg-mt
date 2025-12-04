@@ -52,25 +52,25 @@ class DistItem(BaseModel):
     dependency_id: Optional[str] = Field(
         default=None,
         alias="dependencyId",
-        description="Dependency name or 'this' (or omitted) for the current project"
+        description="Dependency name or 'this' (current project). Can be omitted if source is local."
     )
-    src: str = Field(..., description="Relative source file path")
-    dst: str = Field(..., description="Relative path in the distribution package")
-
-    @field_validator("dependency_id")
-    @classmethod
-    def normalize_dependency_id(cls, v: Optional[str]) -> str:
-        if v is None or v == "this" or v == "":
-            return "this"
-        return v.lower()
+    src: str = Field(..., description="Source path relative to dependency root")
+    dst: str = Field(..., description="Destination path in the final package")
 
 
 class DistRelease(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    id: str = Field(..., pattern=r"^[a-zA-Z0-9_-]+$", description="Unique release ID")
-    name: str = Field(..., description="Package name (can contain ${version})")
-    items: List[DistItem] = Field(..., min_length=1)
+    id: str = Field(
+        ...,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Unique identifier for this release configuration"
+    )
+    name: str = Field(
+        ...,
+        description="Final package filename. Supports ${version} placeholder"
+    )
+    items: List[DistItem] = Field(..., min_length=1, description="Files to include in this release")
 
 
 class DistSection(BaseModel):
@@ -78,7 +78,7 @@ class DistSection(BaseModel):
 
     dist: List[DistRelease] = Field(
         default_factory=list,
-        description="Project distribution configuration"
+        description="Distribution package definitions (used by `helix dist`)"
     )
 
     def get_release_by_id(self, release_id: str) -> Optional[DistRelease]:
@@ -99,66 +99,103 @@ class DistSection(BaseModel):
 # ================================================================
 class HelixProSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    private: bool = False
-    oauth_provider: Optional[OAuthProvider] = None
+    private: bool = Field(default=False, description="Set to true for private repositories")
+    oauth_provider: Optional[OAuthProvider] = Field(default=None, description="OAuth provider for private repo access")
 
 
 class HelixEnterpriseSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    proxy_url: Optional[AnyUrl] = None
+    proxy_url: Optional[AnyUrl] = Field(default=None, description="Proxy URL for enterprise environments")
 
 
 class HelixSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    pro: Optional[HelixProSection] = None
-    enterprise: Optional[HelixEnterpriseSection] = None
+    pro: Optional[HelixProSection] = Field(default=None, description="Helix Pro configuration")
+    enterprise: Optional[HelixEnterpriseSection] = Field(default=None, description="Helix Enterprise configuration")
 
 
 # ================================================================
 # HelixManifest — FINAL VERSION
 # ================================================================
 
-SEMVER_OR_PREFIXED_REF = re.compile(
+# === Regex principal: cobre TODOS os casos SemVer + ranges NPM + prefixed refs ===
+REF_PATTERN = re.compile(
     r"^"
-    r"(?P<prefix>tag|branch|commit)=[A-Za-z0-9._-]+$"
-    r"|"
-    r"(?:v|V)?"
-    r"(?:0|[1-9]\d*)\."
-    r"(?:0|[1-9]\d*)\."
-    r"(?:0|[1-9]\d*)"
-    r"(?:-[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?"
-    r"(?:\+[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?"
-    r"$"
+    r"(?:"                              # Grupo 1: operadores de range (NPM style)
+        r"(\^|~|>=|<=|>|<|\s*)"         # ^ ~ >= <= > < (ou espaços
+        r"(v?)(\d+\.\d+\.\d+)"          # versão base (com ou sem v)
+        r"(-[A-Za-z0-9\.\-]+)?"         # pre-release opcional
+        r"(\+[A-Za-z0-9\.\-]+)?"        # build metadata opcional
+        r"(?:\s+(<|<=)\s*(v?)(\d+\.\d+\.\d+))?"  # segundo lado do range (< ou <=)
+    r")"
+    r"|"                                # OU
+    r"(branch|tag|commit)=[A-Za-z0-9._-]+$"  # prefixed refs
+    r"$",
+    re.IGNORECASE
 )
+
+# === Regex auxiliar: SemVer puro (para validar versão isolada) ===
+SEMVER_PATTERN = re.compile(
+    r"^(?P<major>0|[1-9]\d*)\."
+    r"(?P<minor>0|[1-9]\d*)\."
+    r"(?P<patch>0|[1-9]\d*)"
+    r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+    r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+)
+
+
+def _is_valid_ref(ref: str) -> bool:
+    ref = ref.strip()
+
+    # 1. Prefixed: branch=, tag=, commit=
+    if "=" in ref and ref.split("=", 1)[0].lower() in ("branch", "tag", "commit"):
+        return bool(REF_PATTERN.match(ref))
+
+    # 2. NPM-style ranges: ^ ~ >= <= > < ou intervalos como ">=1.0.0 <2.0.0"
+    if any(op in ref for op in ("^", "~", ">=", "<=", ">", "<", " ")):
+        return bool(REF_PATTERN.match(ref.replace(" ", "")))  # remove espaços
+
+    # 3. SemVer puro (com ou sem v)
+    cleaned = ref.lstrip("vV")
+    return bool(SEMVER_PATTERN.match(cleaned))
 
 class HelixManifest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    name: str = Field(..., min_length=1, max_length=100, pattern=r"^[\w\-\.]+$")
-    version: str = Field(..., description="Required SemVer version")
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        pattern=r"^[\w\-\.]+$",
+        description="Project name (alphanumeric, hyphens, underscores, dots only)"
+    )
+    version: str = Field(..., description="Required Semantic Versioning string (e.g. 1.0.0)")
 
-    description: Optional[str] = Field(default=None, max_length=500)
-    author: Optional[str] = Field(default=None)
-    license: Optional[str] = Field(default="MIT")
+    description: Optional[str] = Field(default=None, max_length=500, description="Short project description")
+    author: Optional[str] = Field(default=None, description="Author or team name")
+    license: Optional[str] = Field(default="MIT", description="License identifier (default: MIT)")
 
-    type: MQLProjectType = Field(..., description="expert, indicator, library, include, etc.")
-    target: MQLTarget = Field(default=MQLTarget.MQL5, description="MQL4 or MQL5")
+    type: MQLProjectType = Field(..., description="Project type: expert, indicator, script, library or include")
+    target: MQLTarget = Field(default=MQLTarget.MQL5, description="Target platform: MQL4 or MQL5 (default: MQL5)")
 
-    dependencies: Dict[str, str] = Field(default_factory=dict)
+    dependencies: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Dependencies with Git URLs or local paths and version constraints"
+    )
 
     include_mode: IncludeMode = Field(
         default=IncludeMode.INCLUDE,
-        description="Build preparation mode: 'include' (default) or 'flat'"
+        description="Mode: 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='include'"
     )
 
     entrypoints: Optional[List[str]] = Field(
         default=None,
-        description=".mq4/.mq5 file list. Required except for type='include'"
+        description="Main source files (.mq4/.mq5/.mqh). Required except for type='include'"
     )
 
-    dist: Optional[DistSection] = Field(default=None)
+    dist: Optional[DistSection] = Field(default=None, description="Distribution package configuration")
 
-    helix: Optional[HelixSection] = None
+    helix: Optional[HelixSection] = Field(default=None, description="Helix Pro and Enterprise settings")
 
 
     @model_validator(mode="before")
@@ -190,15 +227,17 @@ class HelixManifest(BaseModel):
                 raise ValueError(f"entrypoint must have .mq4, .mq5 or .mqh extension: {ep}")
         return v
 
-
     @model_validator(mode="after")
-    def check_include_has_no_entrypoints(self) -> "HelixManifest":
+    def validate_include_project_rules(self) -> "HelixManifest":
         if self.type == MQLProjectType.INCLUDE:
-            if self.entrypoints and len(self.entrypoints) > 0:
-                raise ValueError("Projects of type 'include' must not have entrypoints")
-            self.entrypoints = []
+            # Biblioteca pura → sempre flat (melhor DX)
+            self.include_mode = IncludeMode.FLAT
+            
+            # Permite scripts de teste locais
+            if self.entrypoints is None:
+                self.entrypoints = []
+        
         return self
-
 
     @field_validator("version")
     @classmethod
@@ -229,50 +268,41 @@ class HelixManifest(BaseModel):
             if not spec:
                 raise ValueError(f"Dependency '{dep_name}' is empty")
 
-            # 1. file:// → explicit local path
+            # === 1. Local file:// ===
             if spec.startswith("file://"):
                 local_path = spec[7:]
                 if not Path(local_path).exists():
                     raise ValueError(f"Local dependency '{dep_name}' not found: {local_path}")
-                if not (Path(local_path) / "helix.json").exists() and not (Path(local_path) / "helix.yaml").exists():
-                    raise ValueError(f"Local dependency '{dep_name}' missing helix.yaml or helix.json: {local_path}")
+                if not any((Path(local_path) / f).exists() for f in ("helix.yaml", "helix.json")):
+                    raise ValueError(f"Local dependency '{dep_name}' missing helix.yaml or helix.json")
                 continue
 
-            # 2. Relative/absolute path without protocol → also treated as local
-            if spec.startswith(("./", "../", "/", "~")):
-                continue
-            if Path(spec).exists() or (Path.cwd() / spec).exists():
+            # === 2. Caminho relativo/absoluto (sem protocolo) ===
+            if spec.startswith(("./", "../", "/", "~")) or Path(spec).exists() or (Path.cwd() / spec).exists():
                 continue
 
-            # 3. Remote Git → strict rules
-            if not any(spec.startswith(p) for p in ("https://", "http://", "git@", "ssh://")):
-                raise ValueError(
-                    f"Invalid dependency '{dep_name}' → unrecognized format\n"
-                    f"Provided: {spec!r}"
-                )
+            # === 3. Remote Git (https, http, git@, ssh://) ===
+            if not any(spec.startswith(proto) for proto in ("https://", "http://", "git@", "ssh://")):
+                raise ValueError(f"Invalid dependency '{dep_name}': must use https://, git@, ssh://, file:// or local path")
 
             if spec.count("#") != 1:
-                raise ValueError(f"Invalid dependency '{dep_name}' → must contain exactly one #ref")
+                raise ValueError(f"Invalid dependency '{dep_name}': must contain exactly one '#' separator")
+
             base_url, ref = spec.split("#", 1)
 
             if not ref:
-                raise ValueError(f"Invalid dependency '{dep_name}' → ref cannot be empty after #")
+                raise ValueError(f"Invalid dependency '{dep_name}': version/reference cannot be empty after '#'")
 
             if not base_url.endswith(".git"):
-                raise ValueError(
-                    f"Invalid dependency '{dep_name}' → URL must end with .git\n"
-                    f"URL: {base_url}"
-                )
+                raise ValueError(f"Invalid dependency '{dep_name}': Git URL must end with '.git'")
 
-            if not SEMVER_OR_PREFIXED_REF.match(ref):
+            if not _is_valid_ref(ref):
                 raise ValueError(
-                    f"Invalid dependency '{dep_name}' → unrecognized ref: #{ref}\n"
-                    f"Valid examples:\n"
-                    f"  v1.2.3\n"
-                    f"  1.2.3\n"
-                    f"  v1.0.0-alpha.1+build.123\n"
-                    f"  branch=main\n"
-                    f"  tag=v2.5.0"
+                    f"Invalid version/reference in dependency '{dep_name}': #{ref}\n"
+                    "Valid formats:\n"
+                    "  1.2.3           v1.2.3           ^1.2.0           ~1.2.3\n"
+                    "  >=1.0.0 <2.0.0   >1.5.0           <=3.0.0\n"
+                    "  branch=main      tag=v2.0.0       commit=abc123"
                 )
 
         return v

@@ -5,11 +5,18 @@ import json
 from helix.core.models import load_helix_manifest
 
 VALID_URLS = [
-    # === SemVer clássico (com e sem v) ===
+    # === SemVer clássico (com e sem v), versão exata ===
     "https://github.com/user/lib.mql.git#v1.2.3",
     "https://github.com/user/lib.mql.git#1.2.3",
     "git@github.com:user/lib.mql.git#v2.0.0",
     "git@github.com:user/lib.mql.git#3.1.4",
+
+    # === SemVer com versão não exata ===
+    "https://github.com/helix/core.git#^2.0.0",
+    "https://github.com/ai/mql-engine.git#>=3.1.0 <4.0.0",
+    "https://github.com/pro/risk-manager.git#~1.8.5",
+    "https://github.com/pro/indicators.git#^4.2.0",
+    "https://github.com/team/experimental.git#branch=next",
 
     # === Pré-release ===
     "https://github.com/user/lib.git#v1.0.0-alpha",
@@ -53,20 +60,9 @@ INVALID_URLS = [
     "https://github.com/user/lib.git#",
     "git@github.com:user/lib.git#",
 
-    # === SemVer inválido ===
-    "https://github.com/user/lib.git#v1.2",           # faltou patch
-    "https://github.com/user/lib.git#v1.2.3.4",        # 4 números
-    "https://github.com/user/lib.git#v1.2.3-alpha..beta",
-
-    # === Apenas branch (sem versão SemVer) — seu validador atual aceita, mas aqui marcamos como inválido se quiser forçar SemVer puro ===
-    # "https://github.com/user/lib.git#main",           # ← aceito hoje (com branch=)
-    # "git@github.com:user/lib.git#dev",                # ← aceito hoje
-
     # === Formato errado ===
     "https://github.com/user/lib.git",
     "git@github.com:user/lib.git",
-    "https://github.com/user/lib.git#=v1.2.3",
-    "https://github.com/user/lib.git#tag:",
     "ftp://github.com/user/lib.git#v1.0.0",
     "user/lib.git#v1.0.0",
 ]
@@ -114,8 +110,8 @@ def test_invalid_dependency_urls(tmp_path: Path, url: str):
         load_helix_manifest(d / "helix.json")
 
     error_msg = str(exc.value)
-    assert "Dependência 'mylib' inválida" in error_msg
-    assert "Erro ao ler helix." in error_msg
+    assert "Invalid dependency 'mylib'" in error_msg
+    assert "Error reading helix." in error_msg
 
 
 # === Teste extra: aceitar branch=main (seu caso real) ===

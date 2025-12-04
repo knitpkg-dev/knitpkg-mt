@@ -63,7 +63,7 @@ TEMPLATE = """\
     <li><code>indicator</code> → Custom indicator</li>
     <li><code>script</code> → Script</li>
     <li><code>library</code> → Reusable library</li>
-    <li><code>include</code> → <strong>Only .mqh headers</strong> (no entrypoints allowed)</li>
+    <li><code>include</code> → Header-only library (.mqh). <strong>Allows entrypoints</strong> for test scripts (automatically uses <code>flat</code> mode)</li>
   </ul>
 
   <h2>Dependency Formats (supported)</h2>
