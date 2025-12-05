@@ -177,10 +177,13 @@ def resolve_includes(
     resolved_deps: ResolvedDeps,
 ) -> str:
     """Recursively resolve all #include directives, preserving #property lines and avoiding cycles."""
-    pattern = re.compile(r'^\s*#\s*include\s+[<"]([^>"]+)[>"]', re.MULTILINE)
+    pattern = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.MULTILINE)
 
     def replace(match):
         inc_file = match.group(1)
+        if "autocomplete/autocomplete.mqh" in inc_file.lower():
+            return ""
+        
         try:
             inc_path = find_include_file(inc_file, base_path, resolved_deps)
         except FileNotFoundError:
@@ -523,6 +526,27 @@ def mkinc_command():
                     total_copied += 1
 
             console.log(f"[bold green]Check Include mode:[/] {total_copied} file(s) copied → [bold]helix/include/[/]")
+
+            # === neutralizing autocomplete includes in copied files ===
+            log_neutralize = True
+            for mqh_file in INCLUDE_DIR.rglob("*.mqh"):
+                content = mqh_file.read_text(encoding="utf-8")
+                lines = content.splitlines()
+                modified = False
+
+                for i, line in enumerate(lines):
+                    if re.search(r'autocomplete/autocomplete\.mqh', line, re.IGNORECASE):
+                        if log_neutralize:
+                            console.log(f"[dim]neutralizing[/] autocomplete includes in copied files...")
+                            log_neutralize = False
+
+                        if not line.strip().startswith("//"):
+                            lines[i] = f"// {line.strip()}  // ← disabled by helix mkinc (dev helper)"
+                            modified = True
+
+                if modified:
+                    mqh_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
         else:
             FLAT_DIR.mkdir(parents=True, exist_ok=True)
             for entry in manifest.entrypoints or []:
