@@ -109,7 +109,7 @@ def test_include_type_has_no_entrypoint(include_only_project: Path):
     assert manifest.target.value == "MQL5"
 
     assert manifest.type.value == "include"
-    assert manifest.entrypoints == []
+    assert manifest.entrypoints is None
 
 
 

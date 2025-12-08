@@ -19,6 +19,8 @@ import git
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from helix.commands.autocomplete import navigate_path
+
 from helix.core.models import (
     load_helix_manifest,
     HelixManifest,
@@ -170,6 +172,14 @@ def find_include_file(inc_file: str, base_path: Path, resolved_deps: ResolvedDep
     raise FileNotFoundError(f"Include not found: {inc_file}")
 
 
+_resolve_includes_pattern = re.compile(
+    r'^\s*#\s*include\s+"(?P<include>[^"]+)"'
+    r'(?:\s*/\*\s*@helix\.(?P<directive1>\w+)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
+    r'|'
+    r'^\s*/\*\s*@helix\.(?P<directive2>\w+)\s+"(?P<path2>[^"]+)"\s*\*/\s*$',
+    re.MULTILINE
+)
+
 def resolve_includes(
     content: str,
     base_path: Path,
@@ -177,22 +187,38 @@ def resolve_includes(
     resolved_deps: ResolvedDeps,
 ) -> str:
     """Recursively resolve all #include directives, preserving #property lines and avoiding cycles."""
-    pattern = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.MULTILINE)
 
-    def replace(match):
-        inc_file = match.group(1)
-        if "autocomplete/autocomplete.mqh" in inc_file.lower():
-            return ""
+    def replace(match: re.Match):
+        # Extract values safely
+        include_path: str = match.group('include')
+        directive: str    = match.group('directive1') or match.group('directive2')
+        replace_path: str = match.group('path1') or match.group('path2')
+
+        if directive is None: # normal include
+            inc_file = include_path.strip()
         
+        elif directive == 'include': # /* @helix.include "path" */
+            inc_file = replace_path.strip()
+            console.log(f"[dim]@helix.include found:[/] '{inc_file}'")
+        
+        elif directive == 'replacewith': # #include "../../autocomplete.mqh" /* @helix.replacewith "helix/include/Bar/Bar.mqh" */
+            inc_file = replace_path.strip()
+            console.log(f"[dim]@helix.replacewith found:[/] '{inc_file}'")
+        
+        else:
+            console.log(f"[red]ERROR:[/] Invalid @helix.<directive> → '{directive}'")
+            return f"// ERROR: Invalid @helix.<directive> → '{directive}'"
+
         try:
             inc_path = find_include_file(inc_file, base_path, resolved_deps)
         except FileNotFoundError:
             console.log(f"[red]ERROR:[/] Include not found in {base_path} → {inc_file}")
             return f"// ERROR: Include not found → {inc_file}"
 
-        if inc_path in visited:
+        inc_path_abs = inc_path.absolute()
+        if inc_path_abs in visited:
             return f"// RECURSIVE INCLUDE SKIPPED: {inc_file}"
-        visited.add(inc_path)
+        visited.add(inc_path_abs)
 
         raw = read_file_smart(inc_path)
         preserved = [l for l in raw.splitlines() if l.strip().startswith(("#property copyright", "#property link", "#property version"))]
@@ -210,7 +236,7 @@ def resolve_includes(
             result.append("// " + "="*70)
         return "\n".join(result)
 
-    return pattern.sub(replace, content)
+    return _resolve_includes_pattern.sub(replace, content)
 
 
 def resolve_version_from_spec(name: str, specifier: str, repo: git.Repo) -> str:
@@ -481,7 +507,7 @@ def mkinc_command():
     """Main entry point for `helix mkinc` — resolves dependencies and generates output."""
     try:
         manifest = load_helix_manifest()
-        
+
         effective_mode = IncludeMode.FLAT if manifest.type == MQLProjectType.INCLUDE else manifest.include_mode
 
         console.log(f"[bold magenta]helix mkinc[/] → [bold cyan]{manifest.name}[/] v{manifest.version}")
@@ -527,7 +553,6 @@ def mkinc_command():
 
             console.log(f"[bold green]Check Include mode:[/] {total_copied} file(s) copied → [bold]helix/include/[/]")
 
-            # === neutralizing autocomplete includes in copied files ===
             log_neutralize = True
             for mqh_file in INCLUDE_DIR.rglob("*.mqh"):
                 content = mqh_file.read_text(encoding="utf-8")
@@ -535,14 +560,26 @@ def mkinc_command():
                 modified = False
 
                 for i, line in enumerate(lines):
-                    if re.search(r'autocomplete/autocomplete\.mqh', line, re.IGNORECASE):
-                        if log_neutralize:
-                            console.log(f"[dim]neutralizing[/] autocomplete includes in copied files...")
-                            log_neutralize = False
+                    match = _resolve_includes_pattern.match(line)
+                    if match:
+                        include_path = match.group('include')
+                        directive    = match.group('directive1') or match.group('directive2')
+                        replace_path = match.group('path1') or match.group('path2')
 
-                        if not line.strip().startswith("//"):
-                            lines[i] = f"// {line.strip()}  // ← disabled by helix mkinc (dev helper)"
+                        if directive is not None:
+                            if directive == 'replacewith':
+                                lines[i] = f'#include "{navigate_path(mqh_file.parent,replace_path).as_posix()}" /*** ← dependence resolved by Helix. Original include: "{include_path}" ***/'
+                            elif directive == 'include':
+                                lines[i] = f'#include "{navigate_path(mqh_file.parent,include_path).as_posix()}" /*** ← dependence added by Helix ***/'
+
                             modified = True
+                        else:
+                            if '/autocomplete/autocomplete.mqh' in include_path:
+                                if log_neutralize:
+                                    console.log(f"[dim]neutralizing[/] autocomplete includes in copied files...")
+                                    log_neutralize = False                                
+                                lines[i] = f"// {line.strip()}  /*** ← disabled by helix mkinc (dev helper) ***/"
+                                modified = True
 
                 if modified:
                     mqh_file.write_text("\n".join(lines) + "\n", encoding="utf-8")

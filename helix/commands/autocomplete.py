@@ -7,7 +7,7 @@ from rich.console import Console
 console = Console()
 
 
-def relpath(source: Union[str, Path], target: Union[str, Path]) -> Path:
+def navigate_path(source: Union[str, Path], target: Union[str, Path]) -> Path:
     """
     Return POSIX-style relative path from source directory to target path.
     Works automatically even when source and target are in different branches.
@@ -67,7 +67,7 @@ def autocomplete_command():
         include_dir = dep_path / "helix" / "include"
         if include_dir.exists():
             for mqh in include_dir.rglob("*.mqh"):
-                rel_path = relpath(Path.cwd() / "helix" / "autocomplete", mqh)
+                rel_path = navigate_path(Path.cwd() / "helix" / "autocomplete", mqh)
                 if str(rel_path) not in seen_paths:
                     lines.append(f'#include "{rel_path.as_posix()}"')
                     seen_paths.add(str(rel_path))
