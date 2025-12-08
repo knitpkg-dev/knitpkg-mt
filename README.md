@@ -8,17 +8,28 @@
 For over 20 years, MQL5 developers have suffered from the same painful workflow:
 
 - Manual `#include` chaos across dozens of files  
-- Copy-pasting headers between projects  
-- Broken autocomplete when using external libraries  
-- No reproducible builds  
-- No version pinning  
-- No security or audit trail in corporate environments  
+- Copy-pasting headers between projects (and praying nothing breaks)  
+- Impossible to implement truly reusable, component-based architecture  
+- Extremely hard to maintain clean architectural organization in large projects with multiple developers  
+- No reproducible builds — "works on my machine" syndrome  
+- No version pinning — silent breaking changes from updated libraries  
+- No security, compliance, or audit trail in corporate environments  
 
-**Helix ends this forever.**
+**Helix was born to end this suffering — once and for all.
 
-Helix brings modern software engineering practices to the MetaTrader ecosystem — 
-the same tools that Node.js, Rust, Go, and Python developers take for granted — 
-but built from the ground up for algorithmic trading.
+It brings the modern development practices that Node.js, Rust, Go, and Python developers take for granted — but built from the ground up for the reality of algorithmic trading and the MetaTrader ecosystem.
+
+With Helix, you finally get:
+
+- Clean, modular, maintainable codebases  
+- Real component reusability across projects  
+- Team-friendly architecture that scales  
+- Full confidence in every build  
+- Professional-grade tooling — even in the Free version  
+
+**Helix doesn’t just solve dependency management.**  
+**It enables professional MQL5 development at scale.**
+
 
 ### Installation
 
@@ -61,17 +72,44 @@ helix --version
 
 The most loved feature in the Helix ecosystem — and for good reason.
 
+**Helix Build Directives** are designed exclusively for **include-type projects** — the true reusable components of the MQL5 world.
+
+These libraries (your `helix-bar`, `helix-calc`, `helix-logger`, etc.) are meant to be shared across dozens of EAs, indicators, and scripts. And that’s exactly where traditional `#include` workflows collapse: **zero autocomplete, broken builds, endless path hell.**
+
+Helix fixes this forever — with pure elegance.
+
+#### While developing an include library (e.g. `Calc.mqh`):
+
 ```mql5
 #include "../../autocomplete/autocomplete.mqh" /* @helix:replace-with "helix/include/Bar/Bar.mqh" */
+/* @helix:include      "helix/include/Math/Utils.mqh" */
 ```
 
-This single line gives you:
-- Perfect autocomplete while writing code  
-- Zero placeholder files in final builds  
-- Clean, correct, and fast-compiling output  
-- Optional extra includes via /* @helix:include "path/to/Extra.mqh" */
+You get:
 
-**No other tool in the MQL5 world comes close.**
+- **Perfect IntelliSense** — every class, method, and constant appears instantly  
+- **Zero friction** — code as if all dependencies were already included  
+- Full control with `@helix:include` for extra headers when needed
+
+**After `helix mkinc` - in the final EA/indicator: **
+
+```mql5
+#include "helix/include/Bar/Bar.mqh"
+#include "helix/include/Math/Utils.mqh"
+
+// Clean • Correct • Fast • No traces of autocomplete
+```
+
+The placeholder and directives vanish.
+
+Only pure, professional, production-ready code remains.
+
+**No other tool in the MQL5 ecosystem even attempts this.**
+
+Helix doesn’t just make it possible — it makes it beautiful.
+
+**This is how reusable components should feel in 2026.**
+
 It’s not magic.
 It’s **engineering elegance**.
 
@@ -94,7 +132,9 @@ It’s the foundation of the next generation of professional MQL5 development.
 Whether you're a solo trader building your edge,
 a prop firm managing 50+ developers,
 or a bank running thousands of strategies —  
+
 **Helix scales with you.**
+
 **Free today. Powerful forever.**
 
 ```bash
@@ -113,7 +153,9 @@ Made with passion
 MIT Licensed — Forever free for the community
 
 GitHub: https://github.com/helix-project
+
 Documentation: https://helix.dev
+
 Discord: https://discord.gg/helixWelcome to the future.
 
 **Welcome to the future**
