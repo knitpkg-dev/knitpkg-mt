@@ -570,7 +570,7 @@ def mkinc_command():
                             if directive == 'replacewith':
                                 lines[i] = f'#include "{navigate_path(mqh_file.parent,replace_path).as_posix()}" /*** ← dependence resolved by Helix. Original include: "{include_path}" ***/'
                             elif directive == 'include':
-                                lines[i] = f'#include "{navigate_path(mqh_file.parent,include_path).as_posix()}" /*** ← dependence added by Helix ***/'
+                                lines[i] = f'#include "{navigate_path(mqh_file.parent,replace_path).as_posix()}" /*** ← dependence added by Helix ***/'
 
                             modified = True
                         else:
@@ -578,7 +578,7 @@ def mkinc_command():
                                 if log_neutralize:
                                     console.log(f"[dim]neutralizing[/] autocomplete includes in copied files...")
                                     log_neutralize = False                                
-                                lines[i] = f"// {line.strip()}  /*** ← disabled by helix mkinc (dev helper) ***/"
+                                lines[i] = f"// {line.strip()}  /*** ← disabled by Helix mkinc (dev helper) ***/"
                                 modified = True
 
                 if modified:
