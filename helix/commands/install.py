@@ -1,5 +1,5 @@
-# helix/commands/mkinc.py
-# HELIX 2025 — mkinc
+# helix/commands/install.py
+# HELIX 2025 — install
 
 from __future__ import annotations
 
@@ -375,7 +375,7 @@ def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps
         if sub_manifest.type != MQLProjectType.INCLUDE:
             console.log(
                 f"[bold yellow]Skipping dependency[/] '{dep_name}' → {sub_manifest.name} v{sub_manifest.version}\n"
-                f"    → type is '{sub_manifest.type.value}', but `helix mkinc` only supports 'include' projects.\n"
+                f"    → type is '{sub_manifest.type.value}', but `helix install` only supports 'include' projects.\n"
                 f"    Use `helix build` (Pro) to bundle experts, indicators, etc."
             )
             return False  # ← rejeitada
@@ -503,14 +503,14 @@ def safe_copy_with_conflict_warning(src: Path, dst_dir: Path, dep_name: str) -> 
 # MAIN COMMAND
 # ==============================================================
 
-def mkinc_command():
-    """Main entry point for `helix mkinc` — resolves dependencies and generates output."""
+def install_command():
+    """Main entry point for `helix install` — resolves dependencies and generates output."""
     try:
         manifest = load_helix_manifest()
 
         effective_mode = IncludeMode.FLAT if manifest.type == MQLProjectType.INCLUDE else manifest.include_mode
 
-        console.log(f"[bold magenta]helix mkinc[/] → [bold cyan]{manifest.name}[/] v{manifest.version}")
+        console.log(f"[bold magenta]helix install[/] → [bold cyan]{manifest.name}[/] v{manifest.version}")
         console.log(f"   ├─ type: {manifest.type.value}")
         console.log(f"   └─ mode: [bold]{effective_mode.value}[/] {'[bold yellow]FORCED[/]' if effective_mode != manifest.include_mode else ''}")
 
@@ -580,7 +580,7 @@ def mkinc_command():
                                 if log_neutralize:
                                     console.log(f"[dim]neutralizing[/] autocomplete includes in copied files...")
                                     log_neutralize = False                                
-                                lines[i] = f"// {line.strip()}  /*** ← disabled by Helix mkinc (dev helper) ***/"
+                                lines[i] = f"// {line.strip()}  /*** ← disabled by Helix install (dev helper) ***/"
                                 modified = True
 
                 if modified:
@@ -608,7 +608,7 @@ def mkinc_command():
         console.log(f"[green]Check[/] Resolved {len(resolved_deps)} dependenc{'y' if len(resolved_deps)==1 else 'ies'}")
 
         output_dir = INCLUDE_DIR if effective_mode == IncludeMode.INCLUDE else FLAT_DIR
-        console.log(f"\n[bold green]Check mkinc completed![/] → {output_dir.as_posix()}/")
+        console.log(f"\n[bold green]Check install completed![/] → {output_dir.as_posix()}/")
 
     except Exception as e:
         console.log(f"[red]Error:[/] {e}")
@@ -619,6 +619,6 @@ def mkinc_command():
 
 def register(app):
     @app.command()
-    def mkinc():
+    def install():
         """Prepare the project: resolve recursive includes or generate flat files."""
-        mkinc_command()
+        install_command()

@@ -158,9 +158,11 @@ helix install             # all dependencies solved
 Interactive documentation: [helix-manifest.html](docs/helix-manifest.html)
 
 **Helix — Because you deserve modern tools.**
+
 **Helix — The dependency manager MQL5 always needed.**
 
 Made with passion
+
 MIT Licensed — Forever free for the community
 
 GitHub: https://github.com/helix-project

@@ -7,7 +7,7 @@ from packaging.version import Version, InvalidVersion
 from packaging.specifiers import SpecifierSet
 
 # Importe a função que está sendo testada
-from helix.commands.mkinc import resolve_version_from_spec
+from helix.commands.install import resolve_version_from_spec
 
 
 @pytest.fixture

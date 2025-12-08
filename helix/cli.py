@@ -1,6 +1,6 @@
 # helix/cli.py
 from typer import Typer
-from helix.commands.mkinc import register as register_mkinc
+from helix.commands.install import register as register_mkinc
 from helix.commands.autocomplete import register as register_autocomplete
 
 app = Typer(

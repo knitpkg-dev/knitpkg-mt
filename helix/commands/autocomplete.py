@@ -43,8 +43,8 @@ def autocomplete_command():
 
     console.log(f"[bold magenta]helix autocomplete[/] → generating autocomplete file for [cyan]{manifest.name}[/]")
 
-    # Resolve dependências (reusa a mesma lógica do mkinc)
-    from helix.commands.mkinc import download_dependency, ResolvedDeps
+    # Resolve dependências (reusa a mesma lógica do install)
+    from helix.commands.install import download_dependency, ResolvedDeps
     resolved_deps: ResolvedDeps = []
     for name, spec in (manifest.dependencies or {}).items():
         download_dependency(name, spec, resolved_deps)
