@@ -1,106 +1,107 @@
 # tests/test_include_parser.py
-import re
 import pytest
 
-# @helix.<directive> regular expression under test
+# ----------------------------------------------------------------------
+# Helix directive parser – uses the new @helix:<directive> syntax
+# ----------------------------------------------------------------------
 from helix.commands.mkinc import _resolve_includes_pattern as pattern
-
 
 def parse_helix_line(line: str):
     """
-    Parse a single line using the original regex.
-    Returns a dict with keys: include, directive, replace
-    Returns None if the line does not match the expected Helix patterns.
+    Parse a line containing a Helix directive using the original regex.
+
+    Returns:
+        dict with keys: "include", "directive", "replace"
+        or None if the line does not match any supported Helix pattern.
     """
     m = pattern.match(line)
     if not m:
         return None
 
-    # Extract values safely
-    include_path = m.group('include')          # from normal #include
+    include_path = m.group('include')
     directive    = m.group('directive1') or m.group('directive2')
     replace_path = m.group('path1') or m.group('path2')
 
-    # Special case: standalone /* @helix.include "file.mqh" */
-    # → the real included file is the one inside the comment that follows @helix.include
+    # Special case: standalone /* @helix:include "file.mqh" */
+    # → this means "this file should be included instead"
     if include_path is None and directive == "include":
         include_path = replace_path
 
     return {
-        "include": include_path,   # may be None only for invalid lines (won't happen here)
-        "directive": directive,    # None if no @helix directive
-        "replace": replace_path,   # None if no @helix directive
+        "include":   include_path,   # the actual file being included (after resolution)
+        "directive": directive,      # e.g. "replace-with", "include", None
+        "replace":   replace_path,   # path from the @helix: directive (if any)
     }
 
 
 # ----------------------------------------------------------------------
-# Parameterized unit tests – covers every realistic variation
+# Individual test cases – covers all realistic variations
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
     "line, expected",
     [
-        # 1. Plain #include – no Helix directive
+        # 1. Simple #include – no Helix directive
         (
             '#include "helix/include/Calc/Calc.mqh"',
             {"include": "helix/include/Calc/Calc.mqh", "directive": None, "replace": None},
         ),
-        # 2. #include with normal spaced Helix comment
+        # 2. #include + @helix:replace-with (with spaces)
         (
-            '#include "../../old.mqh" /* @helix.replacewith "helix/new.mqh" */',
-            {"include": "../../old.mqh", "directive": "replacewith", "replace": "helix/new.mqh"},
+            '#include "../../old.mqh" /* @helix:replace-with "helix/new.mqh" */',
+            {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/new.mqh"},
         ),
-        # 3. Standalone Helix include directive
+        # 3. Standalone include directive
         (
-            '/* @helix.include "helix/include/Utils.mqh" */',
+            '/* @helix:include "helix/include/Utils.mqh" */',
             {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
         ),
-        # 4. Normal include without directive
+        # 4. Normal include, no directive
         (
             '#include "../../autocomplete/autocomplete.mqh"',
             {"include": "../../autocomplete/autocomplete.mqh", "directive": None, "replace": None},
         ),
-        # 5. Helix comment with no spaces around
+        # 5. Glued comment (no space before /*)
         (
-            '#include "../../old.mqh" /*@helix.replacewith "helix/include/Bar/Bar.mqh"*/',
-            {"include": "../../old.mqh", "directive": "replacewith", "replace": "helix/include/Bar/Bar.mqh"},
+            '#include "../../old.mqh" /*@helix:replace-with "helix/include/Bar/Bar.mqh"*/',
+            {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/include/Bar/Bar.mqh"},
         ),
-        # 6. Fully glued extreme case (real-world minified output)
+        # 6. Fully glued extreme case – NOT supported by current regex → expected None
         (
-            '#include"../../old.mqh"/*@helix.replacewith"helix/include/Bar/Bar.mqh"*/',
-            None,  # This case is NOT supported by the original regex → expected None
+            '#include"../../old.mqh"/*@helix:replace-with"helix/include/Bar/Bar.mqh"*/',
+            None,
         ),
-        # 7. Standalone glued version
+        # 7. Glued standalone directive
         (
-            '/*@helix.include "helix/include/Utils.mqh"*/',
+            '/*@helix:include "helix/include/Utils.mqh"*/',
             {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
         ),
-        # 8. With trailing spaces and tabs
+        # 8. With extra whitespace/tabs
         (
-            '#include "simple.mqh"     /* @helix.replacewith "novo/caminho.mqh" */',
-            {"include": "simple.mqh", "directive": "replacewith", "replace": "novo/caminho.mqh"},
+            '#include "simple.mqh"     /* @helix:replace-with "novo/caminho.mqh" */',
+            {"include": "simple.mqh", "directive": "replace-with", "replace": "novo/caminho.mqh"},
         ),
-        # 9. Path containing whitespace inside quotes (must be preserved)
+        # 9. Path with spaces inside quotes – must be preserved
         (
-            '/* @helix.include " d " */',
-            {"include": " d ", "directive": "include", "replace": " d "},
+            '/* @helix:include "  file with spaces.mqh  " */',
+            {"include": "  file with spaces.mqh  ", "directive": "include", "replace": "  file with spaces.mqh  "},
         ),
         # 10. Invalid – missing directive name
         (
-            '/* @helix. "helix/include/Utils.mqh" */',
+            '/* @helix: "something.mqh" */',
             None,
         ),
     ],
 )
 def test_parse_individual_lines(line, expected):
-    """Test each line pattern individually."""
+    """Test parsing of individual lines with various formatting styles."""
     assert parse_helix_line(line) == expected
 
 
 # ----------------------------------------------------------------------
-# Full block test – matches exactly the content you provided
+# Full real-world file block test
 # ----------------------------------------------------------------------
 def test_full_real_world_block():
-    """Test the complete multi-line snippet you posted – must match reality."""
+    """Test against a complete real file snippet – must match exactly."""
     texto = '''//+------------------------------------------------------------------+
 //|                                                   TestScript.mq5 |
 //|                                  Copyright 2025, Douglas Rechia. |
@@ -111,33 +112,46 @@ def test_full_real_world_block():
 #property version   "1.00"
 
 #include "helix/include/Calc/Calc.mqh"
-#include "../../old.mqh" /* @helix.replacewith "helix/new.mqh" */
-/* @helix.include "helix/include/Utils.mqh" */
+
+#include "../../old.mqh" /* @helix:replace-with "helix/new.mqh" */
+
+/* @helix:include "helix/include/Utils.mqh" */
 
 #include "../../autocomplete/autocomplete.mqh"
-#include "../../old.mqh" /* @helix.replacewith "helix/include/Bar/Bar.mqh" */
-#include "../../old.mqh" /*@helix.replacewith "helix/include/Bar/Bar.mqh"*/
-/* @helix.include "helix/include/Utils.mqh" */
-/*@helix.include "helix/include/Utils.mqh"*/
-#include "simple.mqh"     /* @helix.replacewith "novo/caminho.mqh" */
-/* @helix. "helix/include/Utils.mqh" */
-/* @helix.include " d " */
+
+#include "../../old.mqh" /* @helix:replace-with "helix/include/Bar/Bar.mqh" */
+
+#include "../../old.mqh" /*@helix:replace-with "helix/include/Bar/Bar.mqh"*/
+
+/* @helix:include "helix/include/Utils.mqh" */
+
+/*@helix:include "helix/include/Utils.mqh"*/
+
+#include "simple.mqh"     /* @helix:replace-with "novo/caminho.mqh" */
+
+/* @helix: "helix/include/Utils.mqh" */
+
+/* @helix:include " d " */
+
 '''
 
-    # Only lines that actually match Helix patterns
     expected_results = [
         {"include": "helix/include/Calc/Calc.mqh", "directive": None, "replace": None},
-        {"include": "../../old.mqh", "directive": "replacewith", "replace": "helix/new.mqh"},
+        {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/new.mqh"},
         {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
         {"include": "../../autocomplete/autocomplete.mqh", "directive": None, "replace": None},
-        {"include": "../../old.mqh", "directive": "replacewith", "replace": "helix/include/Bar/Bar.mqh"},
-        {"include": "../../old.mqh", "directive": "replacewith", "replace": "helix/include/Bar/Bar.mqh"},
+        {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/include/Bar/Bar.mqh"},
+        {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/include/Bar/Bar.mqh"},
         {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
         {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
-        {"include": "simple.mqh", "directive": "replacewith", "replace": "novo/caminho.mqh"},
+        {"include": "simple.mqh", "directive": "replace-with", "replace": "novo/caminho.mqh"},
         {"include": " d ", "directive": "include", "replace": " d "},
     ]
 
-    results = [parse_helix_line(line) for line in texto.splitlines() if parse_helix_line(line)]
+    results = [
+        parse_helix_line(line)
+        for line in texto.splitlines()
+        if parse_helix_line(line) is not None
+    ]
 
     assert results == expected_results

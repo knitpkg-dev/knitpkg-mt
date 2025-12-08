@@ -174,9 +174,9 @@ def find_include_file(inc_file: str, base_path: Path, resolved_deps: ResolvedDep
 
 _resolve_includes_pattern = re.compile(
     r'^\s*#\s*include\s+"(?P<include>[^"]+)"'
-    r'(?:\s*/\*\s*@helix\.(?P<directive1>\w+)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
+    r'(?:\s*/\*\s*@helix:(?P<directive1>\w+(?:-\w+)*)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
     r'|'
-    r'^\s*/\*\s*@helix\.(?P<directive2>\w+)\s+"(?P<path2>[^"]+)"\s*\*/\s*$',
+    r'^\s*/\*\s*@helix:(?P<directive2>\w+(?:-\w+)*)\s+"(?P<path2>[^"]+)"\s*\*/\s*$',
     re.MULTILINE
 )
 
@@ -197,11 +197,11 @@ def resolve_includes(
         if directive is None: # normal include
             inc_file = include_path.strip()
         
-        elif directive == 'include': # /* @helix.include "path" */
+        elif directive == 'include': # /* @helix:include "path" */
             inc_file = replace_path.strip()
             console.log(f"[dim]@helix.include found:[/] '{inc_file}'")
         
-        elif directive == 'replacewith': # #include "../../autocomplete.mqh" /* @helix.replacewith "helix/include/Bar/Bar.mqh" */
+        elif directive == 'replace-with': # #include "../../autocomplete.mqh" /* @helix:replace-with "helix/include/Bar/Bar.mqh" */
             inc_file = replace_path.strip()
             console.log(f"[dim]@helix.replacewith found:[/] '{inc_file}'")
         
@@ -567,13 +567,15 @@ def mkinc_command():
                         replace_path = match.group('path1') or match.group('path2')
 
                         if directive is not None:
-                            if directive == 'replacewith':
-                                lines[i] = f'#include "{navigate_path(mqh_file.parent,replace_path).as_posix()}" /*** ← dependence resolved by Helix. Original include: "{include_path}" ***/'
-                            elif directive == 'include':
+                            if directive == 'include': # /* @helix:include "path" */
                                 lines[i] = f'#include "{navigate_path(mqh_file.parent,replace_path).as_posix()}" /*** ← dependence added by Helix ***/'
 
+                            elif directive == 'replace-with': # #include "../../autocomplete.mqh" /* @helix:replace-with "helix/include/Bar/Bar.mqh" */
+                                lines[i] = f'#include "{navigate_path(mqh_file.parent,replace_path).as_posix()}" /*** ← dependence resolved by Helix. Original include: "{include_path}" ***/'
+
                             modified = True
-                        else:
+
+                        else: # directive is None, check if it is nedded to neutralize autocomplete includes (dev time only)
                             if '/autocomplete/autocomplete.mqh' in include_path:
                                 if log_neutralize:
                                     console.log(f"[dim]neutralizing[/] autocomplete includes in copied files...")
