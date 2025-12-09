@@ -8,7 +8,7 @@ import re
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple, Set, Dict
+from typing import List, Tuple, Set, Optional
 
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version, InvalidVersion
@@ -16,6 +16,7 @@ from packaging.version import Version, InvalidVersion
 import git
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+import typer
 
 from helix.commands.autocomplete import navigate_path
 
@@ -31,7 +32,7 @@ from helix.core.lockfile import load_lockfile, save_lockfile
 from helix.core.file_reading import read_file_smart
 from helix.core.utils import is_local_path
 
-console = Console()
+console: Console = None
 
 ResolvedDep = Tuple[str, Path]
 ResolvedDeps = List[ResolvedDep]
@@ -41,9 +42,9 @@ ResolvedDeps = List[ResolvedDep]
 # UTILS
 # ==============================================================
 
-
 def resolve_local_dependency(name: str, specifier: str) -> Path:
     """Resolve a local dependency path and validate it contains a helix manifest."""
+
     if specifier.startswith("file://"):
         path = Path(specifier[7:])
     else:
@@ -231,61 +232,119 @@ def resolve_version_from_spec(name: str, specifier: str, repo: git.Repo) -> str:
 # REMOTE DOWNLOAD (GIT)
 # ==============================================================
 
-def _download_from_git(name: str, specifier: str) -> Path:
-    """Clone or update a remote git dependency and resolve the correct ref using lockfile when possible."""
+def _download_from_git(name: str, specifier: str, *, force_lock: bool = False) -> Path:
+    """
+    Download a remote Git dependency.
+    
+    Respects helix.lock.json completely:
+      - If lock exists and directory exists → verify integrity
+      - If lock exists and directory missing → checkout exact commit from lock
+      - Otherwise → resolve version normally
+    """
     base_url = specifier.split("#")[0].rstrip("/")
     ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
-    cache_key = hashlib.sha256(specifier.encode()).hexdigest()[:16]
+    cache_key = hashlib.sha256(specifier.encode()).hexsha[:16]
     dep_path = CACHE_DIR / f"{name}_{cache_key}"
 
     lock_data = load_lockfile()
     locked = lock_data["dependencies"].get(name, {})
 
-    # Use lockfile when source + specifier match and directory exists
-    if (locked.get("source") == base_url and
-        locked.get("specifier") == ref_spec and
-        dep_path.exists()):
-        final_ref = locked.get("resolved", "HEAD")
-        console.log(f"[dim]Cache[/] {name} → {final_ref}")
+    # CASE 1: lock + directory exist → check integrity
+    if dep_path.exists() and locked.get("source") == base_url and locked.get("specifier") == ref_spec:
+        status = _check_local_dep_integrity(dep_path, locked)
+
+        if status == "clean":
+            console.log(f"[dim]Cache hit[/] {name} → {locked.get('resolved', 'HEAD')[:8]}")
+            return dep_path
+
+        if force_lock:
+            console.log(f"[red]Error:[/] Cannot proceed with --locked: dependency '{name}' has local changes")
+            raise SystemExit(1)
+
+        console.log(f"[bold yellow]Warning:[/] Local changes in '{name}' — using modified version")
+        console.log(f"    Locked commit: {locked.get('commit', '?')[:8]}")
+        console.log("    Use --locked to enforce lockfile integrity")
+        return dep_path
+
+    # CASE 2: lock exists, directory missing → force exact commit from lock
+    elif locked.get("source") == base_url and locked.get("specifier") == ref_spec:
+        commit = locked.get("commit")
+        if not commit:
+            console.log(f"[bold blue]Resolving[/] {name} ← {specifier}")
+            return _download_and_resolve(name, specifier, dep_path)
+
+        console.log(f"[bold green]Lockfile[/] {name} → {locked.get('resolved','HEAD')[:8]} ({commit[:8]})")
+        dep_path.mkdir(parents=True, exist_ok=True)
+        repo = git.Repo.clone_from(base_url, dep_path, single_branch=True, depth=1)
+        repo.git.checkout(commit)
+        return dep_path
+
+    # CASE 3: no lock or incompatible → normal resolution
     else:
-        if not dep_path.exists():
-            console.log(f"[bold blue]Cloning[/] {name} ← {base_url}")
-            dep_path.mkdir(parents=True, exist_ok=True)
-            git.Repo.clone_from(base_url, dep_path, single_branch=True, depth=50)
+        console.log(f"[bold blue]Resolving[/] {name} ← {specifier}")
+        return _download_and_resolve(name, specifier, dep_path)
+    
 
-        repo = git.Repo(dep_path)
-        repo.remotes.origin.fetch(tags=True, prune=True)
+def _download_and_resolve(name: str, specifier: str, dep_path: Path) -> Path:
+    """
+    Download a remote Git dependency and resolve the best matching version/tag
+    according to the specifier (SemVer ranges, ^, ~, branch=, tag=, commit=).
 
-        # Resolve the best matching tag/commit
-        final_ref = resolve_version_from_spec(name, ref_spec, repo)
+    This function is only called when:
+      - No lockfile entry exists, or
+      - The lockfile is being ignored (e.g. during `helix update`)
 
-        try:
-            repo.git.checkout(final_ref, force=True)
-        except git.exc.GitCommandError as e:
-            console.log(f"[red]Error:[/] Could not checkout '{final_ref}' for {name}")
-            console.log(f"    → {e}")
-            repo.git.checkout("HEAD", force=True)
-            final_ref = "HEAD"
+    Steps performed:
+      1. Clone the repository (shallow, single-branch)
+      2. Fetch tags
+      3. Use resolve_version_from_spec() to find the best matching ref
+      4. Checkout the resolved ref
+      5. Update the lockfile with resolved version and commit SHA
 
-        commit = repo.head.commit.hexsha
+    Args:
+        name (str): Dependency name (for logging and lockfile)
+        specifier (str): Full dependency specifier (e.g. "https://github.com/user/lib.git#^1.2.0")
+        dep_path (Path): Local cache directory where the repo will be cloned
 
-        # Update lockfile
-        lock_data["dependencies"][name] = {
-            "source": base_url,
-            "specifier": ref_spec,
-            "resolved": final_ref,
-            "commit": commit,
-            "fetched_at": datetime.utcnow().isoformat() + "Z"
-        }
-        save_lockfile(lock_data)
+    Returns:
+        Path: Path to the checked-out dependency
+    """
+    base_url = specifier.split("#")[0].rstrip("/")
+    ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
 
-    # Strict validation
-    if not any((dep_path / f).exists() for f in ("helix.yaml", "helix.json")):
-        console.log(f"[red]Fatal error:[/] Remote dependency '{name}' is not a Helix project")
-        console.log(f"    → {base_url}#{ref_spec}")
-        raise SystemExit(1)
+    console.log(f"[bold blue]Cloning[/] {name} ← {base_url}")
+    dep_path.mkdir(parents=True, exist_ok=True)
+    repo = git.Repo.clone_from(base_url, dep_path, single_branch=True, depth=50)
 
-    return dep_path
+    console.log(f"[dim]Fetching tags[/] for {name}...")
+    repo.remotes.origin.fetch(tags=True, prune=True)
+
+    # Resolve the best matching version/tag/commit
+    final_ref = resolve_version_from_spec(name, ref_spec, repo)
+
+    try:
+        console.log(f"[dim]Checking out[/] {name} → {final_ref}")
+        repo.git.checkout(final_ref, force=True)
+    except git.exc.GitCommandError as e:
+        console.log(f"[red]Error:[/] Failed to checkout '{final_ref}' for {name}")
+        console.log(f"    → Falling back to HEAD")
+        repo.git.checkout("HEAD", force=True)
+        final_ref = "HEAD"
+
+    commit = repo.head.commit.hexsha
+
+    # Update lockfile with resolved information
+    lock_data = load_lockfile()
+    lock_data["dependencies"][name] = {
+        "source": base_url,
+        "specifier": ref_spec,
+        "resolved": final_ref,
+        "commit": commit,
+        "fetched_at": datetime.utcnow().isoformat() + "Z"
+    }
+    save_lockfile(lock_data)
+
+    return dep_path    
 
 
 def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps: ResolvedDeps) -> bool:
@@ -321,24 +380,132 @@ def _process_recursive_dependencies(dep_path: Path, dep_name: str, resolved_deps
         console.log(f"[yellow]Warning:[/] Failed to process dependencies of {dep_name}: {e}")
         return False
 
-def download_dependency(name: str, specifier: str, resolved_deps: ResolvedDeps) -> Path:
-    """Download (or resolve) a dependency and recursively process its own dependencies."""
+# ==============================================================
+# HELPER: Check integrity of a local dependency
+# ==============================================================
+
+def _check_local_dep_integrity(dep_path: Path, locked: dict) -> str:
+    """
+    Check if a local dependency is clean and reproducible.
+    
+    Returns:
+        "clean"   — matches lockfile commit and no uncommitted changes
+        "dirty"   — uncommitted changes
+        "drifted" — current commit differs from locked commit
+        "not-git" — not a Git repository
+        "invalid" — error accessing repository
+    """
+    try:
+        repo = git.Repo(dep_path, search_parent_directories=True)
+        if repo.bare:
+            raise git.InvalidGitRepositoryError
+
+        if repo.is_dirty(untracked_files=True):
+            return "dirty"
+        if locked.get("commit") and repo.head.commit.hexsha != locked["commit"]:
+            return "drifted"
+        return "clean"
+    except git.InvalidGitRepositoryError:
+        return "not-git"
+    except Exception:
+        return "invalid"
+
+
+# ==============================================================
+# download_dependency — handles local and remote deps with full lock support
+# ==============================================================
+
+def download_dependency(
+    name: str,
+    specifier: str,
+    resolved_deps: ResolvedDeps,
+    *,
+    locked_mode: bool = False,
+) -> Path:
+    """
+    Resolve and download a dependency (local or remote).
+    
+    When --locked is active:
+      - Local non-git dependencies → fail
+      - Local git dependencies → use current commit
+      - Remote dependencies → use exact commit from lockfile
+    """
     name = name.lower()
 
+    # ------------------------------------------------------------------
+    # Local dependency (file:// or relative path)
+    # ------------------------------------------------------------------
     if is_local_path(specifier):
-        dep_path = resolve_local_dependency(name, specifier)
+        if specifier.startswith("file://"):
+            dep_path = Path(specifier[7:])
+        else:
+            dep_path = (Path.cwd() / specifier).resolve()
+
+        # Fatal: local path in helix.yaml but directory missing
+        if not dep_path.exists():
+            console.log(f"[red]Fatal error:[/] Local dependency '{name}' points to missing path:")
+            console.log(f"    → {dep_path}")
+            console.log("    Local paths in helix.yaml are not portable between machines.")
+            console.log("    Use Git URLs for shared dependencies.")
+            raise SystemExit(1)
+
+        # Check if it's a Git repository
+        has_git = False
+        current_commit = None
+        try:
+            repo = git.Repo(dep_path, search_parent_directories=True)
+            if not repo.bare:
+                has_git = True
+                current_commit = repo.head.commit.hexsha
+        except Exception:
+            pass
+
+        # --locked + local non-git → fail
+        if locked_mode and not has_git:
+            console.log(f"[red]Error:[/] Cannot use --locked with non-git local dependency '{name}'")
+            console.log(f"    → {dep_path}")
+            console.log("    Add a Git repository or remove --locked for development only.")
+            raise SystemExit(1)
+
+        # Warn if local and not under Git
+        if not has_git:
+            console.log(f"[bold yellow]Warning:[/] Local dependency '{name}' has no Git history")
+            console.log(f"    → {dep_path}")
+            console.log("    This dependency is not reproducible across machines.")
+
+        # Record exact commit in lockfile if it's a Git repo
+        if has_git and current_commit:
+            lock_data = load_lockfile()
+            lock_data["dependencies"][name] = {
+                "source": str(dep_path.resolve()),
+                "specifier": specifier,
+                "resolved": f"commit:{current_commit}",
+                "commit": current_commit,
+                "type": "local-git",
+            }
+            save_lockfile(lock_data)
+
+        console.log(f"[bold magenta]Local{'-git' if has_git else ''}[/] {name} → {dep_path.name}")
+
+        if _process_recursive_dependencies(dep_path, name, resolved_deps):
+            if (name, dep_path) not in resolved_deps:
+                resolved_deps.append((name, dep_path))
+            console.log(f"[green]Check[/] {name} → {dep_path.name}")
+
+        return dep_path.resolve()
+
+    # ------------------------------------------------------------------
+    # Remote dependency (Git URL)
+    # ------------------------------------------------------------------
     else:
-        dep_path = _download_from_git(name, specifier)
+        dep_path = _download_from_git(name, specifier, force_lock=locked_mode)
 
-    if (name, dep_path) not in resolved_deps:
-        resolved_deps.append((name, dep_path))
+        if _process_recursive_dependencies(dep_path, name, resolved_deps):
+            if (name, dep_path) not in resolved_deps:
+                resolved_deps.append((name, dep_path))
+            console.log(f"[green]Check[/] {name} → {dep_path.name}")
 
-    if _process_recursive_dependencies(dep_path, name, resolved_deps):
-        if (name, dep_path) not in resolved_deps:
-            resolved_deps.append((name, dep_path))
-        console.log(f"[green]Check[/] {name} → {dep_path.name}")
-
-    return dep_path
+        return dep_path
 
 # ==============================================================
 # INCLUDE PROJECT VALIDATION (centralized)
@@ -544,6 +711,9 @@ def install_command():
 
 def register(app):
     @app.command()
-    def install():
+    def install(verbose: Optional[bool] = typer.Option(False, "--verbose", "-v", help="Show detailed output with file/line information")):
         """Prepare the project: resolve recursive includes or generate flat files."""
+
+        global console
+        console = Console(log_path=verbose)
         install_command()

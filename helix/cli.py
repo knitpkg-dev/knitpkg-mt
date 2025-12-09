@@ -1,6 +1,6 @@
 # helix/cli.py
 from typer import Typer
-from helix.commands.install import register as register_mkinc
+from helix.commands.install import register as register_install
 from helix.commands.autocomplete import register as register_autocomplete
 
 app = Typer(
@@ -11,7 +11,7 @@ app = Typer(
 )
 
 # Registra todos os comandos
-register_mkinc(app)
+register_install(app)
 register_autocomplete(app)
 # (você vai adicionando mais conforme criar: build, dist, etc.)
 

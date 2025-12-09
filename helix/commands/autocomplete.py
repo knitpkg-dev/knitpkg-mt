@@ -1,10 +1,11 @@
 # helix/commands/autocomplete.py
-from typing import Union
+from typing import Union, Optional
 from pathlib import Path
 from helix.core.models import load_helix_manifest, MQLProjectType
 from rich.console import Console
+import typer
 
-console = Console()
+console: Console = None
 
 
 def navigate_path(source: Union[str, Path], target: Union[str, Path]) -> Path:
@@ -83,6 +84,10 @@ def autocomplete_command():
 
 def register(app):
     @app.command()
-    def autocomplete():
+    def autocomplete(verbose: Optional[bool] = typer.Option(False, "--verbose", "-v", help="Show detailed output with file/line information")):
         """Prepare include: create autocomplete.mqh to aid the includes development."""
+
+        global console
+        console = Console(log_path=verbose)
+
         autocomplete_command()    
