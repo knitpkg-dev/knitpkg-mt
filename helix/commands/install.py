@@ -595,7 +595,7 @@ def safe_copy_with_conflict_warning(src: Path, dst_dir: Path, dep_name: str) -> 
 # MAIN COMMAND
 # ==============================================================
 
-def install_command():
+def install_command(locked_mode: bool):
     """Main entry point for `helix install` — resolves dependencies and generates output."""
     try:
         manifest = load_helix_manifest()
@@ -621,7 +621,7 @@ def install_command():
         with Progress(SpinnerColumn(), TextColumn("[bold blue]Solving dependencies...")) as progress:
             task = progress.add_task("", total=len(manifest.dependencies or {}))
             for name, spec in (manifest.dependencies or {}).items():
-                download_dependency(name, spec, resolved_deps)
+                download_dependency(name, spec, resolved_deps, locked_mode=locked_mode)
                 progress.update(task, advance=1)
 
         if effective_mode == IncludeMode.INCLUDE:
@@ -668,7 +668,7 @@ def install_command():
                             modified = True
 
                         else: # directive is None, check if it is nedded to neutralize autocomplete includes (dev time only)
-                            if '/autocomplete/autocomplete.mqh' in include_path:
+                            if '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix():
                                 if log_neutralize:
                                     console.log(f"[dim]neutralizing[/] autocomplete includes in copied files...")
                                     log_neutralize = False                                
@@ -711,9 +711,11 @@ def install_command():
 
 def register(app):
     @app.command()
-    def install(verbose: Optional[bool] = typer.Option(False, "--verbose", "-v", help="Show detailed output with file/line information")):
+    def install(locked: Optional[bool] = typer.Option(False, "--locked", help="Fail if any dependency has local changes or does not match the lockfile. "
+                    "Enables strict reproducible builds (recommended for CI/CD and production)."),
+                verbose: Optional[bool] = typer.Option(False, "--verbose", "-v", help="Show detailed output with file/line information")):
         """Prepare the project: resolve recursive includes or generate flat files."""
 
         global console
         console = Console(log_path=verbose)
-        install_command()
+        install_command(locked)
