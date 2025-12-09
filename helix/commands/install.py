@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import shutil
 from datetime import datetime
@@ -14,7 +13,6 @@ from typing import List, Tuple, Set, Dict
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version, InvalidVersion
 
-import chardet
 import git
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -28,93 +26,20 @@ from helix.core.models import (
     IncludeMode,
 )
 
-console = Console()
+from helix.core.constants import LOCKFILE, CACHE_DIR, FLAT_DIR, INCLUDE_DIR
+from helix.core.lockfile import load_lockfile, save_lockfile
+from helix.core.file_reading import read_file_smart
+from helix.core.utils import is_local_path
 
-# ==============================================================
-# CONSTANTS
-# ==============================================================
-INCLUDE_DIR = Path("helix/include")
-FLAT_DIR = Path("helix/flat")
-CACHE_DIR = Path(".helix/cache")
-LOCKFILE = Path("helix/lock.json")
+console = Console()
 
 ResolvedDep = Tuple[str, Path]
 ResolvedDeps = List[ResolvedDep]
 
 
 # ==============================================================
-# LOCKFILE
-# ==============================================================
-
-def load_lockfile() -> Dict:
-    """Load the helix/lock.json file. Creates a minimal structure if missing or corrupted."""
-    if LOCKFILE.exists():
-        try:
-            return json.loads(LOCKFILE.read_text(encoding="utf-8"))
-        except:
-            return {"version": "1", "dependencies": {}}
-    return {"version": "1", "dependencies": {}}
-
-
-def save_lockfile(data: Dict):
-    """Write the lockfile with proper formatting and ensure parent directories exist."""
-    data.setdefault("version", "1")
-    LOCKFILE.parent.mkdir(parents=True, exist_ok=True)
-    LOCKFILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-
-
-# ==============================================================
-# FILE READING
-# ==============================================================
-
-def read_file_smart(path: Path) -> str:
-    """
-    Read any .mqh file with the correct encoding (UTF-8, UTF-16, etc.)
-    and safely remove null bytes / line-ending issues common with UTF-16 files.
-    """
-    raw = path.read_bytes()
-
-    # 1. Try BOM-aware encodings first (most reliable)
-    for encoding in ("utf-8-sig", "utf-16", "utf-16-le", "utf-16-be"):
-        try:
-            text = raw.decode(encoding)
-            # Normalize line endings and strip null bytes left by UTF-16
-            text = text.replace("\r\n", "\n").replace("\r", "\n")
-            text = text.replace("\x00", "")
-            return text
-        except UnicodeDecodeError:
-            continue
-
-    # 2. Fallback to chardet detection
-    detected = chardet.detect(raw)
-    encoding = detected["encoding"] or "utf-8"
-    try:
-        text = raw.decode(encoding)
-        text = text.replace("\r\n", "\n").replace("\r", "\n")
-        text = text.replace("\x00", "")
-        return text
-    except:
-        pass
-
-    # 3. Last resort: force UTF-8 with replacement
-    text = raw.decode("utf-8", errors="replace")
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = text.replace("\x00", "")
-    return text
-
-
-# ==============================================================
 # UTILS
 # ==============================================================
-
-def is_local_path(spec: str) -> bool:
-    """Return True if the specifier points to a local filesystem path."""
-    spec = spec.strip()
-    if spec.startswith("file://"):
-        return True
-    if spec.startswith(("http://", "https://", "git@", "ssh://")):
-        return False
-    return any(spec.startswith(p) for p in ("./", "../", "/", "~")) or Path(spec).is_absolute()
 
 
 def resolve_local_dependency(name: str, specifier: str) -> Path:
@@ -199,15 +124,15 @@ def resolve_includes(
         
         elif directive == 'include': # /* @helix:include "path" */
             inc_file = replace_path.strip()
-            console.log(f"[dim]@helix.include found:[/] '{inc_file}'")
+            console.log(f"[dim]@helix:include found:[/] '{inc_file}'")
         
         elif directive == 'replace-with': # #include "../../autocomplete.mqh" /* @helix:replace-with "helix/include/Bar/Bar.mqh" */
             inc_file = replace_path.strip()
-            console.log(f"[dim]@helix.replacewith found:[/] '{inc_file}'")
+            console.log(f"[dim]@helix:replace-with found:[/] '{inc_file}'")
         
         else:
-            console.log(f"[red]ERROR:[/] Invalid @helix.<directive> → '{directive}'")
-            return f"// ERROR: Invalid @helix.<directive> → '{directive}'"
+            console.log(f"[red]ERROR:[/] Invalid @helix:<directive> → '{directive}'")
+            return f"// ERROR: Invalid @helix:<directive> → '{directive}'"
 
         try:
             inc_path = find_include_file(inc_file, base_path, resolved_deps)
