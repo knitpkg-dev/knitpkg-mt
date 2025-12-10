@@ -4,7 +4,11 @@ import pytest
 # ----------------------------------------------------------------------
 # Helix directive parser – uses the new @helix:<directive> syntax
 # ----------------------------------------------------------------------
-from helix.commands.install import _resolve_includes_pattern as pattern
+from helix.commands.install import ResolveHelixIncludePattern
+
+resolve_pattern = ResolveHelixIncludePattern()
+
+pattern = resolve_pattern.pattern
 
 def parse_helix_line(line: str):
     """

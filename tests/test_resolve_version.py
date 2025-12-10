@@ -3,11 +3,15 @@ import pytest
 from unittest.mock import MagicMock
 import git
 
-from packaging.version import Version, InvalidVersion
-from packaging.specifiers import SpecifierSet
+from rich.console import Console
+
+from helix.commands.install import DependencyDownloader
 
 # Importe a função que está sendo testada
-from helix.commands.install import resolve_version_from_spec
+def resolve_version_from_spec(name, specifier, repo):
+    
+    downloader = DependencyDownloader(Console())
+    return downloader.resolve_version_from_spec(name, specifier, repo) 
 
 
 @pytest.fixture

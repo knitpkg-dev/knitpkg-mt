@@ -5,8 +5,6 @@ import re
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from pathlib import Path
-import json
-import yaml
 
 from pydantic import (
     BaseModel,
@@ -117,7 +115,7 @@ class HelixSection(BaseModel):
 
 
 # ================================================================
-# HelixManifest — FINAL VERSION
+# HelixManifest
 # ================================================================
 
 # Main regex: covers all SemVer + NPM-style ranges + prefixed refs (branch=, tag=, commit=)
@@ -309,70 +307,3 @@ class HelixManifest(BaseModel):
         if not self.dist or not self.dist.dist:
             return f"{self.name}-{self.version}.zip"
         return self.dist.render_name(release_id, self.version)
-
-
-# ================================================================
-# Loading
-# ================================================================
-
-def load_helix_manifest(path: Optional[str | Path] = None) -> HelixManifest:
-    """
-    Load helix.json OR helix.yaml (YAML takes precedence if both exist).
-    
-    Args:
-        path: 
-            - None: current directory
-            - Path to file (helix.yaml/helix.json)
-            - Directory (searches for manifest inside it)
-    
-    Raises:
-        ValueError: Invalid filename
-        FileNotFoundError: No manifest found
-    """
-    if path is None:
-        yaml_path = Path("helix.yaml")
-        json_path = Path("helix.json")
-    else:
-        path = Path(path)
-        
-        if path.is_file():
-            if path.name not in ("helix.yaml", "helix.json"):
-                raise ValueError(
-                    f"Invalid file: {path.name}\n"
-                    f"Expected: helix.yaml or helix.json"
-                )
-            yaml_path = path if path.name == "helix.yaml" else None
-            json_path = path if path.name == "helix.json" else None
-        elif path.is_dir():
-            yaml_path = path / "helix.yaml"
-            json_path = path / "helix.json"
-        else:
-            raise FileNotFoundError(f"Path not found: {path}")
-
-    if yaml_path and yaml_path.exists():
-        return _load_from_yaml(yaml_path)
-    elif json_path and json_path.exists():
-        return _load_from_json(json_path)
-    else:
-        raise FileNotFoundError("No manifest file found: helix.yaml or helix.json")
-
-
-def _load_from_yaml(path: Path) -> HelixManifest:
-    """Load and parse a helix.yaml manifest file."""
-    try:
-        raw = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(raw)
-        if data is None:
-            raise ValueError("helix.yaml is empty")
-        return HelixManifest(**data)
-    except Exception as e:
-        raise ValueError(f"Error reading helix.yaml: {e}")
-
-
-def _load_from_json(path: Path) -> HelixManifest:
-    """Load and parse a helix.json manifest file."""
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return HelixManifest(**data)
-    except Exception as e:
-        raise ValueError(f"Error reading helix.json: {e}")

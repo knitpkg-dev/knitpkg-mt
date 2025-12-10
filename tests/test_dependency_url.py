@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 import json
-from helix.core.models import load_helix_manifest
+from helix.core.file_reading import load_helix_manifest
 
 VALID_URLS = [
     # === SemVer clássico (com e sem v), versão exata ===

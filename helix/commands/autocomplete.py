@@ -1,7 +1,8 @@
 # helix/commands/autocomplete.py
 from typing import Union, Optional
 from pathlib import Path
-from helix.core.models import load_helix_manifest, MQLProjectType
+from helix.core.models import MQLProjectType
+from helix.core.file_reading import load_helix_manifest
 from rich.console import Console
 import typer
 

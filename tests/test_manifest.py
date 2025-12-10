@@ -3,10 +3,9 @@ import json
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
-from helix.core.models import HelixManifest, load_helix_manifest
-
+from helix.core.models import HelixManifest
+from helix.core.file_reading import load_helix_manifest
 
 # --------------------------------------------------------------------------- #
 # Fixtures e helpers
