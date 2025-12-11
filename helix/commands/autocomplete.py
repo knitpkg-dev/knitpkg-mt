@@ -24,8 +24,8 @@ class AutocompleteGenerator:
         """Generate autocomplete file for the current project."""
         manifest = load_helix_manifest()
         
-        if manifest.type != ProjectType.INCLUDE:
-            self.console.log("[red]Error:[/] Command `helix autocomplete` only works on projects with type: include")
+        if manifest.type != ProjectType.PACKAGE:
+            self.console.log("[red]Error:[/] Command `helix autocomplete` only works on projects with type: package")
             raise SystemExit(1)
 
         self.console.log(f"[bold magenta]helix autocomplete[/] → generating autocomplete file for [cyan]{manifest.name}[/]")
@@ -34,7 +34,7 @@ class AutocompleteGenerator:
         resolved_deps = []
         if manifest.dependencies:
             downloader = DependencyDownloader(self.console)
-            resolved_deps = downloader.download_all(manifest.dependencies, False)
+            resolved_deps, _dependency_tree = downloader.download_all(manifest.dependencies, False)
         else:
             self.console.log("[yellow]Warning:[/] No dependencies found in manifest. Autocomplete file will be empty.")
 

@@ -47,7 +47,7 @@ TEMPLATE = """\
 <body>
 <article class="markdown-body">
   <h1>helix.yaml – Helix Project Manifest</h1>
-  <p><strong>The official configuration file for all Helix-powered MQL5/MQL4 projects.</strong></p>
+  <p><strong>The official configuration file for all Helix-powered projects.</strong></p>
   
   <hr>
 
@@ -59,11 +59,11 @@ TEMPLATE = """\
 
   <h2>Project Types (<code>type</code>)</h2>
   <ul>
-    <li><code>expert</code> → Expert Advisor</li>
-    <li><code>indicator</code> → Custom indicator</li>
-    <li><code>script</code> → Script</li>
-    <li><code>library</code> → Reusable library</li>
-    <li><code>include</code> → Header-only library (.mqh). <strong>Allows entrypoints</strong> for test scripts (automatically uses <code>flat</code> mode)</li>
+    <li><code>package</code> → Reusable component that other projects can depend on. <strong>MQL4/5 specific: </strong>header-only library (.mqh); allows entrypoints for test scripts (automatically uses <code>flat</code> mode).</li>
+    <li><code>mql.expert</code> → MQL4/5 Expert Advisor</li>
+    <li><code>mql.indicator</code> → MQL4/5 Custom indicator</li>
+    <li><code>mql.script</code> → MQL4/5 Script</li>
+    <li><code>mql.library</code> → MQL4/5 library</li>
   </ul>
 
   <h2>Dependency Formats (supported)</h2>
@@ -172,11 +172,12 @@ def generate_example_yaml():
         description: Advanced multi-timeframe Expert Advisor
         author: John Trader
         license: MIT
-        type: expert
+        type: mql.expert
         target: MQL5
         include_mode: flat
 
         entrypoints:
+          - Dependencies.mqh
           - Strategy.mqh
           - QuantumEA.mq5
 

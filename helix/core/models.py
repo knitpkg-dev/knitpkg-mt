@@ -23,10 +23,10 @@ class Target(str, Enum):
 class ProjectType(str, Enum):
     PACKAGE = "package"
 
-    MQL_EXPERT = "mql:expert"
-    MQL_INDICATOR = "mql:indicator"
-    MQL_SCRIPT = "mql:script"
-    MQL_LIBRARY = "mql:library"
+    MQL_EXPERT = "mql.expert"
+    MQL_INDICATOR = "mql.indicator"
+    MQL_SCRIPT = "mql.script"
+    MQL_LIBRARY = "mql.library"
 
 
 class OAuthProvider(str, Enum):
@@ -188,7 +188,7 @@ class HelixManifest(BaseModel):
 
     include_mode: IncludeMode = Field(
         default=IncludeMode.INCLUDE,
-        description="Mode: 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='package'"
+        description="Specific for MQL4/5 projects. Use 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='package'."
     )
 
     entrypoints: Optional[List[str]] = Field(
@@ -262,8 +262,6 @@ class HelixManifest(BaseModel):
         for ep in v:
             if not isinstance(ep, str):
                 raise ValueError(f"entrypoint must be a string: {ep!r}")
-            if not ep.lower().endswith((".mq4", ".mq5", ".mqh")):
-                raise ValueError(f"entrypoint must have .mq4, .mq5 or .mqh extension: {ep}")
         return v
 
     @field_validator("dependencies", mode="before")

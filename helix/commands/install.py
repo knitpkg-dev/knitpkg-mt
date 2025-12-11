@@ -15,7 +15,6 @@ from packaging.version import Version, InvalidVersion
 
 import git
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 import typer
 
 from helix.core.utils import navigate_path
@@ -49,7 +48,7 @@ class DependencyNode:
         for child in self.children:
             child.parent = self
 
-ResolvedDep = Tuple[str, Path, Path]  # name, path, resolved_path
+ResolvedDep = Tuple[str, Path]  # name, path
 ResolvedDeps = List[ResolvedDep]
 DependencyTree = List[DependencyNode]
 
@@ -214,7 +213,7 @@ class DependencyDownloader:
         
         if self._process_recursive_dependencies(dep_path, name, dep_node):
             self.resolved_paths.add(resolved_path)
-            self.resolved_deps.append((name, dep_path, resolved_path))
+            self.resolved_deps.append((name, dep_path))
             
             if self._current_parent is None:
                 self.dependency_tree.append(dep_node)
@@ -248,7 +247,7 @@ class DependencyDownloader:
         
         if self._process_recursive_dependencies(dep_path, name, dep_node):
             self.resolved_paths.add(resolved_path)
-            self.resolved_deps.append((name, dep_path, resolved_path))
+            self.resolved_deps.append((name, dep_path))
             
             if self._current_parent is None:
                 self.dependency_tree.append(dep_node)
@@ -492,10 +491,12 @@ class IncludeModeProcessor:
     
     def process(self, resolved_deps: ResolvedDeps) -> None:
         """Process dependencies in include mode."""
+        self.console.log("[bold blue]Resolving dependencies... ('include' mode)[/]")
+
         INCLUDE_DIR.mkdir(parents=True, exist_ok=True)
         total_copied = 0
         
-        for dep, dep_path, _ in resolved_deps:
+        for dep, dep_path in resolved_deps:
             dep_include_dir = dep_path / "helix" / "include"
             if not dep_include_dir.exists():
                 self.console.log(f"[dim]no include[/] {dep} → no helix/include/")
@@ -588,6 +589,8 @@ class FlatModeProcessor:
     
     def process(self, manifest: HelixManifest, resolved_deps: ResolvedDeps) -> None:
         """Process entrypoints in flat mode."""
+
+        self.console.log(f"[bold blue]Resolving dependencies... ('flat' mode)[/]")
         FLAT_DIR.mkdir(parents=True, exist_ok=True)
         for entry in manifest.entrypoints or []:
             src = Path(entry)
@@ -611,7 +614,7 @@ class FlatModeProcessor:
         candidates = [
             (base_path.parent / inc_file).resolve(),
             (INCLUDE_DIR / inc_file).resolve() if INCLUDE_DIR.exists() else None,
-            *[(dep_path / inc_file).resolve() for _name, dep_path, _ in resolved_deps]
+            *[(dep_path / inc_file).resolve() for _name, dep_path in resolved_deps]
         ]
         
         for path in candidates:
@@ -683,7 +686,7 @@ class HelixInstaller:
         self.include_processor = IncludeModeProcessor(console)
         self.flat_processor = FlatModeProcessor(console)
     
-    def install(self, locked_mode: bool = False, show_tree: bool = False) -> None:
+    def install(self, locked_mode: bool = False, show_tree: bool = True) -> None:
         """Main entry point for install — resolves dependencies and generates output."""
         try:
             manifest = load_helix_manifest()
@@ -706,9 +709,9 @@ class HelixInstaller:
             self.console.log(f"[red]Error:[/] {e}")
     
     def _log_install_start(self, manifest: HelixManifest, effective_mode: IncludeMode) -> None:
-        self.console.log(f"[bold magenta]helix install[/] → [bold cyan]{manifest.name}[/] v{manifest.version}")
-        self.console.log(f"   ├─ type: {manifest.type.value}")
-        self.console.log(f"   └─ mode: [bold]{effective_mode.value}[/] {'[bold yellow]FORCED[/]' if effective_mode != manifest.include_mode else ''}")
+        self.console.log(f"[bold magenta]helix install[/] → [bold cyan]{manifest.name}[/] v{manifest.version} {manifest.type.value}")
+        if effective_mode != manifest.include_mode:
+            self.console.log(f"       (project type '{manifest.type.value}' enforces [bold yellow]'{effective_mode.value}'[/] mode)")
     
     def _prepare_output_directories(self, manifest: HelixManifest) -> None:
         shutil.rmtree(FLAT_DIR, ignore_errors=True)
@@ -718,12 +721,10 @@ class HelixInstaller:
             self.console.log(f"[dim]Preserving[/] {INCLUDE_DIR.as_posix()} (project type is 'package')")
     
     def _resolve_dependencies(self, manifest: HelixManifest, locked_mode: bool, show_tree: bool) -> ResolvedDeps:
-        with Progress(SpinnerColumn(), TextColumn("[bold blue]Solving dependencies...")) as progress:
-            task = progress.add_task("", total=len(manifest.dependencies or {}))
-            resolved_deps, dependency_tree = self.downloader.download_all(manifest.dependencies or {}, locked_mode)
-            progress.update(task, advance=len(manifest.dependencies or {}))
+        self.console.log("[bold blue]Downloading dependencies...[/]")
+        resolved_deps, dependency_tree = self.downloader.download_all(manifest.dependencies or {}, locked_mode)
         
-        # Log dependency tree only if --tree flag is used and there are dependencies
+        # Log dependency tree by default unless --no-tree flag is used
         if show_tree and dependency_tree:
             self._log_dependency_tree(dependency_tree)
         
@@ -769,10 +770,10 @@ def register(app):
     @app.command()
     def install(locked: Optional[bool] = typer.Option(False, "--locked", help="Fail if any dependency has local changes or does not match the lockfile. "
                     "Enables strict reproducible builds (recommended for CI/CD and production)."),
-                tree: Optional[bool] = typer.Option(False, "--tree", help="Display dependency tree after resolution."),
+                no_tree: Optional[bool] = typer.Option(False, "--no-tree", help="Skip displaying dependency tree after resolution."),
                 verbose: Optional[bool] = typer.Option(False, "--verbose", "-v", help="Show detailed output with file/line information")):
         """Prepare the project: resolve recursive includes or generate flat files."""
 
         global console
         console = Console(log_path=verbose)
-        install_command(locked, tree)
+        install_command(locked, not no_tree)
