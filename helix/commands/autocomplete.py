@@ -1,40 +1,18 @@
 # helix/commands/autocomplete.py
-from typing import Union, Optional
+from typing import Optional
 from pathlib import Path
+from rich.console import Console
+
 from helix.core.models import MQLProjectType
 from helix.core.file_reading import load_helix_manifest
-from rich.console import Console
+from helix.core.utils import navigate_path
+
+from .install import DependencyDownloader, ResolvedDeps
+
 import typer
 
+
 console: Console = None
-
-
-def navigate_path(source: Union[str, Path], target: Union[str, Path]) -> Path:
-    """
-    Return POSIX-style relative path from source directory to target path.
-    Works automatically even when source and target are in different branches.
-    
-    Args:
-        source: Starting path (file or directory)
-        target: Destination path (file or directory)
-    
-    Returns:
-        Relative path using forward slashes (e.g. '../../../sibling/dir/file')
-    """
-    src = Path(source).resolve()
-    dst = Path(target).resolve()
-
-    # Find deepest common ancestor
-    common = next((p for p in src.parents if p in dst.parents), Path(src.root))
-
-    # Count how many levels up from source to reach common ancestor
-    up_levels = len(src.parents) - len(common.parents)
-
-    # Build relative path: go up + go down into target
-    rel = Path("../" * up_levels) / dst.relative_to(common)
-
-    return rel  # Use / instead of \, standard in most codebases
-
 
 def autocomplete_command():
     manifest = load_helix_manifest()
@@ -46,10 +24,12 @@ def autocomplete_command():
     console.log(f"[bold magenta]helix autocomplete[/] → generating autocomplete file for [cyan]{manifest.name}[/]")
 
     # Resolve dependências (reusa a mesma lógica do install)
-    from helix.commands.install import download_dependency, ResolvedDeps
     resolved_deps: ResolvedDeps = []
-    for name, spec in (manifest.dependencies or {}).items():
-        download_dependency(name, spec, resolved_deps)
+    if manifest.dependencies:
+        downloader = DependencyDownloader(console)
+        resolved_deps = downloader.download_all(manifest.dependencies, False)
+    else:
+        console.log("[yellow]Warning:[/] No dependencies found in manifest. Autocomplete file will be empty.")
 
     # Gera o arquivo
     autocomplete_dir = Path("helix/autocomplete")
@@ -73,8 +53,6 @@ def autocomplete_command():
                 if str(rel_path) not in seen_paths:
                     lines.append(f'#include "{rel_path.as_posix()}"')
                     seen_paths.add(str(rel_path))
-
-
 
     output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     console.log(f"[bold green]Check[/] Autocomplete file generated → [bold]{output_file}[/]")

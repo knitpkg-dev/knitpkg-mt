@@ -18,7 +18,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 import typer
 
-from helix.commands.autocomplete import navigate_path
+from helix.core.utils import navigate_path
 
 from helix.core.models import (
     HelixManifest,
