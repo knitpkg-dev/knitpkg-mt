@@ -7,6 +7,7 @@ from helix.core.models import ProjectType
 from helix.core.file_reading import load_helix_manifest
 from helix.core.utils import navigate_path
 from .install import DependencyDownloader
+from helix.core.constants import INCLUDE_DIR
 
 import typer
 
@@ -53,7 +54,7 @@ class AutocompleteGenerator:
 
         seen_paths = set()
         for _dep_name, dep_path in resolved_deps:
-            include_dir = dep_path / "helix" / "include"
+            include_dir = dep_path / INCLUDE_DIR
             if include_dir.exists():
                 for mqh in include_dir.rglob("*.mqh"):
                     rel_path = navigate_path(Path.cwd() / "helix" / "autocomplete", mqh)
