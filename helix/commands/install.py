@@ -33,8 +33,25 @@ from helix.core.lockfile import load_lockfile, save_lockfile
 from helix.core.file_reading import read_file_smart
 from helix.core.utils import is_local_path
 
-ResolvedDep = Tuple[str, Path]
+from dataclasses import dataclass
+
+@dataclass
+class DependencyNode:
+    """Represents a resolved dependency with hierarchy information."""
+    name: str
+    path: Path
+    resolved_path: Path  # Canonical path for deduplication
+    version: str
+    children: List['DependencyNode']
+    parent: Optional['DependencyNode'] = None
+    
+    def __post_init__(self):
+        for child in self.children:
+            child.parent = self
+
+ResolvedDep = Tuple[str, Path, Path]  # name, path, resolved_path
 ResolvedDeps = List[ResolvedDep]
+DependencyTree = List[DependencyNode]
 
 # ==============================================================
 # HELIX INCLUDE DIRECTIVES PATTERN CLASS
@@ -125,18 +142,25 @@ class DependencyDownloader:
     def __init__(self, console: Console):
         self.console = console
         self.resolved_deps: ResolvedDeps = []
+        self.dependency_tree: DependencyTree = []
+        self.resolved_paths: Set[Path] = set()  # Track resolved paths for deduplication
         self.locked_mode: bool = False
+        self._current_parent: Optional[DependencyNode] = None
     
-    def download_all(self, dependencies: dict, locked_mode: bool = False) -> ResolvedDeps:
-        """Download all dependencies and return resolved list."""
+    def download_all(self, dependencies: dict, locked_mode: bool = False) -> tuple[ResolvedDeps, DependencyTree]:
+        """Download all dependencies and return both resolved list and dependency tree."""
         self.resolved_deps = []
+        self.dependency_tree = []
+        self.resolved_paths = set()
         self.locked_mode = locked_mode
+        self._current_parent = None
         
         for name, spec in dependencies.items():
             self._download_dependency(name, spec)
-        return self.resolved_deps
+        
+        return self.resolved_deps, self.dependency_tree
     
-    def _download_dependency(self, name: str, specifier: str) -> Path:
+    def _download_dependency(self, name: str, specifier: str) -> Optional[Path]:
         """Resolve and download a dependency (local or remote)."""
         name = name.lower()
         
@@ -145,7 +169,7 @@ class DependencyDownloader:
         else:
             return self._handle_remote_dependency(name, specifier)
     
-    def _handle_local_dependency(self, name: str, specifier: str) -> Path:
+    def _handle_local_dependency(self, name: str, specifier: str) -> Optional[Path]:
         """Handle local dependency resolution."""
         if specifier.startswith("file://"):
             dep_path = Path(specifier[7:])
@@ -156,6 +180,13 @@ class DependencyDownloader:
             self.console.log(f"[red]Fatal error:[/] Local dependency '{name}' points to missing path:")
             self.console.log(f"    → {dep_path}")
             raise SystemExit(1)
+        
+        resolved_path = dep_path.resolve()
+        
+        # Check if already resolved by path
+        if resolved_path in self.resolved_paths:
+            self.console.log(f"[dim]Already resolved by path:[/] {name} → {resolved_path}")
+            return None
         
         has_git, current_commit = self._check_git_status(dep_path)
         
@@ -171,23 +202,63 @@ class DependencyDownloader:
         
         self.console.log(f"[bold magenta]Local{'-git' if has_git else ''}[/] {name}")
         
-        if self._process_recursive_dependencies(dep_path, name):
-            if (name, dep_path) not in self.resolved_deps:
-                self.resolved_deps.append((name, dep_path))
+        # Load manifest to get version
+        try:
+            manifest = load_helix_manifest(dep_path)
+            version = manifest.version
+        except Exception:
+            version = "unknown"
+        
+        # Create dependency node
+        dep_node = DependencyNode(name=name, path=dep_path, resolved_path=resolved_path, version=version, children=[])
+        
+        if self._process_recursive_dependencies(dep_path, name, dep_node):
+            self.resolved_paths.add(resolved_path)
+            self.resolved_deps.append((name, dep_path, resolved_path))
+            
+            if self._current_parent is None:
+                self.dependency_tree.append(dep_node)
+            else:
+                self._current_parent.children.append(dep_node)
+                dep_node.parent = self._current_parent
+            
             self.console.log(f"[green]Check[/] {name}")
         
-        return dep_path.resolve()
+        return resolved_path
     
-    def _handle_remote_dependency(self, name: str, specifier: str) -> Path:
+    def _handle_remote_dependency(self, name: str, specifier: str) -> Optional[Path]:
         """Handle remote dependency resolution."""
         dep_path = self._download_from_git(name, specifier, force_lock=self.locked_mode)
+        resolved_path = dep_path.resolve()
         
-        if self._process_recursive_dependencies(dep_path, name):
-            if (name, dep_path) not in self.resolved_deps:
-                self.resolved_deps.append((name, dep_path))
+        # Check if already resolved by path
+        if resolved_path in self.resolved_paths:
+            self.console.log(f"[dim]Already resolved by path:[/] {name} → {resolved_path}")
+            return None
+        
+        # Load manifest to get version
+        try:
+            manifest = load_helix_manifest(dep_path)
+            version = manifest.version
+        except Exception:
+            version = "unknown"
+        
+        # Create dependency node
+        dep_node = DependencyNode(name=name, path=dep_path, resolved_path=resolved_path, version=version, children=[])
+        
+        if self._process_recursive_dependencies(dep_path, name, dep_node):
+            self.resolved_paths.add(resolved_path)
+            self.resolved_deps.append((name, dep_path, resolved_path))
+            
+            if self._current_parent is None:
+                self.dependency_tree.append(dep_node)
+            else:
+                self._current_parent.children.append(dep_node)
+                dep_node.parent = self._current_parent
+            
             self.console.log(f"[green]Check[/] {name}")
         
-        return dep_path
+        return resolved_path
     
     def _check_git_status(self, dep_path: Path) -> tuple[bool, str | None]:
         """Check if path is a git repository and return commit hash."""
@@ -293,7 +364,7 @@ class DependencyDownloader:
         except Exception:
             return "invalid"
     
-    def _process_recursive_dependencies(self, dep_path: Path, dep_name: str) -> bool:
+    def _process_recursive_dependencies(self, dep_path: Path, dep_name: str, dep_node: DependencyNode) -> bool:
         """Process recursive dependencies. Return True if accepted, False if skipped."""
         try:
             sub_manifest = load_helix_manifest(dep_path)
@@ -311,11 +382,16 @@ class DependencyDownloader:
             
             if sub_manifest.dependencies:
                 self.console.log(f"[dim]Recursive:[/] {dep_name} → {len(sub_manifest.dependencies)} dep(s)")
+                
+                # Set current node as parent for recursive calls
+                previous_parent = self._current_parent
+                self._current_parent = dep_node
+                
                 for sub_name, sub_spec in sub_manifest.dependencies.items():
-                    if sub_name.lower() not in {n.lower() for n, _ in self.resolved_deps}:
-                        self._download_dependency(sub_name, sub_spec)
-                    else:
-                        self.console.log(f"[dim]Already resolved:[/] {sub_name}")
+                    self._download_dependency(sub_name, sub_spec)
+                
+                # Restore previous parent
+                self._current_parent = previous_parent
             
             return True
         except Exception as e:
@@ -419,7 +495,7 @@ class IncludeModeProcessor:
         INCLUDE_DIR.mkdir(parents=True, exist_ok=True)
         total_copied = 0
         
-        for dep, dep_path in resolved_deps:
+        for dep, dep_path, _ in resolved_deps:
             dep_include_dir = dep_path / "helix" / "include"
             if not dep_include_dir.exists():
                 self.console.log(f"[dim]no include[/] {dep} → no helix/include/")
@@ -535,7 +611,7 @@ class FlatModeProcessor:
         candidates = [
             (base_path.parent / inc_file).resolve(),
             (INCLUDE_DIR / inc_file).resolve() if INCLUDE_DIR.exists() else None,
-            *[(dep_path / inc_file).resolve() for _name, dep_path in resolved_deps]
+            *[(dep_path / inc_file).resolve() for _name, dep_path, _ in resolved_deps]
         ]
         
         for path in candidates:
@@ -607,7 +683,7 @@ class HelixInstaller:
         self.include_processor = IncludeModeProcessor(console)
         self.flat_processor = FlatModeProcessor(console)
     
-    def install(self, locked_mode: bool = False) -> None:
+    def install(self, locked_mode: bool = False, show_tree: bool = False) -> None:
         """Main entry point for install — resolves dependencies and generates output."""
         try:
             manifest = load_helix_manifest()
@@ -617,7 +693,7 @@ class HelixInstaller:
             validate_include_project_structure(manifest, Path.cwd(), False, self.console)
             self._prepare_output_directories(manifest)
             
-            resolved_deps = self._resolve_dependencies(manifest, locked_mode)
+            resolved_deps = self._resolve_dependencies(manifest, locked_mode, show_tree)
             
             if effective_mode == IncludeMode.INCLUDE:
                 self.include_processor.process(resolved_deps)
@@ -641,12 +717,35 @@ class HelixInstaller:
         elif INCLUDE_DIR.exists():
             self.console.log(f"[dim]Preserving[/] {INCLUDE_DIR.as_posix()} (project type is 'package')")
     
-    def _resolve_dependencies(self, manifest: HelixManifest, locked_mode: bool) -> ResolvedDeps:
+    def _resolve_dependencies(self, manifest: HelixManifest, locked_mode: bool, show_tree: bool) -> ResolvedDeps:
         with Progress(SpinnerColumn(), TextColumn("[bold blue]Solving dependencies...")) as progress:
             task = progress.add_task("", total=len(manifest.dependencies or {}))
-            resolved_deps = self.downloader.download_all(manifest.dependencies or {}, locked_mode)
+            resolved_deps, dependency_tree = self.downloader.download_all(manifest.dependencies or {}, locked_mode)
             progress.update(task, advance=len(manifest.dependencies or {}))
+        
+        # Log dependency tree only if --tree flag is used and there are dependencies
+        if show_tree and dependency_tree:
+            self._log_dependency_tree(dependency_tree)
+        
         return resolved_deps
+    
+    def _log_dependency_tree(self, dependency_tree: DependencyTree) -> None:
+        """Log the dependency tree in a readable format."""
+        self.console.log("\n[bold cyan]Dependency Tree:[/]")
+        for node in dependency_tree:
+            self._log_tree_node(node, "")
+        self.console.log("")
+    
+    def _log_tree_node(self, node: DependencyNode, prefix: str) -> None:
+        """Recursively log a dependency tree node."""
+        is_last = node.parent is None or node == node.parent.children[-1]
+        current_prefix = "├── " if not is_last else "└── "
+        
+        self.console.log(f"{prefix}{current_prefix}[bold]{node.name}[/] v{node.version}")
+        
+        child_prefix = prefix + ("│   " if not is_last else "    ")
+        for child in node.children:
+            self._log_tree_node(child, child_prefix)
     
     def _log_completion(self, resolved_deps: ResolvedDeps, effective_mode: IncludeMode) -> None:
         self.console.log(f"[green]Check[/] Resolved {len(resolved_deps)} dependenc{'y' if len(resolved_deps)==1 else 'ies'}")
@@ -657,10 +756,10 @@ class HelixInstaller:
 # COMMAND WRAPPER
 # ==============================================================
 
-def install_command(locked_mode: bool):
+def install_command(locked_mode: bool, show_tree: bool):
     """Command wrapper for HelixInstaller."""
     installer = HelixInstaller(console)
-    installer.install(locked_mode)
+    installer.install(locked_mode, show_tree)
 
 # ==============================================================
 # CLI REGISTRATION
@@ -670,9 +769,10 @@ def register(app):
     @app.command()
     def install(locked: Optional[bool] = typer.Option(False, "--locked", help="Fail if any dependency has local changes or does not match the lockfile. "
                     "Enables strict reproducible builds (recommended for CI/CD and production)."),
+                tree: Optional[bool] = typer.Option(False, "--tree", help="Display dependency tree after resolution."),
                 verbose: Optional[bool] = typer.Option(False, "--verbose", "-v", help="Show detailed output with file/line information")):
         """Prepare the project: resolve recursive includes or generate flat files."""
 
         global console
         console = Console(log_path=verbose)
-        install_command(locked)
+        install_command(locked, tree)
