@@ -11,7 +11,7 @@ from helix.commands.install import DependencyDownloader
 def resolve_version_from_spec(name, specifier, repo):
     
     downloader = DependencyDownloader(Console())
-    return downloader.resolve_version_from_spec(name, specifier, repo) 
+    return downloader._resolve_version_from_spec(name, specifier, repo) 
 
 
 @pytest.fixture

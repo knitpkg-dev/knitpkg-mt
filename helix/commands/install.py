@@ -22,8 +22,9 @@ from helix.core.utils import navigate_path
 
 from helix.core.models import (
     HelixManifest,
-    MQLProjectType,
+    ProjectType,
     IncludeMode,
+    Target
 )
 
 from helix.core.file_reading import load_helix_manifest
@@ -89,30 +90,30 @@ def validate_include_project_structure(
     Called for both the main project and recursive dependencies.
     Emits friendly warnings only (does not break the build).
     """
-    if manifest.type != MQLProjectType.INCLUDE:
+    if manifest.type != ProjectType.PACKAGE:
         return
 
-    include_dir = project_dir / "helix" / "include"
+    include_dir = project_dir / INCLUDE_DIR
     prefix = "[dep]" if is_dependency else "[project]"
 
     if not include_dir.exists():
-        console.log(f"[bold yellow]WARNING {prefix}:[/] Include-type project missing 'helix/include/' folder")
+        console.log(f"[bold yellow]WARNING {prefix}:[/] Include-type project missing '{Path(INCLUDE_DIR).as_posix()}' folder")
         console.log(f"    → {project_dir}")
         console.log("    Your .mqh files will not be exported to projects that depend on this one!")
         console.log("    Create the folder and move the files:")
-        console.log("       mkdir -p helix/include")
-        console.log("       git mv *.mqh helix/include/ 2>/dev/null || true")
+        console.log(f"       mkdir -p {Path(INCLUDE_DIR).as_posix()}")
+        console.log(f"       git mv *.mqh {Path(INCLUDE_DIR).as_posix()} 2>/dev/null || true")
         console.log("")
         return
 
     mqh_files = list(include_dir.rglob("*.mqh"))
     if not mqh_files:
-        console.log(f"[bold yellow]WARNING {prefix}:[/] 'helix/include/' folder exists but is empty!")
+        console.log(f"[bold yellow]WARNING {prefix}:[/] '{Path(INCLUDE_DIR).as_posix()}' folder exists but is empty!")
         console.log(f"    → {project_dir}")
         console.log("    No .mqh files will be exported. Move your headers there.")
         console.log("")
     else:
-        console.log(f"[green]Check {prefix}[/] {len(mqh_files)} .mqh file(s) found in helix/include/")
+        console.log(f"[green]Check {prefix}[/] {len(mqh_files)} .mqh file(s) found in {Path(INCLUDE_DIR).as_posix()}")
 
 # ==============================================================
 # DEPENDENCY DOWNLOADER CLASS
@@ -168,12 +169,12 @@ class DependencyDownloader:
         if has_git and current_commit:
             self._update_lockfile_local(name, specifier, dep_path, current_commit)
         
-        self.console.log(f"[bold magenta]Local{'-git' if has_git else ''}[/] {name} → {dep_path.name}")
+        self.console.log(f"[bold magenta]Local{'-git' if has_git else ''}[/] {name}")
         
         if self._process_recursive_dependencies(dep_path, name):
             if (name, dep_path) not in self.resolved_deps:
                 self.resolved_deps.append((name, dep_path))
-            self.console.log(f"[green]Check[/] {name} → {dep_path.name}")
+            self.console.log(f"[green]Check[/] {name}")
         
         return dep_path.resolve()
     
@@ -184,7 +185,7 @@ class DependencyDownloader:
         if self._process_recursive_dependencies(dep_path, name):
             if (name, dep_path) not in self.resolved_deps:
                 self.resolved_deps.append((name, dep_path))
-            self.console.log(f"[green]Check[/] {name} → {dep_path.name}")
+            self.console.log(f"[green]Check[/] {name}")
         
         return dep_path
     
@@ -254,7 +255,7 @@ class DependencyDownloader:
         self.console.log(f"[dim]Fetching tags[/] for {name}...")
         repo.remotes.origin.fetch(tags=True, prune=True)
         
-        final_ref = self.resolve_version_from_spec(name, ref_spec, repo)
+        final_ref = self._resolve_version_from_spec(name, ref_spec, repo)
         
         try:
             self.console.log(f"[dim]Checking out[/] {name} → {final_ref}")
@@ -297,12 +298,15 @@ class DependencyDownloader:
         try:
             sub_manifest = load_helix_manifest(dep_path)
             
-            if sub_manifest.type != MQLProjectType.INCLUDE:
-                self.console.log(f"[bold yellow]Skipping dependency[/] '{dep_name}' → {sub_manifest.name} v{sub_manifest.version}")
-                self.console.log(f"    → type is '{sub_manifest.type.value}', but `helix install` only supports 'include' projects.")
+            if not self._accept_dependency(sub_manifest):
                 return False
             
-            self.console.log(f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → {sub_manifest.name} v{sub_manifest.version}")
+            if dep_name != sub_manifest.name:
+                self.console.log(f"[yellow]Warning:[/] Dependency name mismatch: '{dep_name}' != '{sub_manifest.name}'")
+                self.console.log(f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → {sub_manifest.name} v{sub_manifest.version}")
+            else:
+                self.console.log(f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] v{sub_manifest.version}")
+
             validate_include_project_structure(sub_manifest, dep_path, True, self.console)
             
             if sub_manifest.dependencies:
@@ -310,13 +314,33 @@ class DependencyDownloader:
                 for sub_name, sub_spec in sub_manifest.dependencies.items():
                     if sub_name.lower() not in {n.lower() for n, _ in self.resolved_deps}:
                         self._download_dependency(sub_name, sub_spec)
+                    else:
+                        self.console.log(f"[dim]Already resolved:[/] {sub_name}")
             
             return True
         except Exception as e:
             self.console.log(f"[yellow]Warning:[/] Failed to process dependencies of {dep_name}: {e}")
             return False
         
-    def resolve_version_from_spec(self, name: str, specifier: str, repo: git.Repo) -> str:
+    def _accept_dependency(self, manifest: HelixManifest):
+        """Decide whether to accept a dependency based on its manifest."""
+        accept = True
+
+        accept_target = manifest.target in (Target.MQL4, Target.MQL5)
+        accept = accept and accept_target
+        if not accept_target:
+            self.console.log(f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}")
+            self.console.log(f"    → target is '{manifest.target.value}', but `helix install` only supports '{Target.MQL4}' or '{Target.MQL5}' projects.")
+
+        accept_project_type = manifest.type == ProjectType.PACKAGE
+        accept = accept and accept_project_type
+        if not accept_project_type:
+            self.console.log(f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}")
+            self.console.log(f"    → type is '{manifest.type.value}', but `helix install` only supports 'package' projects.")
+        
+        return accept
+        
+    def _resolve_version_from_spec(self, name: str, specifier: str, repo: git.Repo) -> str:
         """
         Resolve a version specifier (SemVer ranges, ^, ~, exact versions, branch=, tag=, commit=)
         against available git tags. Tags with build metadata (+xxx) are preferred when versions are equal.
@@ -587,7 +611,7 @@ class HelixInstaller:
         """Main entry point for install — resolves dependencies and generates output."""
         try:
             manifest = load_helix_manifest()
-            effective_mode = IncludeMode.FLAT if manifest.type == MQLProjectType.INCLUDE else manifest.include_mode
+            effective_mode = IncludeMode.FLAT if manifest.type == ProjectType.PACKAGE else manifest.include_mode
             
             self._log_install_start(manifest, effective_mode)
             validate_include_project_structure(manifest, Path.cwd(), False, self.console)
@@ -612,10 +636,10 @@ class HelixInstaller:
     
     def _prepare_output_directories(self, manifest: HelixManifest) -> None:
         shutil.rmtree(FLAT_DIR, ignore_errors=True)
-        if manifest.type != MQLProjectType.INCLUDE:
+        if manifest.type != ProjectType.PACKAGE:
             shutil.rmtree(INCLUDE_DIR, ignore_errors=True)
         elif INCLUDE_DIR.exists():
-            self.console.log(f"[dim]Preserving[/] helix/include/ (project type is 'include')")
+            self.console.log(f"[dim]Preserving[/] {INCLUDE_DIR.as_posix()} (project type is 'package')")
     
     def _resolve_dependencies(self, manifest: HelixManifest, locked_mode: bool) -> ResolvedDeps:
         with Progress(SpinnerColumn(), TextColumn("[bold blue]Solving dependencies...")) as progress:

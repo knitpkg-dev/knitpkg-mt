@@ -15,17 +15,18 @@ from pydantic import (
     model_validator,
 )
 
-class MQLTarget(str, Enum):
+class Target(str, Enum):
     MQL4 = "MQL4"
     MQL5 = "MQL5"
 
 
-class MQLProjectType(str, Enum):
-    EXPERT = "expert"
-    INDICATOR = "indicator"
-    SCRIPT = "script"
-    LIBRARY = "library"
-    INCLUDE = "include"  # only .mqh headers
+class ProjectType(str, Enum):
+    PACKAGE = "package"
+
+    MQL_EXPERT = "mql:expert"
+    MQL_INDICATOR = "mql:indicator"
+    MQL_SCRIPT = "mql:script"
+    MQL_LIBRARY = "mql:library"
 
 
 class OAuthProvider(str, Enum):
@@ -177,8 +178,8 @@ class HelixManifest(BaseModel):
     author: Optional[str] = Field(default=None, description="Author or team name")
     license: Optional[str] = Field(default="MIT", description="License identifier (default: MIT)")
 
-    type: MQLProjectType = Field(..., description="Project type: expert, indicator, script, library or include")
-    target: MQLTarget = Field(default=MQLTarget.MQL5, description="Target platform: MQL4 or MQL5 (default: MQL5)")
+    type: ProjectType = Field(..., description="Project type: package (reusable components) or platform-specific types")
+    target: Target = Field(..., description="Target platform")
 
     dependencies: Dict[str, str] = Field(
         default_factory=dict,
@@ -187,12 +188,12 @@ class HelixManifest(BaseModel):
 
     include_mode: IncludeMode = Field(
         default=IncludeMode.INCLUDE,
-        description="Mode: 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='include'"
+        description="Mode: 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='package'"
     )
 
     entrypoints: Optional[List[str]] = Field(
         default=None,
-        description="Main source files (.mq4/.mq5/.mqh). Required except for type='include'"
+        description="Main source files. Required except for type='package'"
     )
 
     dist: Optional[DistSection] = Field(default=None, description="Distribution package configuration")
@@ -200,19 +201,53 @@ class HelixManifest(BaseModel):
     helix: Optional[HelixSection] = Field(default=None, description="Helix Pro and Enterprise settings")
 
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     @classmethod
     def validate_entrypoints_presence(cls, data: Any) -> Any:
-        """Ensure non-include projects have at least one entrypoint."""
+        """Ensure non-package projects have at least one entrypoint."""
         if isinstance(data, dict):
             proj_type = data.get("type")
             has_entrypoints = "entrypoints" in data and data["entrypoints"] is not None
 
-            if proj_type != "include":
+            if proj_type != ProjectType.PACKAGE:
                 if not has_entrypoints or len(data["entrypoints"]) == 0:
                     raise ValueError(f"Projects of type '{proj_type}' must have at least one entrypoint")
         return data
 
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def validate_type(cls, v: ProjectType) -> ProjectType:
+        """Validate type is not None and is a valid ProjectType enum value."""
+        if v is None:
+            raise ValueError("type cannot be None")
+        if v not in ProjectType:
+            raise ValueError(f"type must be one of {[x.value for x in list(ProjectType)]}, got: {v}")
+        return v
+
+    @field_validator("target", mode="before")
+    @classmethod
+    def validate_target(cls, v: Target) -> Target:
+        """Validate target is not None and is a valid Target enum value."""
+        if v is None:
+            raise ValueError("target cannot be None")
+        if v not in Target:
+            raise ValueError(f"target must be one of {[x.value for x in list(Target)]}, got: {v}")
+        return v
+
+    @field_validator("version")
+    @classmethod
+    def validate_semver(cls, v: str) -> str:
+        """Strict SemVer validation (without build metadata in comparison)."""
+        v = v.strip()
+        pattern = re.compile(
+            r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
+            r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+            r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+        )
+        if not pattern.match(v):
+            raise ValueError("version must follow SemVer format (e.g. 1.0.0, 2.1.3-beta.1)")
+        return v
 
     @field_validator("entrypoints", mode="before")
     @classmethod
@@ -230,21 +265,6 @@ class HelixManifest(BaseModel):
             if not ep.lower().endswith((".mq4", ".mq5", ".mqh")):
                 raise ValueError(f"entrypoint must have .mq4, .mq5 or .mqh extension: {ep}")
         return v
-
-    @field_validator("version")
-    @classmethod
-    def validate_semver(cls, v: str) -> str:
-        """Strict SemVer validation (without build metadata in comparison)."""
-        v = v.strip()
-        pattern = re.compile(
-            r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
-            r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-            r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
-        )
-        if not pattern.match(v):
-            raise ValueError("version must follow SemVer format (e.g. 1.0.0, 2.1.3-beta.1)")
-        return v
-
 
     @field_validator("dependencies", mode="before")
     @classmethod
