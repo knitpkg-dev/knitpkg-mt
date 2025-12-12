@@ -77,7 +77,7 @@ def test_valid_dependency_urls(tmp_path: Path, url: str):
     manifest = {
         "name": "test",
         "version": "1.0.0",
-        "type": "mql.expert",
+        "type": "expert",
         "target": "MQL5",
         "entrypoints": ["Test.mq5"],
         "dependencies": {
@@ -98,7 +98,7 @@ def test_invalid_dependency_urls(tmp_path: Path, url: str):
     manifest = {
         "name": "test",
         "version": "1.0.0",
-        "type": "mql.expert",
+        "type": "expert",
         "target": "MQL5",
         "entrypoints": ["Test.mq5"],
         "dependencies": {
@@ -121,7 +121,7 @@ def test_branch_main_is_accepted(tmp_path: Path):
     manifest = {
         "name": "test",
         "version": "1.0.0",
-        "type": "mql.expert",
+        "type": "expert",
         "target": "MQL5",
         "entrypoints": ["Bot.mq5"],
         "dependencies": {

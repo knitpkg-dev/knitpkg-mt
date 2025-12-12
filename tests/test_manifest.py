@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from helix.mql.models import MQLHelixManifest, ProjectType, Target
+from helix.mql.models import MQLHelixManifest, MQLProjectType, Target
 from helix.core.file_reading import load_helix_manifest
 
 # --------------------------------------------------------------------------- #
@@ -24,7 +24,7 @@ def sample_dir(tmp_path: Path) -> Path:
         "author": "João Trader <joao@tradingpro.com>",
         "license": "MIT",
         "target": "MQL5",
-        "type": "mql.indicator",
+        "type": "indicator",
         "entrypoints": ["SuperRSI_Alert.mq5"],
         "dependencies": {
             "json.mql": "https://github.com/fxdss/json.mql.git#v1.8.2",
@@ -79,7 +79,7 @@ def test_load_valid_manifest(sample_dir: Path):
     assert manifest.target == Target.MQL5
 
     # MQL-specific fields
-    assert manifest.type == ProjectType.MQL_INDICATOR
+    assert manifest.type == MQLProjectType.INDICATOR
     assert manifest.entrypoints == ["SuperRSI_Alert.mq5"]
 
     # dependencies
@@ -100,7 +100,7 @@ def test_package_has_no_entrypoint(package_project: Path):
     manifest = load_helix_manifest(package_project / "helix.json", manifest_class=MQLHelixManifest)
 
     assert manifest.target == Target.MQL5
-    assert manifest.type == ProjectType.PACKAGE
+    assert manifest.type == MQLProjectType.PACKAGE
     assert manifest.entrypoints is None or manifest.entrypoints == []
 
 def test_missing_entrypoint_for_indicator(tmp_path: Path):
@@ -110,7 +110,7 @@ def test_missing_entrypoint_for_indicator(tmp_path: Path):
     data = {
         "name": "no-entry",
         "version": "1.0.0",
-        "type": "mql.indicator",
+        "type": "indicator",
         "target": "MQL5"
     }
     (d / "helix.json").write_text(json.dumps(data), encoding="utf-8")
@@ -118,7 +118,7 @@ def test_missing_entrypoint_for_indicator(tmp_path: Path):
     with pytest.raises(ValueError) as exc:
         load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
 
-    assert "Projects of type 'mql.indicator' must have at least one entrypoint" in str(exc.value)
+    assert "Projects of type 'indicator' must have at least one entrypoint" in str(exc.value)
 
 def test_invalid_git_url(tmp_path: Path):
     """Malformed dependency URL should fail"""
@@ -127,7 +127,7 @@ def test_invalid_git_url(tmp_path: Path):
     data = {
         "name": "bad",
         "version": "1.0.0",
-        "type": "mql.script",
+        "type": "script",
         "target": "MQL5",
         "entrypoints": ["Test.mq5"],
         "dependencies": {
@@ -149,7 +149,7 @@ def test_invalid_semver(tmp_path: Path):
     data = {
         "name": "bad",
         "version": "1.2",  # ← missing patch
-        "type": "mql.indicator",
+        "type": "indicator",
         "target": "MQL5",
         "entrypoints": ["X.mq5"],
     }

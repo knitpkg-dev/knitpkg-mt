@@ -10,8 +10,9 @@ and validation logic.
 from typing import Optional, List, Any
 from enum import Enum
 from pydantic import Field, field_validator, model_validator
+from typing_extensions import Self  # ← Add this import
 
-from helix.core.models import HelixManifest
+from helix.core.models import HelixManifest, ProjectType
 
 # ==============================================================
 # MQL-SPECIFIC ENUMS
@@ -22,13 +23,17 @@ class Target(str, Enum):
     MQL4 = "MQL4"
     MQL5 = "MQL5"
 
-class ProjectType(str, Enum):
-    """MetaTrader project types."""
-    PACKAGE = "package"
-    MQL_EXPERT = "mql.expert"
-    MQL_INDICATOR = "mql.indicator"
-    MQL_SCRIPT = "mql.script"
-    MQL_LIBRARY = "mql.library"
+class MQLProjectType(str, Enum):
+    """
+    MQL-specific project types.
+
+    Inherits PACKAGE from base ProjectType and adds MQL-specific types.
+    """
+    PACKAGE = "package"  # Inherited from base ProjectType
+    EXPERT = "expert"
+    INDICATOR = "indicator"
+    SCRIPT = "script"
+    LIBRARY = "library"
 
 class IncludeMode(str, Enum):
     """MQL include processing modes."""
@@ -53,7 +58,7 @@ class MQLHelixManifest(HelixManifest):
         description="Target platform (MQL4 or MQL5)"
     )
 
-    type: ProjectType = Field(
+    type: MQLProjectType = Field(
         ...,
         description="Project type"
     )
@@ -71,15 +76,15 @@ class MQLHelixManifest(HelixManifest):
 
     @field_validator("type", mode="before")
     @classmethod
-    def validate_type(cls, v: Any) -> ProjectType:
-        """Validate type is not None and is a valid ProjectType enum value."""
+    def validate_type(cls, v: Any) -> MQLProjectType:
+        """Validate type is not None and is a valid MQLProjectType enum value."""
         if v is None:
             raise ValueError("type cannot be None")
         if isinstance(v, str):
             try:
-                return ProjectType(v)
+                return MQLProjectType(v)
             except ValueError:
-                valid_types = [x.value for x in ProjectType]
+                valid_types = [x.value for x in MQLProjectType]
                 raise ValueError(f"type must be one of {valid_types}, got: {v}")
         return v
 
@@ -113,12 +118,11 @@ class MQLHelixManifest(HelixManifest):
         return v
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_entrypoints_presence(cls, data: Any) -> Any:
+    def validate_entrypoints_presence(self) -> Self:  # ← Changed: instance method
         """Ensure non-package projects have at least one entrypoint."""
-        if data.type != ProjectType.PACKAGE:
-            if not data.entrypoints or len(data.entrypoints) == 0:
+        if self.type != MQLProjectType.PACKAGE:  # ← Changed: use self instead of data
+            if not self.entrypoints or len(self.entrypoints) == 0:
                 raise ValueError(
-                    f"Projects of type '{data.type.value}' must have at least one entrypoint"
+                    f"Projects of type '{self.type.value}' must have at least one entrypoint"
                 )
-        return data
+        return self  # ← Changed: return self instead of data

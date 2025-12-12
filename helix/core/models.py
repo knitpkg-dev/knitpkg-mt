@@ -24,6 +24,14 @@ from pydantic import (
 # COMMON ENUMS 
 # ==============================================================
 
+class ProjectType(str, Enum):
+    """
+    Base project type (platform-agnostic).
+
+    Platform-specific types should inherit from this enum.
+    """
+    PACKAGE = "package"  # Reusable library/components
+
 class OAuthProvider(str, Enum):
     """OAuth providers for Helix Pro private repository access."""
     GITHUB = "github"
@@ -213,13 +221,14 @@ class HelixManifest(BaseModel):
         description="License identifier"
     )
 
-    # Generic target and type (strings - platform-specific subclasses will use enums)
+    # Generic target (string - platform-specific subclasses will use enums)
     target: str = Field(
         ...,
         description="Target platform/version"
     )
 
-    type: str = Field(
+    # Base project type (only PACKAGE at this level)
+    type: ProjectType = Field(
         ...,
         description="Project type"
     )

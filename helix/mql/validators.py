@@ -10,7 +10,7 @@ project structure validation and manifest constraints.
 from pathlib import Path
 from rich.console import Console
 
-from helix.mql.models import ProjectType, Target
+from helix.mql.models import MQLProjectType, Target
 from helix.core.constants import INCLUDE_DIR
 
 # ==============================================================
@@ -30,12 +30,12 @@ def validate_mql_project_structure(
     Emits friendly warnings only (does not break the build).
 
     Args:
-        manifest: HelixManifest object
+        manifest: MQLHelixManifest object
         project_dir: Path to project root
         is_dependency: True if validating a dependency
         console: Rich console for logging
     """
-    if manifest.type != ProjectType.PACKAGE:
+    if manifest.type != MQLProjectType.PACKAGE:
         return
 
     include_dir = project_dir / INCLUDE_DIR
@@ -80,7 +80,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
     Validate MQL-specific manifest constraints for dependencies.
 
     Args:
-        manifest: HelixManifest object
+        manifest: MQLHelixManifest object
         console: Rich console for logging
 
     Returns:
@@ -92,17 +92,21 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
     accept_target = manifest.target in (Target.MQL4, Target.MQL5)
     accept = accept and accept_target
     if not accept_target:
-        console.log(f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}")
+        console.log(
+            f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
+        )
         console.log(
             f"    → target is '{manifest.target.value}', but `helix install` only "
             f"supports '{Target.MQL4.value}' or '{Target.MQL5.value}' projects."
         )
 
     # Check type
-    accept_project_type = manifest.type == ProjectType.PACKAGE
+    accept_project_type = manifest.type == MQLProjectType.PACKAGE
     accept = accept and accept_project_type
     if not accept_project_type:
-        console.log(f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}")
+        console.log(
+            f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
+        )
         console.log(
             f"    → type is '{manifest.type.value}', but `helix install` only "
             f"supports 'package' projects."
