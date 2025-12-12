@@ -22,7 +22,7 @@ from helix.core.file_reading import load_helix_manifest, read_file_smart
 from helix.core.constants import CACHE_DIR, FLAT_DIR, INCLUDE_DIR
 
 # Import MQL-specific models and downloader
-from helix.mql.models import MQLHelixManifest, ProjectType, IncludeMode
+from helix.mql.models import MQLHelixManifest, MQLProjectType, IncludeMode
 from helix.mql.dependency_downloader import MQLDependencyDownloader
 from helix.mql.validators import validate_mql_project_structure
 
@@ -32,6 +32,13 @@ from helix.core.dependency_downloader import (
     ResolvedDep,
     ResolvedDeps,
     DependencyTree
+)
+
+# Import custom exceptions
+from helix.core.exceptions import (
+    LocalDependencyNotFoundError,
+    LocalDependencyNotGitError,
+    DependencyHasLocalChangesError,
 )
 
 # ==============================================================
@@ -354,7 +361,12 @@ class HelixInstaller:
         self.flat_processor = FlatModeProcessor(console, project_dir)
 
     def install(self, locked_mode: bool = False, show_tree: bool = True) -> None:
-        """Main entry point for install — resolves dependencies and generates output."""
+        """
+        Main entry point for install — resolves dependencies and generates output.
+
+        Raises:
+            SystemExit: On fatal errors (dependency not found, locked mode violations, etc.)
+        """
         try:
             manifest: MQLHelixManifest = load_helix_manifest(
                 self.project_dir,
@@ -363,7 +375,7 @@ class HelixInstaller:
 
             effective_mode = (
                 IncludeMode.FLAT
-                if manifest.type == ProjectType.PACKAGE
+                if manifest.type == MQLProjectType.PACKAGE
                 else manifest.include_mode
             )
 
@@ -388,9 +400,13 @@ class HelixInstaller:
 
             self._log_completion(resolved_deps, effective_mode)
 
+        except (LocalDependencyNotFoundError, LocalDependencyNotGitError, DependencyHasLocalChangesError) as e:
+            # Handle dependency errors with clear messages
+            self.console.log(f"[red]Fatal error:[/] {e}")
+            raise SystemExit(1)
         except Exception as e:
             self.console.log(f"[red]Error:[/] {e}")
-            raise
+            raise SystemExit(1)
 
     def _log_install_start(
         self,
@@ -412,7 +428,7 @@ class HelixInstaller:
         include_dir = self.project_dir / INCLUDE_DIR
 
         shutil.rmtree(flat_dir, ignore_errors=True)
-        if manifest.type != ProjectType.PACKAGE:
+        if manifest.type != MQLProjectType.PACKAGE:
             shutil.rmtree(include_dir, ignore_errors=True)
         elif include_dir.exists():
             self.console.log(
@@ -426,7 +442,17 @@ class HelixInstaller:
         locked_mode: bool,
         show_tree: bool
     ) -> ResolvedDeps:
+        """
+        Resolve dependencies using downloader.
+
+        Raises:
+            LocalDependencyNotFoundError: If local dependency path doesn't exist
+            LocalDependencyNotGitError: If --locked with non-git local dependency
+            DependencyHasLocalChangesError: If --locked but dependency has changes
+        """
         self.console.log("[bold blue]Downloading dependencies...[/]")
+
+        # This may raise custom exceptions - let them propagate
         resolved_deps, dependency_tree = self.downloader.download_all(
             manifest.dependencies or {},
             locked_mode

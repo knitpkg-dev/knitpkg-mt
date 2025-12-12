@@ -28,6 +28,13 @@ from helix.core.file_reading import load_helix_manifest
 from helix.core.utils import is_local_path
 from helix.core.constants import CACHE_DIR
 
+# Import custom exceptions
+from helix.core.exceptions import (
+    LocalDependencyNotFoundError,
+    LocalDependencyNotGitError,
+    DependencyHasLocalChangesError,
+)
+
 # ==============================================================
 # TYPE DEFINITIONS
 # ==============================================================
@@ -62,6 +69,8 @@ class DependencyDownloader:
     and recursive dependency processing. Platform-specific validation can be
     implemented by overriding validate_manifest() and validate_project_structure().
 
+    Raises custom exceptions instead of SystemExit to allow better reusability.
+
     Attributes:
         console: Rich console for logging
         resolved_deps: List of (name, path) tuples for resolved dependencies
@@ -92,6 +101,11 @@ class DependencyDownloader:
 
         Returns:
             Tuple of (resolved_deps, dependency_tree)
+
+        Raises:
+            LocalDependencyNotFoundError: Local path does not exist
+            LocalDependencyNotGitError: --locked used with non-git local dep
+            DependencyHasLocalChangesError: --locked used but dep has changes
         """
         self.resolved_deps = []
         self.dependency_tree = []
@@ -168,18 +182,20 @@ class DependencyDownloader:
             return self._handle_remote_dependency(name, specifier)
 
     def _handle_local_dependency(self, name: str, specifier: str) -> Optional[Path]:
-        """Handle local dependency resolution."""
+        """
+        Handle local dependency resolution.
+
+        Raises:
+            LocalDependencyNotFoundError: If path doesn't exist
+            LocalDependencyNotGitError: If --locked with non-git dependency
+        """
         if specifier.startswith("file://"):
             dep_path = Path(specifier[7:])
         else:
             dep_path = (Path.cwd() / specifier).resolve()
 
         if not dep_path.exists():
-            self.console.log(
-                f"[red]Fatal error:[/] Local dependency '{name}' points to missing path:"
-            )
-            self.console.log(f"    → {dep_path}")
-            raise SystemExit(1)
+            raise LocalDependencyNotFoundError(name, str(dep_path))
 
         resolved_path = dep_path.resolve()
 
@@ -191,10 +207,7 @@ class DependencyDownloader:
         has_git, current_commit = self._check_git_status(dep_path)
 
         if self.locked_mode and not has_git:
-            self.console.log(
-                f"[red]Error:[/] Cannot use --locked with non-git local dependency '{name}'"
-            )
-            raise SystemExit(1)
+            raise LocalDependencyNotGitError(name)
 
         if not has_git:
             self.console.log(
@@ -311,7 +324,12 @@ class DependencyDownloader:
         *,
         force_lock: bool = False
     ) -> Path:
-        """Download a remote Git dependency."""
+        """
+        Download a remote Git dependency.
+
+        Raises:
+            DependencyHasLocalChangesError: If dependency has local changes in locked mode
+        """
         base_url = specifier.split("#")[0].rstrip("/")
         ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
         cache_key = hashlib.sha256(specifier.encode()).hexsha[:16]
@@ -332,11 +350,7 @@ class DependencyDownloader:
                 )
                 return dep_path
             if force_lock:
-                self.console.log(
-                    f"[red]Error:[/] Cannot proceed with --locked: "
-                    f"dependency '{name}' has local changes"
-                )
-                raise SystemExit(1)
+                raise DependencyHasLocalChangesError(name)
             self.console.log(
                 f"[bold yellow]Warning:[/] Local changes in '{name}' "
                 f"— using modified version"
