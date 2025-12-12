@@ -1,13 +1,20 @@
 # helix/commands/autocomplete.py
+
+"""
+Helix autocomplete command — generate autocomplete.mqh for IDE support.
+"""
+
 from typing import Optional
 from pathlib import Path
 from rich.console import Console
 
-from helix.core.models import ProjectType
+from helix.mql.models import ProjectType, MQLHelixManifest
 from helix.core.file_reading import load_helix_manifest
 from helix.core.utils import navigate_path
-from .install import DependencyDownloader
 from helix.core.constants import INCLUDE_DIR
+
+# Import MQL-specific downloader
+from helix.mql.dependency_downloader import MQLDependencyDownloader
 
 import typer
 
@@ -16,31 +23,47 @@ import typer
 # ==============================================================
 
 class AutocompleteGenerator:
-    """Generates autocomplete.mqh file for include projects."""
-    
-    def __init__(self, console: Console):
+    """Generates autocomplete.mqh file for package projects."""
+
+    def __init__(self, console: Console, project_dir: Path):
         self.console = console
-    
+        self.project_dir = project_dir
+
     def generate(self) -> None:
         """Generate autocomplete file for the current project."""
-        manifest = load_helix_manifest()
-        
+        manifest: MQLHelixManifest = load_helix_manifest(
+            self.project_dir,
+            manifest_class=MQLHelixManifest
+        )
+
         if manifest.type != ProjectType.PACKAGE:
-            self.console.log("[red]Error:[/] Command `helix autocomplete` only works on projects with type: package")
+            self.console.log(
+                "[red]Error:[/] Command `helix autocomplete` only works on projects "
+                "with type: package"
+            )
             raise SystemExit(1)
 
-        self.console.log(f"[bold magenta]helix autocomplete[/] → generating autocomplete file for [cyan]{manifest.name}[/]")
+        self.console.log(
+            f"[bold magenta]helix autocomplete[/] → generating autocomplete file for "
+            f"[cyan]{manifest.name}[/]"
+        )
 
-        # Resolve dependências (reusa a mesma lógica do install)
+        # Resolve dependencies (reuse same logic as install)
         resolved_deps = []
         if manifest.dependencies:
-            downloader = DependencyDownloader(self.console)
-            resolved_deps, _dependency_tree = downloader.download_all(manifest.dependencies, False)
+            downloader = MQLDependencyDownloader(self.console)
+            resolved_deps, _dependency_tree = downloader.download_all(
+                manifest.dependencies,
+                False
+            )
         else:
-            self.console.log("[yellow]Warning:[/] No dependencies found in manifest. Autocomplete file will be empty.")
+            self.console.log(
+                "[yellow]Warning:[/] No dependencies found in manifest. "
+                "Autocomplete file will be empty."
+            )
 
-        # Gera o arquivo
-        autocomplete_dir = Path("helix/autocomplete")
+        # Generate the file
+        autocomplete_dir = self.project_dir / "helix" / "autocomplete"
         autocomplete_dir.mkdir(parents=True, exist_ok=True)
         output_file = autocomplete_dir / "autocomplete.mqh"
 
@@ -57,13 +80,18 @@ class AutocompleteGenerator:
             include_dir = dep_path / INCLUDE_DIR
             if include_dir.exists():
                 for mqh in include_dir.rglob("*.mqh"):
-                    rel_path = navigate_path(Path.cwd() / "helix" / "autocomplete", mqh)
+                    rel_path = navigate_path(
+                        autocomplete_dir,
+                        mqh
+                    )
                     if str(rel_path) not in seen_paths:
                         lines.append(f'#include "{rel_path.as_posix()}"')
                         seen_paths.add(str(rel_path))
 
         output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        self.console.log(f"[bold green]Check[/] Autocomplete file generated → [bold]{output_file}[/]")
+        self.console.log(
+            f"[bold green]Check[/] Autocomplete file generated → [bold]{output_file}[/]"
+        )
 
 # ==============================================================
 # CLI REGISTRATION
@@ -71,9 +99,28 @@ class AutocompleteGenerator:
 
 def register(app):
     @app.command()
-    def autocomplete(verbose: Optional[bool] = typer.Option(False, "--verbose", "-v", help="Show detailed output with file/line information")):
+    def autocomplete(
+        project_dir: Optional[Path] = typer.Option(
+            None,
+            "--project-dir",
+            "-d",
+            help="Project directory (default: current directory)"
+        ),
+        verbose: Optional[bool] = typer.Option(
+            False,
+            "--verbose",
+            "-v",
+            help="Show detailed output with file/line information"
+        )
+    ):
         """Prepare include: create autocomplete.mqh to aid the includes development."""
 
         console = Console(log_path=verbose)
-        generator = AutocompleteGenerator(console)
-        generator.generate()    
+
+        if project_dir is None:
+            project_dir = Path.cwd()
+        else:
+            project_dir = Path(project_dir).resolve()
+
+        generator = AutocompleteGenerator(console, project_dir)
+        generator.generate()

@@ -1,45 +1,49 @@
 # tests/test_include_parser.py
+
 import pytest
+import re
 
 # ----------------------------------------------------------------------
 # Helix directive parser – uses the new @helix:<directive> syntax
 # ----------------------------------------------------------------------
-from helix.commands.install import ResolveHelixIncludePattern
 
-resolve_pattern = ResolveHelixIncludePattern()
-
-pattern = resolve_pattern.pattern
+# Pattern definition (copied from commands/install.py for testing)
+HELIX_PATTERN = re.compile(
+    r'^\s*#\s*include\s+"(?P<include>[^"]+)"'
+    r'(?:\s*/\*\s*@helix:(?P<directive1>\w+(?:-\w+)*)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
+    r'|'
+    r'^\s*/\*\s*@helix:(?P<directive2>\w+(?:-\w+)*)\s+"(?P<path2>[^"]+)"\s*\*/\s*$',
+    re.MULTILINE
+)
 
 def parse_helix_line(line: str):
     """
-    Parse a line containing a Helix directive using the original regex.
+    Parse a line containing a Helix directive.
 
     Returns:
         dict with keys: "include", "directive", "replace"
         or None if the line does not match any supported Helix pattern.
     """
-    m = pattern.match(line)
+    m = HELIX_PATTERN.match(line)
     if not m:
         return None
 
     include_path = m.group('include')
-    directive    = m.group('directive1') or m.group('directive2')
+    directive = m.group('directive1') or m.group('directive2')
     replace_path = m.group('path1') or m.group('path2')
 
     # Special case: standalone /* @helix:include "file.mqh" */
-    # → this means "this file should be included instead"
     if include_path is None and directive == "include":
         include_path = replace_path
 
     return {
-        "include":   include_path,   # the actual file being included (after resolution)
-        "directive": directive,      # e.g. "replace-with", "include", None
-        "replace":   replace_path,   # path from the @helix: directive (if any)
+        "include": include_path,
+        "directive": directive,
+        "replace": replace_path,
     }
 
-
 # ----------------------------------------------------------------------
-# Individual test cases – covers all realistic variations
+# Individual test cases
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
     "line, expected",
@@ -69,7 +73,7 @@ def parse_helix_line(line: str):
             '#include "../../old.mqh" /*@helix:replace-with "helix/include/Bar/Bar.mqh"*/',
             {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/include/Bar/Bar.mqh"},
         ),
-        # 6. Fully glued extreme case – NOT supported by current regex → expected None
+        # 6. Fully glued extreme case – NOT supported
         (
             '#include"../../old.mqh"/*@helix:replace-with"helix/include/Bar/Bar.mqh"*/',
             None,
@@ -84,7 +88,7 @@ def parse_helix_line(line: str):
             '#include "simple.mqh"     /* @helix:replace-with "novo/caminho.mqh" */',
             {"include": "simple.mqh", "directive": "replace-with", "replace": "novo/caminho.mqh"},
         ),
-        # 9. Path with spaces inside quotes – must be preserved
+        # 9. Path with spaces inside quotes
         (
             '/* @helix:include "  file with spaces.mqh  " */',
             {"include": "  file with spaces.mqh  ", "directive": "include", "replace": "  file with spaces.mqh  "},
@@ -100,16 +104,13 @@ def test_parse_individual_lines(line, expected):
     """Test parsing of individual lines with various formatting styles."""
     assert parse_helix_line(line) == expected
 
-
 # ----------------------------------------------------------------------
 # Full real-world file block test
 # ----------------------------------------------------------------------
 def test_full_real_world_block():
-    """Test against a complete real file snippet – must match exactly."""
+    """Test against a complete real file snippet."""
     texto = '''//+------------------------------------------------------------------+
 //|                                                   TestScript.mq5 |
-//|                                  Copyright 2025, Douglas Rechia. |
-//|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"

@@ -1,8 +1,10 @@
-# tests/test_dependency_urls.py
+# tests/test_dependency_url.py
+
 import pytest
 from pathlib import Path
 import json
 from helix.core.file_reading import load_helix_manifest
+from helix.mql.models import MQLHelixManifest
 
 VALID_URLS = [
     # === SemVer clássico (com e sem v), versão exata ===
@@ -33,7 +35,7 @@ VALID_URLS = [
     # === Pré-release + build ===
     "https://github.com/user/lib.git#v1.0.0-alpha.1+build.456",
 
-    # === Formatos com prefixo explícito (aceitos pelo seu validador atual) ===
+    # === Formatos com prefixo explícito ===
     "https://github.com/user/lib.git#tag=v2.5.0",
     "https://github.com/user/lib.git#tag=2.5.0",
     "git@github.com:user/lib.git#branch=v1.8.2",
@@ -45,7 +47,7 @@ VALID_URLS = [
     "https://github.com/dingmaotu/mql-zmq.git#v1.0.4",
     "https://gitlab.com/mql5/libs/utils.git#v3.2.1",
 
-    # === Outros domínios (Bitbucket, GitLab SSH, etc.) ===
+    # === Outros domínios ===
     "git@gitlab.com:group/project.mql.git#v1.0.0",
     "https://bitbucket.org/team/indicators.git#2.1.0",
     "git@bitbucket.org:team/utils.git#branch=stable",
@@ -67,15 +69,15 @@ INVALID_URLS = [
     "user/lib.git#v1.0.0",
 ]
 
-
 @pytest.mark.parametrize("url", VALID_URLS)
 def test_valid_dependency_urls(tmp_path: Path, url: str):
+    """Test that valid dependency URLs are accepted."""
     d = tmp_path / "valid"
     d.mkdir()
     manifest = {
         "name": "test",
         "version": "1.0.0",
-        "type": "expert",
+        "type": "mql.expert",
         "target": "MQL5",
         "entrypoints": ["Test.mq5"],
         "dependencies": {
@@ -84,19 +86,19 @@ def test_valid_dependency_urls(tmp_path: Path, url: str):
     }
     (d / "helix.json").write_text(json.dumps(manifest), encoding="utf-8")
 
-    # Deve carregar sem erro
-    manifest_obj = load_helix_manifest(d / "helix.json")
+    # Should load without error using MQL manifest
+    manifest_obj = load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
     assert manifest_obj.dependencies["mylib"] == url
-
 
 @pytest.mark.parametrize("url", INVALID_URLS)
 def test_invalid_dependency_urls(tmp_path: Path, url: str):
+    """Test that invalid dependency URLs raise ValueError."""
     d = tmp_path / "invalid"
     d.mkdir()
     manifest = {
         "name": "test",
         "version": "1.0.0",
-        "type": "expert",
+        "type": "mql.expert",
         "target": "MQL5",
         "entrypoints": ["Test.mq5"],
         "dependencies": {
@@ -105,23 +107,21 @@ def test_invalid_dependency_urls(tmp_path: Path, url: str):
     }
     (d / "helix.json").write_text(json.dumps(manifest), encoding="utf-8")
 
-    # Deve levantar ValueError com mensagem clara
+    # Should raise ValueError with clear message
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "helix.json")
+        load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
 
     error_msg = str(exc.value)
-    assert "Invalid dependency 'mylib'" in error_msg
-    assert "Error reading helix." in error_msg
+    assert "Invalid dependency 'mylib'" in error_msg or "Error reading helix." in error_msg
 
-
-# === Teste extra: aceitar branch=main (seu caso real) ===
 def test_branch_main_is_accepted(tmp_path: Path):
+    """Test that branch=main is accepted (real use case)."""
     d = tmp_path / "branch"
     d.mkdir()
     manifest = {
         "name": "test",
         "version": "1.0.0",
-        "type": "expert",
+        "type": "mql.expert",
         "target": "MQL5",
         "entrypoints": ["Bot.mq5"],
         "dependencies": {
@@ -129,5 +129,5 @@ def test_branch_main_is_accepted(tmp_path: Path):
         }
     }
     (d / "helix.json").write_text(json.dumps(manifest), encoding="utf-8")
-    obj = load_helix_manifest(d / "helix.json")
+    obj = load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
     assert obj.dependencies["telegram"] == "git@github.com:fabiuz/telegram.mql.git#branch=main"

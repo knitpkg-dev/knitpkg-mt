@@ -38,4 +38,4 @@ watch = "pytest-watch -- -xvs"
 manifest = "pytest tests/test_manifest.py -v"
 
 [tool.poetry.scripts]
-helix = "helix.cli:app"
+helix-mt = "helix.cli:app"
