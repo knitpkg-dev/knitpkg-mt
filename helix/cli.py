@@ -2,6 +2,8 @@
 from typer import Typer
 from helix.commands.install import register as register_install
 from helix.commands.autocomplete import register as register_autocomplete
+from helix.commands.config import register as register_config
+from helix.commands.compile import register as register_compile
 
 app = Typer(
     name="helix",
@@ -10,10 +12,11 @@ app = Typer(
     no_args_is_help=True,
 )
 
-# Registra todos os comandos
+# Register all commands
 register_install(app)
 register_autocomplete(app)
-# (você vai adicionando mais conforme criar: build, dist, etc.)
+register_config(app)
+register_compile(app)
 
 def main():
     app()

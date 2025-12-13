@@ -233,6 +233,11 @@ class HelixManifest(BaseModel):
         description="Project type"
     )
 
+    compile: Optional[List[str]] = Field(
+        default=None,
+        description="List of source files to compile (relative to project root)"
+    )
+
     dependencies: Dict[str, str] = Field(
         default_factory=dict,
         description="Dependencies with Git URLs or local paths and version constraints"
