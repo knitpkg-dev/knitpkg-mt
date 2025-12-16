@@ -2,7 +2,10 @@
 
 """
 Helix compile command — compile MQL source files.
+
 This module handles compilation of MQL4/MQL5 source files using MetaEditor.
+The MQLCompiler class raises domain-specific exceptions instead of SystemExit,
+allowing proper separation between library code and CLI layer.
 """
 import subprocess
 import re
@@ -19,6 +22,15 @@ from helix.core.file_reading import load_helix_manifest
 from helix.mql.models import MQLHelixManifest, Target
 from helix.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
 from helix.mql.constants import FLAT_DIR
+
+# Import MQL-specific exceptions
+from helix.mql.exceptions import (
+    CompilerNotFoundError,
+    UnsupportedTargetError,
+    NoFilesToCompileError,
+    CompilationFailedError,
+)
+
 
 # ==============================================================
 # COMPILATION RESULT TYPES
@@ -70,6 +82,12 @@ class MQLCompiler:
         Args:
             entrypoints_only: If True, compile only entrypoints
             compile_only: If True, compile only files in compile list
+
+        Raises:
+            CompilerNotFoundError: If MetaEditor executable is not found
+            UnsupportedTargetError: If manifest target is not supported
+            NoFilesToCompileError: If no files are available for compilation
+            CompilationFailedError: If one or more files fail to compile
         """
         # Load manifest
         self.manifest = load_helix_manifest(
@@ -88,7 +106,7 @@ class MQLCompiler:
                 "[yellow]Warning:[/] No files to compile. "
                 "Check your manifest's 'compile' and 'entrypoints' fields."
             )
-            return
+            raise NoFilesToCompileError()
 
         self.console.log(
             f"[bold magenta]helix compile[/] → "
@@ -146,7 +164,7 @@ class MQLCompiler:
             self.console.log(
                 f"[red]Error:[/] Unsupported target: {self.manifest.target}"
             )
-            raise SystemExit(1)
+            raise UnsupportedTargetError(self.manifest.target)
 
         if not compiler_path.exists():
             self.console.log(
@@ -163,7 +181,10 @@ class MQLCompiler:
                 self.console.log(
                     f"  helix-mt config --mql4-compiler-path <path-to-MetaEditor.exe>"
                 )
-            raise SystemExit(1)
+            raise CompilerNotFoundError(
+                str(compiler_path),
+                self.manifest.target.value
+            )
 
         return compiler_path
 
@@ -491,20 +512,18 @@ class MQLCompiler:
                 messages=[str(e)]
             )
 
+
     def _print_summary(self) -> None:
         """Print compilation summary table."""
         if not self.results:
             return
 
-        # Count by status
         success_count = sum(1 for r in self.results if r.status == CompilationStatus.SUCCESS)
         warning_count = sum(1 for r in self.results if r.status == CompilationStatus.SUCCESS_WITH_WARNINGS)
         error_count = sum(1 for r in self.results if r.status == CompilationStatus.ERROR)
 
         if warning_count > 0 or error_count > 0:
             self.console.log("")
-
-            # Create summary table
             table = Table(title="Compilation Summary", show_header=True, header_style="bold cyan")
             table.add_column("File", style="dim")
             table.add_column("Status", justify="center")
@@ -513,24 +532,20 @@ class MQLCompiler:
 
             for result in self.results:
                 rel_path = result.file_path.relative_to(self.project_dir).as_posix()
-
                 if result.status == CompilationStatus.SUCCESS:
                     status = "[green]✓ Success[/]"
                 elif result.status == CompilationStatus.SUCCESS_WITH_WARNINGS:
                     status = "[yellow]⚠ Warning[/]"
                 else:
                     status = "[red]✗ Error[/]"
-
                 table.add_row(
                     str(rel_path),
                     status,
                     str(result.error_count) if result.error_count > 0 else "—",
                     str(result.warning_count) if result.warning_count > 0 else "—"
                 )
-
             self.console.print(table)
 
-        # Final status message
         self.console.log("")
         if error_count == 0 and warning_count == 0:
             self.console.log(
@@ -549,17 +564,15 @@ class MQLCompiler:
             )
 
         if warning_count > 0 or error_count > 0:
-            # Show where logs are saved
             self.console.log("")
             self.console.log(
                 f"[dim]Compilation logs saved to:[/] {self.compile_logs_dir.relative_to(self.project_dir).as_posix()}"
             )
-
         self.console.log("")
 
-        # Exit with error code if compilation failed
+        # Raise exception instead of SystemExit
         if error_count > 0:
-            raise SystemExit(1)
+            raise CompilationFailedError(error_count, warning_count, len(self.results))
 
 
 # ==============================================================
@@ -600,7 +613,6 @@ def register(app):
         else:
             project_dir = Path(project_dir).resolve()
 
-        # Validate mutually exclusive options
         if entrypoints_only and compile_only:
             console.log(
                 "[red]Error:[/] --entrypoints-only and --compile-only "
@@ -609,4 +621,13 @@ def register(app):
             raise SystemExit(1)
 
         compiler = MQLCompiler(console, project_dir)
-        compiler.compile(entrypoints_only, compile_only)
+
+        try:
+            compiler.compile(entrypoints_only, compile_only)
+        except (CompilerNotFoundError, 
+                UnsupportedTargetError, 
+                NoFilesToCompileError,
+                CompilationFailedError):
+            # All errors already logged by MQLCompiler
+            # Just exit with error code
+            raise SystemExit(1)
