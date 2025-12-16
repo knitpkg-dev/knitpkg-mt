@@ -1,7 +1,7 @@
 # helix/commands/config.py
 
 """
-Helix config command — manage Helix configuration settings.
+Helix for MetaTrader config command — manage Helix configuration settings.
 
 This module provides CLI commands to view and modify Helix's global
 configuration, such as MetaEditor compiler paths and MQL data folder paths.
@@ -40,12 +40,12 @@ def register(app):
             "--mql4-compiler-path",
             help="Set the path to MetaEditor.exe (MQL4 compiler)"
         ),
-        mql5_data_folder_path: Optional[Path] = typer.Option( # NEW
+        mql5_data_folder_path: Optional[Path] = typer.Option(
             None,
             "--mql5-data-folder-path",
             help="Set the custom data folder path for MQL5 (e.g., C:\\Users\\User\\AppData\\Roaming\\MetaQuotes\\Terminal\\<hash>)"
         ),
-        mql4_data_folder_path: Optional[Path] = typer.Option( # NEW
+        mql4_data_folder_path: Optional[Path] = typer.Option(
             None,
             "--mql4-data-folder-path",
             help="Set the custom data folder path for MQL4 (e.g., C:\\Users\\User\\AppData\\Roaming\\MetaQuotes\\Terminal\\<hash>)"
@@ -59,8 +59,6 @@ def register(app):
     ):
         """
         Manage Helix configuration settings.
-
-        Use this command to set paths for MetaEditor compilers and MQL data folders.
         """
         console = Console()
 
@@ -78,7 +76,7 @@ def register(app):
                 f" {mql4_compiler_path.resolve()}"
             )
 
-        # Set MQL data folder paths (NEW)
+        # Set MQL data folder paths
         if mql5_data_folder_path:
             set_mql5_data_folder_path(str(mql5_data_folder_path.resolve()))
             console.log(
@@ -98,7 +96,7 @@ def register(app):
             not mql5_data_folder_path and not mql4_data_folder_path
         ):
 
-            table = Table(title="Helix Configuration", show_header=True, header_style="bold cyan")
+            table = Table(title="Helix for MetaTrader Configuration", show_header=True, header_style="bold cyan") # Alterado
             table.add_column("Setting", style="dim")
             table.add_column("Value")
 
@@ -106,7 +104,7 @@ def register(app):
             table.add_row("mql5-compiler-path", get_mql5_compiler_path() or "[dim]Not set[/]")
             table.add_row("mql4-compiler-path", get_mql4_compiler_path() or "[dim]Not set[/]")
 
-            # Display data folder paths (NEW)
+            # Display data folder paths
             table.add_row("mql5-data-folder-path", get_mql5_data_folder_path() or "[dim]Not set[/]")
             table.add_row("mql4-data-folder-path", get_mql4_data_folder_path() or "[dim]Not set[/]")
 

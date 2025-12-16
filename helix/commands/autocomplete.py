@@ -1,7 +1,10 @@
 # helix/commands/autocomplete.py
 
 """
-Helix autocomplete command — generate autocomplete.mqh for IDE support.
+Helix for MetaTrader autocomplete command — generates autocomplete files.
+
+This module handles the generation of MQL include files that provide
+autocomplete functionality for Helix-managed packages within MetaEditor.
 """
 
 from typing import Optional
@@ -23,14 +26,27 @@ import typer
 # ==============================================================
 
 class AutocompleteGenerator:
-    """Generates autocomplete.mqh file for package projects."""
+    """Generates autocomplete files for MQL package projects."""
 
     def __init__(self, console: Console, project_dir: Path):
+        """
+        Initialize the AutocompleteGenerator.
+
+        Args:
+            console: Rich console for output
+            project_dir: Root directory of the Helix project
+        """
         self.console = console
         self.project_dir = project_dir
 
     def generate(self) -> None:
-        """Generate autocomplete file for the current project."""
+        """
+        Generate the autocomplete.mqh file.
+
+        This file includes all MQL header files from the project's
+        dependencies, making them available for autocompletion
+        in MetaEditor.
+        """
         manifest: MQLHelixManifest = load_helix_manifest(
             self.project_dir,
             manifest_class=MQLHelixManifest
@@ -44,7 +60,7 @@ class AutocompleteGenerator:
             raise SystemExit(1)
 
         self.console.log(
-            f"[bold magenta]helix autocomplete[/] → generating autocomplete file for "
+            f"[bold magenta]autocomplete[/] → generating autocomplete file for " # Alterado
             f"[cyan]{manifest.name}[/]"
         )
 
@@ -98,6 +114,8 @@ class AutocompleteGenerator:
 # ==============================================================
 
 def register(app):
+    """Register the autocomplete command with the Typer app."""
+
     @app.command()
     def autocomplete(
         project_dir: Optional[Path] = typer.Option(
@@ -110,11 +128,10 @@ def register(app):
             False,
             "--verbose",
             "-v",
-            help="Show detailed output with file/line information"
+            help="Show detailed output"
         )
     ):
-        """Prepare include: create autocomplete.mqh to aid the includes development."""
-
+        """Generate autocomplete.mqh for MetaEditor for package development."""
         console = Console(log_path=verbose)
 
         if project_dir is None:

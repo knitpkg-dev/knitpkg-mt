@@ -1,10 +1,11 @@
 [tool.poetry]
-name = "helix"
+name = "helix-mt"
 version = "0.1.0"
-description = "Helix package manager for Metatrader"
+description = "Helix for MetaTrader – Professional package manager for MQL5/MQL4"
 authors = ["Douglas Rechia <rechia@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+packages = [{include = "helix"}]
 
 [tool.poetry.dependencies]
 python = "^3.13"

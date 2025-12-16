@@ -1,12 +1,13 @@
 # helix/commands/compile.py
 
 """
-Helix compile command — compile MQL source files.
+Helix for Metatrader compile command — compile MQL source files.
 
 This module handles compilation of MQL4/MQL5 source files using MetaEditor.
 The MQLCompiler class raises domain-specific exceptions instead of SystemExit,
 allowing proper separation between library code and CLI layer.
 """
+import os
 import subprocess
 import re
 import shutil
@@ -23,7 +24,7 @@ from helix.mql.models import MQLHelixManifest, Target
 from helix.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
 from helix.mql.constants import FLAT_DIR
 from helix.mql.settings import get_mql4_data_folder_path, get_mql5_data_folder_path
-import os
+from helix.mql.constants import COMPILE_LOGS_DIR
 
 # Import MQL-specific exceptions
 from helix.mql.exceptions import (
@@ -63,7 +64,6 @@ class CompilationResult:
 # ==============================================================
 # MQL COMPILER CLASS
 # ==============================================================
-
 class MQLCompiler:
     """Handles MQL4/MQL5 source code compilation."""
 
@@ -72,7 +72,7 @@ class MQLCompiler:
         self.project_dir = project_dir
         self.manifest: Optional[MQLHelixManifest] = None
         self.results: List[CompilationResult] = []
-        self.compile_logs_dir = project_dir / ".helix" / "compile-logs"
+        self.compile_logs_dir = project_dir / COMPILE_LOGS_DIR
 
     def compile(
         self,
@@ -112,7 +112,7 @@ class MQLCompiler:
             raise NoFilesToCompileError()
 
         self.console.log(
-            f"[bold magenta]helix compile[/] → "
+            f"[bold magenta]compile[/] → "
             f"[cyan]{self.manifest.name}[/] v{self.manifest.version}"
         )
         self.console.log(
@@ -679,7 +679,7 @@ def register(app):
             help="Show detailed output"
         )
     ):
-        """Compile MQL source files using MetaEditor."""
+        """Compile MQL source files via CLI."""
         console = Console(log_path=verbose)
 
         if project_dir is None:

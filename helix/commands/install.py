@@ -1,7 +1,7 @@
 # helix/commands/install.py
 
 """
-Helix install command — dependency resolution and output generation.
+Helix for Metatrader install command — dependency resolution and output generation.
 
 This module orchestrates the installation process: downloading dependencies,
 processing them in include or flat mode, and generating output files.
