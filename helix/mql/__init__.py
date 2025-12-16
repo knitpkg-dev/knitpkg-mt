@@ -6,6 +6,7 @@ from .exceptions import (
     UnsupportedTargetError,
     NoFilesToCompileError,
     CompilationFailedError,
+    IncludePathNotFoundError
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     'UnsupportedTargetError',
     'NoFilesToCompileError',
     'CompilationFailedError',
+    'IncludePathNotFoundError'
 ]

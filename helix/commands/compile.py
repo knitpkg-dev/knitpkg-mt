@@ -22,6 +22,8 @@ from helix.core.file_reading import load_helix_manifest
 from helix.mql.models import MQLHelixManifest, Target
 from helix.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
 from helix.mql.constants import FLAT_DIR
+from helix.mql.settings import get_mql4_data_folder_path, get_mql5_data_folder_path
+import os
 
 # Import MQL-specific exceptions
 from helix.mql.exceptions import (
@@ -29,6 +31,7 @@ from helix.mql.exceptions import (
     UnsupportedTargetError,
     NoFilesToCompileError,
     CompilationFailedError,
+    IncludePathNotFoundError
 )
 
 
@@ -155,7 +158,16 @@ class MQLCompiler:
         return log_file
 
     def _get_compiler_path(self) -> Path:
-        """Get compiler path based on manifest target."""
+        """
+        Get compiler path based on manifest target.
+
+        Returns:
+            Path to the MetaEditor executable
+
+        Raises:
+            UnsupportedTargetError: If manifest target is not MQL4 or MQL5
+            CompilerNotFoundError: If the compiler executable does not exist
+        """
         if self.manifest.target == Target.MQL5:
             compiler_path = Path(get_mql5_compiler_path())
         elif self.manifest.target == Target.MQL4:
@@ -252,32 +264,94 @@ class MQLCompiler:
 
         return unique_files
 
-    def _get_mql_include_path(self) -> Optional[Path]:
+    
+    def _get_mql_include_path(self) -> Path:
         """
-        Detect MQL5/MQL4 include directory from MetaTrader installation.
-        Returns the first valid path found or None.
+        Determine the MQL include path for the current target.
+
+        First, checks if a custom data folder path is configured.
+        If not, it attempts to auto-detect the path within the MetaQuotes
+        Terminal folders.
+
+        Returns:
+            Path to the MQL include directory (e.g., MQL5/Include or MQL4/Include)
+
+        Raises:
+            IncludePathNotFoundError: If the MQL include directory cannot be located.
         """
-        # Common MetaTrader data paths
+        mql_data_folder_path_str: Optional[str] = None
+        if self.manifest.target == Target.MQL5:
+            mql_data_folder_path_str = get_mql5_data_folder_path()
+        elif self.manifest.target == Target.MQL4:
+            mql_data_folder_path_str = get_mql4_data_folder_path()
+
+        # 1. Check for configured data folder path
+        if mql_data_folder_path_str:
+            configured_path = Path(mql_data_folder_path_str)
+            configured_path_include = configured_path / self.manifest.target.value / "Include"
+            if configured_path_include.exists() and configured_path_include.is_dir():
+                return configured_path_include.parent
+            else:
+                self.console.log(
+                    f"[yellow]Warning:[/] Configured MQL data folder "
+                    f"'{configured_path.as_posix()}' does not exist or is not a valid MQL directory. "
+                    f"Attempting auto-detection."
+                )
+
+        # 2. Fallback to auto-detection logic
         possible_paths = [
             Path.home() / "AppData" / "Roaming" / "MetaQuotes" / "Terminal",
         ]
 
-        target_folder = "MQL5" if self.manifest.target == Target.MQL5 else "MQL4"
+        if self.manifest.target == Target.MQL5:
+            possible_paths.append(
+                Path("C:/Program Files/MetaTrader 5/Terminal"), # Common default for MQL5
+            )
+        elif self.manifest.target == Target.MQL4:
+            possible_paths.append(
+                Path("C:/Program Files (x86)/MetaTrader 4/Terminal"),
+            )
+
+        found_mql_paths: List[Path] = []
+        target_folder_name = self.manifest.target.value # MQL5 or MQL4
 
         for base_path in possible_paths:
             if not base_path.exists():
                 continue
 
-            # Search for Terminal subfolders (MetaTrader creates random folder names)
-            for terminal_folder in base_path.iterdir():
-                if not terminal_folder.is_dir():
-                    continue
+            # Iterate through subfolders (e.g., "D0E8209F77C15E0B37B07412A6190423")
+            # Using os.walk to ensure we only go one level deep in the terminal folders
+            for root, dirs, _ in os.walk(base_path):
+                for d in dirs:
+                    terminal_id_path = Path(root) / d
+                    mql_path = terminal_id_path / target_folder_name
+                    include_path = mql_path / "Include"
+                    if include_path.is_dir():
+                        found_mql_paths.append(mql_path)
+                # Only search one level deep in Terminal folders
+                break 
 
-                mql_path = terminal_folder / target_folder
-                if mql_path.exists() and mql_path.is_dir():
-                    return mql_path
+        if not found_mql_paths:
+            self.console.log(
+                f"[red]Error:[/] Could not find MQL {target_folder_name} "
+                f"include path automatically. "
+                f"Please configure it manually using 'helix-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
+            )
+            # Raise the new exception instead of SystemExit(1)
+            raise IncludePathNotFoundError(target_folder_name)
 
-        return None
+        if len(found_mql_paths) > 1:
+            self.console.log(
+                f"[yellow]Warning:[/] Multiple MQL {target_folder_name} "
+                f"data folders found. Using the first one detected: "
+                f"{found_mql_paths[0].parent.as_posix()}"
+            )
+            self.console.log(
+                f"[yellow]Hint:[/] To specify a particular data folder, "
+                f"use 'helix-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
+            )
+
+        return found_mql_paths[0]
 
     def _parse_compilation_log(self, log_path: Path) -> CompilationResult:
         """Parse MetaEditor compilation log."""

@@ -52,3 +52,13 @@ class CompilationFailedError(MQLCompilationError):
             f"Compilation failed: {error_count} error(s), "
             f"{warning_count} warning(s), {total} file(s) total"
         )
+
+class IncludePathNotFoundError(MQLCompilationError): # NEW
+    """Raised when the MetaTrader include directory cannot be located."""
+
+    def __init__(self, target_folder: str):
+        self.target_folder = target_folder
+        super().__init__(
+            f"MetaTrader include directory for '{target_folder}' not found. "
+            "Ensure MetaTrader is installed and the data folder exists."
+        )

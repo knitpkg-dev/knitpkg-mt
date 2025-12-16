@@ -1,83 +1,113 @@
 # helix/commands/config.py
 
 """
-Helix config command — manage CLI configuration.
+Helix config command — manage Helix configuration settings.
 
-This module handles compiler path configuration and other CLI settings.
+This module provides CLI commands to view and modify Helix's global
+configuration, such as MetaEditor compiler paths and MQL data folder paths.
 """
-
 from pathlib import Path
 from typing import Optional
-from rich.console import Console
-import typer
 
-# Import MQL-specific settings
+import typer
+from rich.console import Console
+from rich.table import Table
+
 from helix.mql.settings import (
     get_mql5_compiler_path,
-    get_mql4_compiler_path,
     set_mql5_compiler_path,
+    get_mql4_compiler_path,
     set_mql4_compiler_path,
+    get_mql5_data_folder_path,
+    set_mql5_data_folder_path,
+    get_mql4_data_folder_path,
+    set_mql4_data_folder_path,
 )
 
+
 def register(app):
+    """Register the config command with the Typer app."""
+
     @app.command()
     def config(
         mql5_compiler_path: Optional[Path] = typer.Option(
             None,
             "--mql5-compiler-path",
-            help="Set MQL5 compiler path (MetaEditor64.exe)"
+            help="Set the path to MetaEditor64.exe (MQL5 compiler)"
         ),
         mql4_compiler_path: Optional[Path] = typer.Option(
             None,
             "--mql4-compiler-path",
-            help="Set MQL4 compiler path (MetaEditor.exe)"
+            help="Set the path to MetaEditor.exe (MQL4 compiler)"
         ),
-        show: Optional[bool] = typer.Option(
+        mql5_data_folder_path: Optional[Path] = typer.Option( # NEW
+            None,
+            "--mql5-data-folder-path",
+            help="Set the custom data folder path for MQL5 (e.g., C:\\Users\\User\\AppData\\Roaming\\MetaQuotes\\Terminal\\<hash>)"
+        ),
+        mql4_data_folder_path: Optional[Path] = typer.Option( # NEW
+            None,
+            "--mql4-data-folder-path",
+            help="Set the custom data folder path for MQL4 (e.g., C:\\Users\\User\\AppData\\Roaming\\MetaQuotes\\Terminal\\<hash>)"
+        ),
+        list_all: Optional[bool] = typer.Option(
             False,
-            "--show",
-            help="Show current configuration"
+            "--list",
+            "-l",
+            help="List all current configuration settings"
         )
     ):
-        """Configure Helix CLI settings (compiler paths, etc)."""
+        """
+        Manage Helix configuration settings.
 
+        Use this command to set paths for MetaEditor compilers and MQL data folders.
+        """
         console = Console()
 
-        # Show current configuration
-        if show:
-            console.log("[bold cyan]Current Configuration:[/]")
-            console.log(f"  MQL5 Compiler: [yellow]{get_mql5_compiler_path()}[/]")
-            console.log(f"  MQL4 Compiler: [yellow]{get_mql4_compiler_path()}[/]")
-            return
-
-        # Set MQL5 compiler path
+        # Set compiler paths
         if mql5_compiler_path:
-            if not mql5_compiler_path.exists():
-                console.log(
-                    f"[red]Error:[/] Compiler not found: {mql5_compiler_path}"
-                )
-                raise SystemExit(1)
-
             set_mql5_compiler_path(str(mql5_compiler_path.resolve()))
             console.log(
-                f"[green]Check[/] MQL5 compiler path set to: "
-                f"[bold]{mql5_compiler_path.resolve()}[/]"
+                f"[green]MQL5 compiler path set to:[/]"
+                f" {mql5_compiler_path.resolve()}"
             )
-
-        # Set MQL4 compiler path
         if mql4_compiler_path:
-            if not mql4_compiler_path.exists():
-                console.log(
-                    f"[red]Error:[/] Compiler not found: {mql4_compiler_path}"
-                )
-                raise SystemExit(1)
-
             set_mql4_compiler_path(str(mql4_compiler_path.resolve()))
             console.log(
-                f"[green]Check[/] MQL4 compiler path set to: "
-                f"[bold]{mql4_compiler_path.resolve()}[/]"
+                f"[green]MQL4 compiler path set to:[/]"
+                f" {mql4_compiler_path.resolve()}"
             )
 
-        if not mql5_compiler_path and not mql4_compiler_path and not show:
+        # Set MQL data folder paths (NEW)
+        if mql5_data_folder_path:
+            set_mql5_data_folder_path(str(mql5_data_folder_path.resolve()))
             console.log(
-                "[yellow]No configuration changes. Use --show to see current settings.[/]"
+                f"[green]MQL5 data folder path set to:[/]"
+                f" {mql5_data_folder_path.resolve()}"
             )
+        if mql4_data_folder_path:
+            set_mql4_data_folder_path(str(mql4_data_folder_path.resolve()))
+            console.log(
+                f"[green]MQL4 data folder path set to:[/]"
+                f" {mql4_data_folder_path.resolve()}"
+            )
+
+        # List all settings if requested or no settings were changed
+        if list_all or (
+            not mql5_compiler_path and not mql4_compiler_path and
+            not mql5_data_folder_path and not mql4_data_folder_path
+        ):
+
+            table = Table(title="Helix Configuration", show_header=True, header_style="bold cyan")
+            table.add_column("Setting", style="dim")
+            table.add_column("Value")
+
+            # Display compiler paths
+            table.add_row("mql5-compiler-path", get_mql5_compiler_path() or "[dim]Not set[/]")
+            table.add_row("mql4-compiler-path", get_mql4_compiler_path() or "[dim]Not set[/]")
+
+            # Display data folder paths (NEW)
+            table.add_row("mql5-data-folder-path", get_mql5_data_folder_path() or "[dim]Not set[/]")
+            table.add_row("mql4-data-folder-path", get_mql4_data_folder_path() or "[dim]Not set[/]")
+
+            console.print(table)
