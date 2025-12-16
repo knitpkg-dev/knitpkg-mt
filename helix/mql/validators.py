@@ -11,7 +11,7 @@ from pathlib import Path
 from rich.console import Console
 
 from helix.mql.models import MQLProjectType, Target
-from helix.core.constants import INCLUDE_DIR
+from helix.mql.constants import INCLUDE_DIR
 
 # ==============================================================
 # MQL PROJECT STRUCTURE VALIDATION

@@ -18,7 +18,7 @@ import typer
 from helix.core.file_reading import load_helix_manifest
 from helix.mql.models import MQLHelixManifest, Target
 from helix.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
-from helix.core.constants import FLAT_DIR
+from helix.mql.constants import FLAT_DIR
 
 # ==============================================================
 # COMPILATION RESULT TYPES

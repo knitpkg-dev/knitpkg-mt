@@ -19,9 +19,10 @@ import typer
 
 from helix.core.utils import navigate_path
 from helix.core.file_reading import load_helix_manifest, read_file_smart
-from helix.core.constants import CACHE_DIR, FLAT_DIR, INCLUDE_DIR
+from helix.core.constants import CACHE_DIR
 
 # Import MQL-specific models and downloader
+from helix.mql.constants import FLAT_DIR, INCLUDE_DIR
 from helix.mql.models import MQLHelixManifest, MQLProjectType, IncludeMode
 from helix.mql.dependency_downloader import MQLDependencyDownloader
 from helix.mql.validators import validate_mql_project_structure

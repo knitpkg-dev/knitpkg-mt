@@ -11,7 +11,7 @@ from rich.console import Console
 from helix.mql.models import ProjectType, MQLHelixManifest
 from helix.core.file_reading import load_helix_manifest
 from helix.core.utils import navigate_path
-from helix.core.constants import INCLUDE_DIR
+from helix.mql.constants import INCLUDE_DIR
 
 # Import MQL-specific downloader
 from helix.mql.dependency_downloader import MQLDependencyDownloader
