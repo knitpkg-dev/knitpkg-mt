@@ -332,7 +332,7 @@ class DependencyDownloader:
         """
         base_url = specifier.split("#")[0].rstrip("/")
         ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
-        cache_key = hashlib.sha256(specifier.encode()).hexsha[:16]
+        cache_key = hashlib.sha256(specifier.encode()).hexdigest()[:16]
         dep_path = CACHE_DIR / f"{name}_{cache_key}"
 
         lock_data = load_lockfile()

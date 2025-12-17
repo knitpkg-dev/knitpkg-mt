@@ -8,7 +8,6 @@ The MQLCompiler class raises domain-specific exceptions instead of SystemExit,
 allowing proper separation between library code and CLI layer.
 """
 import os
-import subprocess
 import re
 import shutil
 from pathlib import Path
@@ -518,27 +517,18 @@ class MQLCompiler:
         log_file = self._get_log_file_path(file_path)
 
         try:
-            # Build command arguments
-            args = [
-                str(compiler_path),
-                f'/compile:{str(file_path)}',
-                f'/log:{str(log_file)}',
-            ]
+            # NOTE: The MetaEditor compiler does not handle file paths with spaces correctly 
+            # when invoked via os.subprocess.run(). Workaround: navigate to the compiler 
+            # directory and invoke via os.system() instead.
 
-            # Add include path if detected
+            cmd = f'{compiler_path.name} /compile:"{file_path}" /log:"{log_file}"'
+
             inc_path = self._get_mql_include_path()
             if inc_path:
-                args.append(f'/inc:{str(inc_path)}')
-
-            # Execute MetaEditor
-            # NOTE: MetaEditor always returns 0, even on compilation errors
-            subprocess.run(
-                args,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=str(self.project_dir)
-            )
+                cmd = cmd + f' /inc:"{inc_path}"'
+                
+            os.chdir(compiler_path.parent)
+            os.system(cmd)
 
             # Parse log to determine actual result
             result = self._parse_compilation_log(log_file)
@@ -565,16 +555,6 @@ class MQLCompiler:
 
             return result
 
-        except subprocess.TimeoutExpired:
-            self.console.log(
-                f"  [red]✗[/] {rel_path} (compilation timeout)"
-            )
-            return CompilationResult(
-                file_path=file_path,
-                status=CompilationStatus.ERROR,
-                error_count=1,
-                messages=["Compilation timeout"]
-            )
         except Exception as e:
             self.console.log(
                 f"  [red]✗[/] {rel_path} (error: {e})"
