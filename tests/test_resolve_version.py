@@ -1,5 +1,5 @@
 # tests/test_resolve_version.py
-
+from pathlib import Path
 import pytest
 from unittest.mock import MagicMock
 import git
@@ -11,7 +11,7 @@ from helix.core.dependency_downloader import DependencyDownloader
 
 def resolve_version_from_spec(name, specifier, repo):
     """Helper function to test version resolution"""
-    downloader = DependencyDownloader(Console())
+    downloader = DependencyDownloader(Console(), Path.cwd())
     return downloader._resolve_version_from_spec(name, specifier, repo)
 
 @pytest.fixture

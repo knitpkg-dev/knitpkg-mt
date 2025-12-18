@@ -34,7 +34,7 @@ def test_local_dependency_not_found(tmp_path: Path):
     (d / "helix.json").write_text(json.dumps(manifest_data))
 
     manifest = load_helix_manifest(d, manifest_class=MQLHelixManifest)
-    downloader = MQLDependencyDownloader(Console())
+    downloader = MQLDependencyDownloader(Console(), Path.cwd())
 
     with pytest.raises(LocalDependencyNotFoundError) as exc:
         downloader.download_all(manifest.dependencies, locked_mode=False)
@@ -73,7 +73,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     (main_dir / "helix.json").write_text(json.dumps(main_manifest))
 
     manifest = load_helix_manifest(main_dir, manifest_class=MQLHelixManifest)
-    downloader = MQLDependencyDownloader(Console())
+    downloader = MQLDependencyDownloader(Console(), Path.cwd())
 
     with pytest.raises(LocalDependencyNotGitError) as exc:
         downloader.download_all(manifest.dependencies, locked_mode=True)
