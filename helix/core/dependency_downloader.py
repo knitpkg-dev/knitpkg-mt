@@ -23,7 +23,7 @@ from packaging.version import Version, InvalidVersion
 import git
 from rich.console import Console
 
-from helix.core.lockfile import load_lockfile, save_lockfile
+from helix.core.lockfile import load_lockfile, save_lockfile, is_lock_change
 from helix.core.file_reading import load_helix_manifest
 from helix.core.utils import is_local_path
 from helix.core.constants import CACHE_DIR
@@ -309,14 +309,15 @@ class DependencyDownloader:
     ) -> None:
         """Update lockfile for local git dependency."""
         lock_data = load_lockfile()
-        lock_data["dependencies"][name] = {
-            "source": str(dep_path.resolve()),
-            "specifier": specifier,
-            "resolved": f"commit:{commit}",
-            "commit": commit,
-            "type": "local-git",
-        }
-        save_lockfile(lock_data)
+        if is_lock_change(lock_data, name, str(dep_path.resolve()), specifier, f"commit:{commit}", commit):
+            lock_data["dependencies"][name] = {
+                "source": str(dep_path.resolve()),
+                "specifier": specifier,
+                "resolved": f"commit:{commit}",
+                "commit": commit,
+                "type": "local-git",
+            }
+            save_lockfile(lock_data)
 
     def _download_from_git(
         self,
@@ -419,14 +420,15 @@ class DependencyDownloader:
 
         commit = repo.head.commit.hexsha
         lock_data = load_lockfile()
-        lock_data["dependencies"][name] = {
-            "source": base_url,
-            "specifier": ref_spec,
-            "resolved": final_ref,
-            "commit": commit,
-            "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        }
-        save_lockfile(lock_data)
+        if is_lock_change(lock_data, name, base_url, ref_spec, final_ref, commit):
+            lock_data["dependencies"][name] = {
+                "source": base_url,
+                "specifier": ref_spec,
+                "resolved": final_ref,
+                "commit": commit,
+                "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            }
+            save_lockfile(lock_data)
         return dep_path
 
     def _fetch_tags_and_resolve(self, name: str, specifier: str, dep_path: Path) -> Path:
@@ -451,17 +453,7 @@ class DependencyDownloader:
 
         commit = repo.head.commit.hexsha
         lock_data = load_lockfile()
-        dep_saved = lock_data["dependencies"].get(name, {})
-        source_saved = dep_saved.get("source")
-        specifier_saved = dep_saved.get("specifier")
-        resolved_saved = dep_saved.get("resolved")
-        commit_saved = dep_saved.get("commit")
-        if (
-            source_saved != base_url or 
-            specifier_saved != ref_spec or 
-            resolved_saved != final_ref or 
-            commit_saved != commit
-        ):
+        if is_lock_change(lock_data, name, base_url, ref_spec, final_ref, commit):
             lock_data["dependencies"][name] = {
                 "source": base_url,
                 "specifier": ref_spec,

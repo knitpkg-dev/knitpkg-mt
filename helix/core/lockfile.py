@@ -21,3 +21,16 @@ def save_lockfile(data: Dict):
     data.setdefault("version", "1")
     LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     LOCK_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+def is_lock_change(lock_data: Dict, dep_name: str, base_url: str, ref_spec: str, final_ref: str, commit: str) -> bool:
+    dep_saved = lock_data["dependencies"].get(dep_name, {})
+    source_saved = dep_saved.get("source")
+    specifier_saved = dep_saved.get("specifier")
+    resolved_saved = dep_saved.get("resolved")
+    commit_saved = dep_saved.get("commit")
+    
+    return \
+        source_saved != base_url or \
+        specifier_saved != ref_spec or \
+        resolved_saved != final_ref or \
+        commit_saved != commit
