@@ -1,25 +1,7 @@
 # No seu test_integration_deps.py
 from helix.commands.install import HelixInstaller
-from helix.core.models import HelixManifest
-from helix.mql.models import MQLHelixManifest, MQLProjectType, IncludeMode
-from helix.commands.compile import FLAT_DIR
-from helix.mql.constants import INCLUDE_DIR
-from helix.core.file_reading import read_file_smart
-from helix.core.exceptions import (
-    LocalDependencyNotFoundError,
-    LocalDependencyNotGitError,
-    DependencyHasLocalChangesError,
-)
-from helix.core.dependency_downloader import (
-    ResolvedDeps,
-    DependencyTree,
-    DependencyNode,
-)
-from helix.commands.install import FlatModeProcessor, ResolveHelixIncludePattern, IncludeModeProcessor
-from helix.core.file_reading import load_helix_manifest
-from helix.mql.dependency_downloader import MQLDependencyDownloader
 from pathlib import Path
-
+import pytest
 
 # --- MockConsole para capturar a saída ---
 class MockConsole:
