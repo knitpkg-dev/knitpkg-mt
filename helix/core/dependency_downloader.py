@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Tuple, Set, Optional, Any
 from dataclasses import dataclass
@@ -343,12 +343,17 @@ class DependencyDownloader:
             and locked.get("source") == base_url
             and locked.get("specifier") == ref_spec
         ):
-            status = self._check_local_dep_integrity(dep_path, locked)
+            status = self._check_local_dep_integrity(name, dep_path, locked)
             if status == "clean":
                 self.console.log(
                     f"[dim]Cache hit[/] {name} → {locked.get('resolved', 'HEAD')[:8]}"
                 )
                 return dep_path
+            if status == "drifted":
+                self.console.log(
+                    f"[dim]Cache drifted[/] {name} — re-resolving..."
+                )
+                return self._fetch_tags_and_resolve(name, specifier, dep_path)
             if force_lock:
                 raise DependencyHasLocalChangesError(name)
             self.console.log(
@@ -359,7 +364,7 @@ class DependencyDownloader:
         elif locked.get("source") == base_url and locked.get("specifier") == ref_spec:
             commit = locked.get("commit")
             if not commit:
-                return self._download_and_resolve(name, specifier, dep_path)
+                return self._clone_and_resolve(name, specifier, dep_path)
             self.console.log(
                 f"[bold green]Lockfile[/] {name} → "
                 f"{locked.get('resolved','HEAD')[:8]} ({commit[:8]})"
@@ -369,9 +374,9 @@ class DependencyDownloader:
             repo.git.checkout(commit)
             return dep_path
         else:
-            return self._download_and_resolve(name, specifier, dep_path)
+            return self._clone_and_resolve(name, specifier, dep_path)
 
-    def _download_and_resolve(self, name: str, specifier: str, dep_path: Path) -> Path:
+    def _clone_and_resolve(self, name: str, specifier: str, dep_path: Path) -> Path:
         """Download and resolve the best matching version/tag."""
         base_url = specifier.split("#")[0].rstrip("/")
         ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
@@ -400,12 +405,44 @@ class DependencyDownloader:
             "specifier": ref_spec,
             "resolved": final_ref,
             "commit": commit,
-            "fetched_at": datetime.utcnow().isoformat() + "Z"
+            "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         }
         save_lockfile(lock_data)
         return dep_path
 
-    def _check_local_dep_integrity(self, dep_path: Path, locked: dict) -> str:
+    def _fetch_tags_and_resolve(self, name: str, specifier: str, dep_path: Path) -> Path:
+        """Download and resolve the best matching version/tag."""
+        base_url = specifier.split("#")[0].rstrip("/")
+        ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
+
+        repo = git.Repo(dep_path, search_parent_directories=True)
+
+        self.console.log(f"[dim]Fetching tags[/] for {name}...")
+        repo.remotes.origin.fetch(tags=True, prune=True)
+
+        final_ref = self._resolve_version_from_spec(name, ref_spec, repo)
+
+        try:
+            self.console.log(f"[dim]Checking out[/] {name} → {final_ref}")
+            repo.git.checkout(final_ref, force=True)
+        except git.exc.GitCommandError:
+            self.console.log(f"[red]Error:[/] Failed to checkout '{final_ref}' for {name}")
+            repo.git.checkout("HEAD", force=True)
+            final_ref = "HEAD"
+
+        commit = repo.head.commit.hexsha
+        lock_data = load_lockfile()
+        lock_data["dependencies"][name] = {
+            "source": base_url,
+            "specifier": ref_spec,
+            "resolved": final_ref,
+            "commit": commit,
+            "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        }
+        save_lockfile(lock_data)
+        return dep_path
+    
+    def _check_local_dep_integrity(self, name: str, dep_path: Path, locked: dict) -> str:
         """Check if a local dependency is clean and reproducible."""
         try:
             repo = git.Repo(dep_path, search_parent_directories=True)
@@ -413,6 +450,14 @@ class DependencyDownloader:
                 raise git.InvalidGitRepositoryError
             if repo.is_dirty(untracked_files=True):
                 return "dirty"
+            
+            # Pull latest changes before checking commit
+            try:
+                self.console.log(f"[dim]Pull latest changes[/] for {name}...")
+                repo.remotes.origin.pull()
+            except Exception:
+                pass  # Ignore pull errors, continue with existing state
+            
             if locked.get("commit") and repo.head.commit.hexsha != locked["commit"]:
                 return "drifted"
             return "clean"
