@@ -390,7 +390,10 @@ class DependencyDownloader:
             repo.git.checkout(commit)
             return dep_path
         else:
-            return self._clone_and_resolve(name, specifier, dep_path)
+            if dep_path.exists():
+                return self._fetch_tags_and_resolve(name, specifier, dep_path)
+            else:
+                return self._clone_and_resolve(name, specifier, dep_path)
 
     def _clone_and_resolve(self, name: str, specifier: str, dep_path: Path) -> Path:
         """Download and resolve the best matching version/tag."""
@@ -448,14 +451,25 @@ class DependencyDownloader:
 
         commit = repo.head.commit.hexsha
         lock_data = load_lockfile()
-        lock_data["dependencies"][name] = {
-            "source": base_url,
-            "specifier": ref_spec,
-            "resolved": final_ref,
-            "commit": commit,
-            "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        }
-        save_lockfile(lock_data)
+        dep_saved = lock_data["dependencies"].get(name, {})
+        source_saved = dep_saved.get("source")
+        specifier_saved = dep_saved.get("specifier")
+        resolved_saved = dep_saved.get("resolved")
+        commit_saved = dep_saved.get("commit")
+        if (
+            source_saved != base_url or 
+            specifier_saved != ref_spec or 
+            resolved_saved != final_ref or 
+            commit_saved != commit
+        ):
+            lock_data["dependencies"][name] = {
+                "source": base_url,
+                "specifier": ref_spec,
+                "resolved": final_ref,
+                "commit": commit,
+                "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            }
+            save_lockfile(lock_data)
         return dep_path
     
     def _check_local_dep_integrity(self, name: str, dep_path: Path, locked: dict) -> str:
