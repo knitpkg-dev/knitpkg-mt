@@ -357,7 +357,7 @@ class HelixInstaller:
         self.console = console
         self.project_dir = project_dir
         # Use MQL-specific downloader
-        self.downloader = MQLDependencyDownloader(console)
+        self.downloader = MQLDependencyDownloader(console, project_dir)
         self.include_processor = IncludeModeProcessor(console, project_dir)
         self.flat_processor = FlatModeProcessor(console, project_dir)
 

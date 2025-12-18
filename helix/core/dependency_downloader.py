@@ -80,8 +80,9 @@ class DependencyDownloader:
         locked_mode: Whether to enforce strict lockfile mode
     """
 
-    def __init__(self, console: Console):
+    def __init__(self, console: Console, project_dir: Path):
         self.console = console
+        self.project_dir = project_dir
         self.resolved_deps: ResolvedDeps = []
         self.dependency_tree: DependencyTree = []
         self.resolved_paths: Set[Path] = set()
@@ -193,7 +194,7 @@ class DependencyDownloader:
         if specifier.startswith("file://"):
             dep_path = Path(specifier[7:])
         else:
-            dep_path = (Path.cwd() / specifier).resolve()
+            dep_path = (self.project_dir / specifier).resolve()
 
         if not dep_path.exists():
             raise LocalDependencyNotFoundError(name, str(dep_path))
