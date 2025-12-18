@@ -20,6 +20,15 @@ class DependencyError(HelixError):
     """Base exception for dependency-related errors."""
     pass
 
+class CorruptGitDependencyCacheError(DependencyError):
+    """Raised when a cached git dependency is corrupt."""
+    def __init__(self, name: str, path: str):
+        self.name = name
+        self.path = path
+        super().__init__(
+            f"Cached git dependency '{name}' is corrupt:\n    → {path}"
+        )
+
 class LocalDependencyNotFoundError(DependencyError):
     """Raised when a local dependency path does not exist."""
     def __init__(self, name: str, path: str):

@@ -33,6 +33,7 @@ from helix.core.exceptions import (
     LocalDependencyNotFoundError,
     LocalDependencyNotGitError,
     DependencyHasLocalChangesError,
+    CorruptGitDependencyCacheError,
 )
 
 # ==============================================================
@@ -251,7 +252,7 @@ class DependencyDownloader:
 
     def _handle_remote_dependency(self, name: str, specifier: str) -> Optional[Path]:
         """Handle remote dependency resolution."""
-        dep_path = self._download_from_git(name, specifier, force_lock=self.locked_mode)
+        dep_path = self._download_from_git(name, specifier)
         resolved_path = dep_path.resolve()
 
         # Check if already resolved by path
@@ -320,9 +321,7 @@ class DependencyDownloader:
     def _download_from_git(
         self,
         name: str,
-        specifier: str,
-        *,
-        force_lock: bool = False
+        specifier: str
     ) -> Path:
         """
         Download a remote Git dependency.
@@ -344,23 +343,40 @@ class DependencyDownloader:
             and locked.get("specifier") == ref_spec
         ):
             status = self._check_local_dep_integrity(name, dep_path, locked)
+
             if status == "clean":
                 self.console.log(
                     f"[dim]Cache hit[/] {name} → {locked.get('resolved', 'HEAD')[:8]}"
                 )
                 return dep_path
+            
             if status == "drifted":
                 self.console.log(
                     f"[dim]Cache drifted[/] {name} — re-resolving..."
                 )
-                return self._fetch_tags_and_resolve(name, specifier, dep_path)
-            if force_lock:
-                raise DependencyHasLocalChangesError(name)
-            self.console.log(
-                f"[bold yellow]Warning:[/] Local changes in '{name}' "
-                f"— using modified version"
-            )
-            return dep_path
+                if not self.locked_mode:
+                    return self._fetch_tags_and_resolve(name, specifier, dep_path)
+                else:
+                    commit = locked.get("commit")
+                    if not commit:
+                        return self._fetch_tags_and_resolve(name, specifier, dep_path)
+
+                    repo = git.Repo(dep_path, search_parent_directories=True)
+                    repo.git.checkout(commit)
+                    return dep_path
+
+            if status == "dirty":
+                if self.locked_mode:
+                    raise DependencyHasLocalChangesError(name)
+                self.console.log(
+                    f"[bold yellow]Warning:[/] Local changes in '{name}' "
+                    f"— using modified version"
+                )
+                return dep_path
+            
+            else:
+                raise CorruptGitDependencyCacheError(name, dep_path)
+
         elif locked.get("source") == base_url and locked.get("specifier") == ref_spec:
             commit = locked.get("commit")
             if not commit:
@@ -450,6 +466,10 @@ class DependencyDownloader:
                 raise git.InvalidGitRepositoryError
             if repo.is_dirty(untracked_files=True):
                 return "dirty"
+            
+            if self.locked_mode:
+                if locked.get("commit") and repo.head.commit.hexsha == locked["commit"]:
+                    return "clean"
             
             # Pull latest changes before checking commit
             try:
