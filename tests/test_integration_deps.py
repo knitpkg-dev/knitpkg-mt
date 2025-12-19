@@ -121,7 +121,7 @@ DEP_D_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 #include "../autocomplete/autocomplete.mqh" /* @helix:replace-with "helix/include/DepA.mqh" */
 
-/* @helix:include "helix/include/DepB.mqh" */
+/* @helix:include "helix/include/DepB/DepB.mqh" */
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -141,7 +141,7 @@ DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
 //+------------------------------------------------------------------+
 #include "../include/DepA.mqh" /*** ← dependence resolved by Helix. Original include: "../autocomplete/autocomplete.mqh" ***/
 
-#include "../include/DepB.mqh" /*** ← dependence added by Helix ***/
+#include "../include/DepB/DepB.mqh" /*** ← dependence added by Helix ***/
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -401,7 +401,7 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
     create_project_files(root_dir, "DepD", "helix/include", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
     # Create dependency projects (Level 2)
     create_project_files(root_dir, "DepA", "helix/include", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
-    create_project_files(root_dir, "DepB", "helix/include", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
+    create_project_files(root_dir, "DepB", "helix/include/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
     # Create Expert project (Level 1)
     create_project_files(root_dir, "ExpertTest", ".", EXPERT_TEST_MQH_CONTENT, expert_test_yaml_content, ".", EXPERT_TEST_MQ5_CONTENT)
 
@@ -586,7 +586,7 @@ def check_include_mode(root_dir: Path):
     assert depa_content == DEP_A_MQH_CONTENT
 
     # Verify if DepB.mqh include file was created with expected content
-    depb_path = expert_test_includes_path / "DepB.mqh"
+    depb_path = expert_test_includes_path / "DepB" / "DepB.mqh"
     assert depb_path.exists(), f"DepB.mqh include file not found: {depb_path}"
 
     with open(depb_path, "r", encoding="utf-8") as f:
