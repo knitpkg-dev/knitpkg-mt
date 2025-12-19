@@ -67,7 +67,7 @@ class AutocompleteGenerator:
         # Resolve dependencies (reuse same logic as install)
         resolved_deps = []
         if manifest.dependencies:
-            downloader = MQLDependencyDownloader(self.console)
+            downloader = MQLDependencyDownloader(self.console, self.project_dir)
             resolved_deps, _dependency_tree = downloader.download_all(
                 manifest.dependencies,
                 False

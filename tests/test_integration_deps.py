@@ -1,5 +1,6 @@
 # No seu test_integration_deps.py
 from helix.commands.install import HelixInstaller
+from helix.commands.autocomplete import AutocompleteGenerator
 from pathlib import Path
 import pytest
 
@@ -106,6 +107,7 @@ description: Dependency E package
 
 # Level 3
 DEP_D_MQH_CONTENT = """
+
 //+------------------------------------------------------------------+
 //|                                                           DepD.mqh |
 //|                                                                  |
@@ -117,13 +119,57 @@ DEP_D_MQH_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "helix/include/DepA.mqh"
-#include "helix/include/DepB.mqh"
+#include "../autocomplete/autocomplete.mqh" /* @helix:replace-with "helix/include/DepA.mqh" */
+
+/* @helix:include "helix/include/DepB.mqh" */
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
 
+DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
+
+//+------------------------------------------------------------------+
+//|                                                           DepD.mqh |
+//|                                                                  |
+//|                    Helix for MetaTrader                          |
+//|                                                                  |
+//|                          MIT License                             |
+//|                    Copyright (c) 2025 Douglas Rechia             |
+//|                                                                  |
+//|  Dependency D: Depends on DepA and DepB.                         |
+//|                                                                  |
+//+------------------------------------------------------------------+
+#include "../include/DepA.mqh" /*** ← dependence resolved by Helix. Original include: "../autocomplete/autocomplete.mqh" ***/
+
+#include "../include/DepB.mqh" /*** ← dependence added by Helix ***/
+
+string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
+
+"""
+
+DEP_D_MQ5_CONTENT = """
+//+------------------------------------------------------------------+
+//|                                                    UnitTests.mq5 |
+//|                                                   Douglas Rechia |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Douglas Rechia"
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+
+#include "helix/include/DepD.mqh"
+//+------------------------------------------------------------------+
+//| Script program start function                                    |
+//+------------------------------------------------------------------+
+void OnStart()
+  {
+   Print(GetDepDValue());
+  }
+//+------------------------------------------------------------------+
+"""
+
 DEP_D_YAML_CONTENT = """
+
 name: DepD
 version: 1.0.0
 type: package
@@ -132,6 +178,9 @@ description: Dependency D package
 dependencies:
   DepA: ../DepA
   DepB: ../DepB
+
+compile:
+  - UnitTests.mq5
 """
 
 DEP_C_MQH_CONTENT = """
@@ -266,7 +315,7 @@ void OnTick()
 }
 """
 
-EXPERT_TEST_YAML_CONTENT = """
+EXPERT_TEST_YAML_CONTENT_1 = """
 name: ExpertTest
 version: 1.0.0
 type: expert
@@ -278,6 +327,36 @@ entrypoints:
 dependencies:
   DepA: ../DepA # Local dependency
   DepB: ../DepB # Local dependency
+  DepC: ../DepC # Local dependency
+  DepD: ../DepD # Local dependency
+  DepE: ../DepE # Local dependency
+"""
+
+EXPERT_TEST_YAML_CONTENT_2 = """
+name: ExpertTest
+version: 1.0.0
+type: expert
+target: MQL5
+description: Expert Advisor Test Project
+include_mode: flat
+entrypoints:
+  - ExpertTest.mqh
+dependencies:
+  DepC: ../DepC # Local dependency
+  DepD: ../DepD # Local dependency
+  DepE: ../DepE # Local dependency
+"""
+
+EXPERT_TEST_YAML_CONTENT_3 = """
+name: ExpertTest
+version: 1.0.0
+type: expert
+target: MQL5
+description: Expert Advisor Test Project
+include_mode: include
+entrypoints:
+  - ExpertTest.mqh
+dependencies:
   DepC: ../DepC # Local dependency
   DepD: ../DepD # Local dependency
   DepE: ../DepE # Local dependency
@@ -305,15 +384,14 @@ def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_c
         with open(mq5_file_path, "w", encoding="utf-8") as f:
             f.write(mq5_content)
 
-# --- Pytest Integration Test ---
-def test_complex_dependency_tree_and_flat_include(tmp_path: Path):
+def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str) -> str:
     """
     Tests the resolution of a complex dependency tree (4 levels with merge)
     and the correct generation of the flat include file by instantiating HelixInstaller directly.
     """
     root_dir = tmp_path / "helix_test_root"
     print('='*50)
-    print(f"===========Test root dir: {root_dir}")
+    print(f"===========complex_dependency_tree_and_flat_include root dir: {root_dir}")
     print('='*50)
     root_dir.mkdir()
 
@@ -321,12 +399,12 @@ def test_complex_dependency_tree_and_flat_include(tmp_path: Path):
     create_project_files(root_dir, "DepE", "helix/include", DEP_E_MQH_CONTENT, DEP_E_YAML_CONTENT)
     # Create dependency projects (Level 3)
     create_project_files(root_dir, "DepC", "helix/include", DEP_C_MQH_CONTENT, DEP_C_YAML_CONTENT)
-    create_project_files(root_dir, "DepD", "helix/include", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT)
+    create_project_files(root_dir, "DepD", "helix/include", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
     # Create dependency projects (Level 2)
     create_project_files(root_dir, "DepA", "helix/include", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
     create_project_files(root_dir, "DepB", "helix/include", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
     # Create Expert project (Level 1)
-    create_project_files(root_dir, "ExpertTest", ".", EXPERT_TEST_MQH_CONTENT, EXPERT_TEST_YAML_CONTENT, ".", EXPERT_TEST_MQ5_CONTENT)
+    create_project_files(root_dir, "ExpertTest", ".", EXPERT_TEST_MQH_CONTENT, expert_test_yaml_content, ".", EXPERT_TEST_MQ5_CONTENT)
 
     expert_test_path = root_dir / "ExpertTest"
 
@@ -371,6 +449,13 @@ def test_complex_dependency_tree_and_flat_include(tmp_path: Path):
                 print(error)
         pytest.fail(f"HelixInstaller.install failed: {e}")
 
+    return root_dir
+
+
+def check_flat_content(root_dir: Path):
+    
+    expert_test_path = root_dir / "ExpertTest"
+
     # Verify if the flat include file was created
     flat_include_path = expert_test_path / "helix" / "flat" / "ExpertTest_flat.mqh"
     assert flat_include_path.exists(), f"Flat include file not found: {flat_include_path}"
@@ -408,3 +493,134 @@ def test_complex_dependency_tree_and_flat_include(tmp_path: Path):
 
     print("\nFlat include file created and verified successfully using MockConsole!")
 
+# --- Pytest Integration Test ---
+def test_complex_dependency_tree_and_flat_include_expert_yaml1(tmp_path: Path):
+    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_1))
+
+def test_complex_dependency_tree_and_flat_include_expert_yaml2(tmp_path: Path):
+    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_2))
+
+def test_autocomplete(tmp_path: Path):
+    root_dir = tmp_path / "helix_test_root"
+    print('='*50)
+    print(f"===========test_autocomplete root dir: {root_dir}")
+    print('='*50)
+    root_dir.mkdir()
+
+    create_project_files(root_dir, "DepD", "helix/include", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
+    create_project_files(root_dir, "DepA", "helix/include", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
+    create_project_files(root_dir, "DepB", "helix/include", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
+
+    depd_test_path = root_dir / "DepD"
+
+    # Instantiate MockConsole
+    mock_console = MockConsole()
+
+    # Instantiate AutocompleteGenerator and call generate directly
+    # The AutocompleteGenerator expects a Console instance
+    generator = AutocompleteGenerator(mock_console, depd_test_path)
+
+    print(f"\nRunning AutocompleteGenerator.generate for {depd_test_path}")
+    try:
+        # Generates helix/autocomplete/autocomplete.mqh
+        generator.generate()
+
+        # Print captured output for debugging if needed
+        print("\n--- Captured Console Logs ---")
+        for log in mock_console.logs:
+            print(log)
+        if mock_console.warnings:
+            print("\n--- Captured Console Warnings ---")
+            for warn in mock_console.warnings:
+                print(warn)
+        if mock_console.errors:
+            print("\n--- Captured Console Errors ---")
+            for error in mock_console.errors:
+                print(error)
+
+    except Exception as e:
+        # If an exception occurs within HelixInstaller, print captured output
+        print(f"\n--- AutocompleteGenerator FAILED with an exception: {e} ---")
+        print("\n--- Captured Console Logs (before exception) ---")
+        for log in mock_console.logs:
+            print(log)
+        if mock_console.warnings:
+            print("\n--- Captured Console Warnings (before exception) ---")
+            for warn in mock_console.warnings:
+                print(warn)
+        if mock_console.errors:
+            print("\n--- Captured Console Errors (before exception) ---")
+            for error in mock_console.errors:
+                print(error)
+        pytest.fail(f"AutocompleteGenerator.install failed: {e}")
+
+    # Verify if autocomplete.mqh include file was created
+    autocomplete_path = depd_test_path / "helix" / "autocomplete" / "autocomplete.mqh"
+    assert autocomplete_path.exists(), f"autocomplete.mqh file not found: {autocomplete_path}"
+
+    # Verify the content of the autocomplete include file
+    with open(autocomplete_path, "r", encoding="utf-8") as f:
+        autocomplete_content = f.read()
+
+    print(f"\nContent of {autocomplete_path}:\n{autocomplete_content}")
+
+    # Assertions to check if DepA.mqh and DepB.mqh are included
+    assert "//+------------------------------------------------------------------+\n//|                                          autocomplete.mqh        |" in autocomplete_content
+    
+    assert '#include "../../../DepA/helix/include/DepA.mqh"' in autocomplete_content
+    assert '#include "../../../DepB/helix/include/DepB.mqh"' in autocomplete_content
+
+    print("\nAutocomplete include file created and verified successfully using MockConsole!")
+
+def check_include_mode(root_dir: Path):
+    
+    expert_test_path = root_dir / "ExpertTest"
+    expert_test_includes_path = expert_test_path / "helix" / "include"
+
+    # Verify if DepA.mqh include file was created with expected content
+    depa_path = expert_test_includes_path / "DepA.mqh"
+    assert depa_path.exists(), f"DepA.mqh include file not found: {depa_path}"
+
+    with open(depa_path, "r", encoding="utf-8") as f:
+        depa_content = f.read()
+
+    assert depa_content == DEP_A_MQH_CONTENT
+
+    # Verify if DepB.mqh include file was created with expected content
+    depb_path = expert_test_includes_path / "DepB.mqh"
+    assert depb_path.exists(), f"DepB.mqh include file not found: {depb_path}"
+
+    with open(depb_path, "r", encoding="utf-8") as f:
+        depb_content = f.read()
+
+    assert depb_content == DEP_B_MQH_CONTENT
+
+    # Verify if DepC.mqh include file was created with expected content
+    depc_path = expert_test_includes_path / "DepC.mqh"
+    assert depc_path.exists(), f"DepC.mqh include file not found: {depc_path}"
+
+    with open(depc_path, "r", encoding="utf-8") as f:
+        depc_content = f.read()
+
+    assert depc_content == DEP_C_MQH_CONTENT
+
+    # Verify if DepD.mqh include file was created with expected content
+    depd_path = expert_test_includes_path / "DepD.mqh"
+    assert depd_path.exists(), f"DepD.mqh include file not found: {depd_path}"
+
+    with open(depd_path, "r", encoding="utf-8") as f:
+        depd_content = f.read()
+
+    assert depd_content == DEP_D_INCLUDE_MODE_RESOLVED_CONTENT
+
+    # Verify if DepE.mqh include file was created with expected content
+    depe_path = expert_test_includes_path / "DepE.mqh"
+    assert depe_path.exists(), f"DepE.mqh include file not found: {depe_path}"
+
+    with open(depe_path, "r", encoding="utf-8") as f:
+        depe_content = f.read()
+
+    assert depe_content == DEP_E_MQH_CONTENT
+
+def test_helix_directives_and_include_mode(tmp_path: Path):
+    check_include_mode(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_3))
