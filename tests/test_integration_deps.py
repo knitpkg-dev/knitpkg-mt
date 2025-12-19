@@ -144,7 +144,6 @@ DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
 #include "../include/DepB.mqh" /*** ← dependence added by Helix ***/
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
-
 """
 
 DEP_D_MQ5_CONTENT = """

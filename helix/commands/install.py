@@ -141,13 +141,13 @@ class IncludeModeProcessor:
 
                     if directive == 'include':
                         lines[i] = (
-                            f'#include "{navigate_path(mqh_file.parent, replace_path).as_posix()}" '
+                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / replace_path).as_posix()}" '
                             f'/*** ← dependence added by Helix ***/'
                         )
                         modified = True
                     elif directive == 'replace-with':
                         lines[i] = (
-                            f'#include "{navigate_path(mqh_file.parent, replace_path).as_posix()}" '
+                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / replace_path).as_posix()}" '
                             f'/*** ← dependence resolved by Helix. Original include: "{include_path}" ***/'
                         )
                         modified = True
