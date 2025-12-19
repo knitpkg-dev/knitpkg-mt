@@ -501,9 +501,9 @@ class HelixInstaller:
 # COMMAND WRAPPER
 # ==============================================================
 
-def install_command(project_dir: Path, locked_mode: bool, show_tree: bool):
+def install_command(project_dir: Path, locked_mode: bool, show_tree: bool, verbose: bool):
     """Command wrapper for HelixInstaller."""
-    console = Console()
+    console = Console(log_path=verbose)
     installer = HelixInstaller(console, project_dir)
     installer.install(locked_mode, show_tree)
 
@@ -545,4 +545,4 @@ def register(app):
         else:
             project_dir = Path(project_dir).resolve()
 
-        install_command(project_dir, locked, not no_tree)
+        install_command(project_dir, locked, not no_tree, verbose)
