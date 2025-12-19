@@ -30,6 +30,12 @@ def navigate_path(source: Union[str, Path], target: Union[str, Path]) -> Path:
     src = Path(source).resolve()
     dst = Path(target).resolve()
 
+    # If target is inside source directory, return relative path directly
+    try:
+        return dst.relative_to(src)
+    except ValueError:
+        pass
+
     # Find deepest common ancestor
     common = next((p for p in src.parents if p in dst.parents), Path(src.root))
 

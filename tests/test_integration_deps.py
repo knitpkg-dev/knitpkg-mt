@@ -139,9 +139,9 @@ DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "../include/DepA.mqh" /*** ← dependence resolved by Helix. Original include: "../autocomplete/autocomplete.mqh" ***/
+#include "DepA.mqh" /*** ← dependence resolved by Helix. Original include: "../autocomplete/autocomplete.mqh" ***/
 
-#include "../include/DepB/DepB.mqh" /*** ← dependence added by Helix ***/
+#include "DepB/DepB.mqh" /*** ← dependence added by Helix ***/
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -194,7 +194,28 @@ DEP_C_MQH_CONTENT = """
 //|  Dependency C: Depends on DepA.                                  |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "helix/include/DepA.mqh"
+#include "../autocomplete/autocomplete.mqh" 
+ 
+/* @helix:include "helix/include/DepA.mqh" */
+
+string GetDepCValue() { return "DepC_Value(" + GetDepAValue() + ")"; }
+"""
+
+DEP_C_INCLUDE_MODE_RESOLVED_CONTENT = """
+//+------------------------------------------------------------------+
+//|                                                           DepC.mqh |
+//|                                                                  |
+//|                    Helix for MetaTrader                          |
+//|                                                                  |
+//|                          MIT License                             |
+//|                    Copyright (c) 2025 Douglas Rechia             |
+//|                                                                  |
+//|  Dependency C: Depends on DepA.                                  |
+//|                                                                  |
+//+------------------------------------------------------------------+
+// #include "../autocomplete/autocomplete.mqh"  /*** ← disabled by Helix install (dev helper) ***/
+ 
+#include "DepA.mqh" /*** ← dependence added by Helix ***/
 
 string GetDepCValue() { return "DepC_Value(" + GetDepAValue() + ")"; }
 """
@@ -278,7 +299,7 @@ string GetExpertTestValue() {
 }
 """
 
-EXPERT_TEST_MQ5_CONTENT = """
+EXPERT_TEST_MQ5_CONTENT_FLAT_MODE = """
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mq5 |
 //|                                                                  |
@@ -296,6 +317,42 @@ EXPERT_TEST_MQ5_CONTENT = """
 #property description "Integration Test Expert"
 
 #include "helix/flat/ExpertTest_flat.mqh" // This will be replaced by the flat include
+
+int OnInit()
+{
+    Print(GetExpertTestValue());
+    return INIT_SUCCEEDED;
+}
+
+void OnDeinit(const int reason)
+{
+    Print("ExpertTest deinitialized.");
+}
+
+void OnTick()
+{
+    // Simple tick logic
+}
+"""
+
+EXPERT_TEST_MQ5_CONTENT_INCLUDE_MODE = """
+//+------------------------------------------------------------------+
+//|                                                  ExpertTest.mq5 |
+//|                                                                  |
+//|                    Helix for MetaTrader                          |
+//|                                                                  |
+//|                          MIT License                             |
+//|                    Copyright (c) 2025 Douglas Rechia             |
+//|                                                                  |
+//|  ExpertTest: Main Expert Advisor file.                           |
+//|                                                                  |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2025, Douglas Rechia"
+#property link      "https://www.helix-mt.com"
+#property version   "1.00"
+#property description "Integration Test Expert"
+
+#include "ExpertTest.mqh" 
 
 int OnInit()
 {
@@ -353,8 +410,8 @@ type: expert
 target: MQL5
 description: Expert Advisor Test Project
 include_mode: include
-entrypoints:
-  - ExpertTest.mqh
+compile:
+  - ExpertTest.mq5
 dependencies:
   DepC: ../DepC # Local dependency
   DepD: ../DepD # Local dependency
@@ -383,7 +440,7 @@ def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_c
         with open(mq5_file_path, "w", encoding="utf-8") as f:
             f.write(mq5_content)
 
-def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str) -> str:
+def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str, expert_test_mq5_content: str) -> str:
     """
     Tests the resolution of a complex dependency tree (4 levels with merge)
     and the correct generation of the flat include file by instantiating HelixInstaller directly.
@@ -403,7 +460,7 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
     create_project_files(root_dir, "DepA", "helix/include", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
     create_project_files(root_dir, "DepB", "helix/include/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
     # Create Expert project (Level 1)
-    create_project_files(root_dir, "ExpertTest", ".", EXPERT_TEST_MQH_CONTENT, expert_test_yaml_content, ".", EXPERT_TEST_MQ5_CONTENT)
+    create_project_files(root_dir, "ExpertTest", ".", EXPERT_TEST_MQH_CONTENT, expert_test_yaml_content, ".", expert_test_mq5_content)
 
     expert_test_path = root_dir / "ExpertTest"
 
@@ -494,10 +551,10 @@ def check_flat_content(root_dir: Path):
 
 # --- Pytest Integration Test ---
 def test_complex_dependency_tree_and_flat_include_expert_yaml1(tmp_path: Path):
-    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_1))
+    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_1, EXPERT_TEST_MQ5_CONTENT_FLAT_MODE))
 
 def test_complex_dependency_tree_and_flat_include_expert_yaml2(tmp_path: Path):
-    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_2))
+    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_2, EXPERT_TEST_MQ5_CONTENT_FLAT_MODE))
 
 def test_autocomplete(tmp_path: Path):
     root_dir = tmp_path / "helix_test_root"
@@ -601,7 +658,7 @@ def check_include_mode(root_dir: Path):
     with open(depc_path, "r", encoding="utf-8") as f:
         depc_content = f.read()
 
-    assert depc_content == DEP_C_MQH_CONTENT
+    assert depc_content == DEP_C_INCLUDE_MODE_RESOLVED_CONTENT
 
     # Verify if DepD.mqh include file was created with expected content
     depd_path = expert_test_includes_path / "DepD.mqh"
@@ -622,4 +679,4 @@ def check_include_mode(root_dir: Path):
     assert depe_content == DEP_E_MQH_CONTENT
 
 def test_helix_directives_and_include_mode(tmp_path: Path):
-    check_include_mode(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_3))
+    check_include_mode(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_3, EXPERT_TEST_MQ5_CONTENT_INCLUDE_MODE))
