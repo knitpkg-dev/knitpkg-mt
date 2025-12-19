@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 
 from helix.commands import (
+    init,
     install,
     autocomplete,
     compile,
@@ -27,6 +28,7 @@ app = typer.Typer(
 )
 
 # Register commands
+init.register(app)
 install.register(app)
 autocomplete.register(app)
 compile.register(app)

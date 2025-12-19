@@ -34,6 +34,7 @@ class MQLProjectType(str, Enum):
     INDICATOR = "indicator"
     SCRIPT = "script"
     LIBRARY = "library"
+    SERVICE = "service"
 
 class IncludeMode(str, Enum):
     """MQL include processing modes."""
