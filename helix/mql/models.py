@@ -120,9 +120,9 @@ class MQLHelixManifest(HelixManifest):
     @model_validator(mode="after")
     def validate_entrypoints_presence(self) -> Self:  # ← Changed: instance method
         """Ensure non-package projects have at least one entrypoint."""
-        if self.type != MQLProjectType.PACKAGE:  # ← Changed: use self instead of data
+        if self.include_mode and self.include_mode == IncludeMode.FLAT:
             if not self.entrypoints or len(self.entrypoints) == 0:
                 raise ValueError(
-                    f"Projects of type '{self.type.value}' must have at least one entrypoint"
+                    f"Include mode 'flat' requires at least one entrypoint"
                 )
         return self  # ← Changed: return self instead of data

@@ -179,7 +179,7 @@ dependencies:
   DepB: ../DepB
 
 compile:
-  - UnitTests.mq5
+  - DepD.mq5
 """
 
 DEP_C_MQH_CONTENT = """

@@ -103,14 +103,14 @@ def test_package_has_no_entrypoint(package_project: Path):
     assert manifest.type == MQLProjectType.PACKAGE
     assert manifest.entrypoints is None or manifest.entrypoints == []
 
-def test_missing_entrypoint_for_indicator(tmp_path: Path):
-    """Non-package projects must have entrypoints"""
+def test_missing_entrypoint_for_flat_mode(tmp_path: Path):
+    """flat mode projects must have entrypoints"""
     d = tmp_path / "missing-entrypoint"
     d.mkdir()
     data = {
         "name": "no-entry",
         "version": "1.0.0",
-        "type": "indicator",
+        "include_mode": "flat",
         "target": "MQL5"
     }
     (d / "helix.json").write_text(json.dumps(data), encoding="utf-8")
@@ -118,7 +118,7 @@ def test_missing_entrypoint_for_indicator(tmp_path: Path):
     with pytest.raises(ValueError) as exc:
         load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
 
-    assert "Projects of type 'indicator' must have at least one entrypoint" in str(exc.value)
+    assert "Include mode 'flat' requires at least one entrypoint" in str(exc.value)
 
 def test_invalid_git_url(tmp_path: Path):
     """Malformed dependency URL should fail"""
