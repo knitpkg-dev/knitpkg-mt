@@ -109,9 +109,10 @@ def test_missing_entrypoint_for_flat_mode(tmp_path: Path):
     d.mkdir()
     data = {
         "name": "no-entry",
+        "type": "script",
         "version": "1.0.0",
         "include_mode": "flat",
-        "target": "MQL5"
+        "target": "MQL5",
     }
     (d / "helix.json").write_text(json.dumps(data), encoding="utf-8")
 

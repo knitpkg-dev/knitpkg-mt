@@ -214,6 +214,8 @@ TEMPLATE_EXPERT = """//+--------------------------------------------------------
 #property description "Powered by Helix for MetaTrader"
 #property description "http://helix.dev"
 
+{{expert_include}}
+
 // ***** Add your code and rename the file as needed. *****
 
 //+------------------------------------------------------------------+
@@ -243,6 +245,18 @@ void OnTick()
 
   }
 //+------------------------------------------------------------------+
+"""
+TEMPLATE_EXPERT_ENTRYPOINT_INCLUDE = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+
+//------------------------------------------------------------------
+// Add here your includes from the resolved dependencies. 
+//------------------------------------------------------------------
+
+/* @helix:include "Path/To/Resolved/Header.mqh" */
 """
 
 TEMPLATE_INDICATOR_BARS = """//+------------------------------------------------------------------+
@@ -514,9 +528,21 @@ class ProjectInitializer:
         src_dir.mkdir(parents=True, exist_ok=True)
 
         file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
-        expert_path = src_dir / f"{self.name}{file_ext}"
+        file_name = f"{self.name}{file_ext}"
+        expert_path = src_dir / file_name
+        self.compile.append(f"src/{file_name}")
 
-        expert_content = self.render_template(TEMPLATE_EXPERT)
+        expert_content = self.render_template(TEMPLATE_EXPERT, {
+            "header_file_name": ProjectInitializer.format_mql_header(file_name),
+            "header_name": ProjectInitializer.format_mql_header(f"Expert Advisor {self.name}"),
+            "header_organization": ProjectInitializer.format_mql_header(f"Organization: {self.organization}" if self.organization else "No organization"),
+            "version": self.version,
+            "description": self.description,
+            "organization": self.organization if self.organization else "No organization",
+            "author": self.author,
+            "license": self.license,
+            "expert_include": "",
+        })
         expert_path.write_text(expert_content.strip() + "\n", encoding="utf-8")
         self.console.print(f"[green]Created {expert_path.relative_to(self.project_root)}[/green]")
 

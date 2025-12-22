@@ -293,9 +293,9 @@ EXPERT_TEST_MQH_CONTENT = """
 //|  ExpertTest: Main Expert Advisor header.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "helix/include/Acme/DepC.mqh"
-#include "helix/include/Acme/DepD/DepD.mqh"
-#include "helix/include/DepE.mqh"
+/* @helix:include "Acme/DepC.mqh" */
+/* @helix:include "Acme/DepD/DepD.mqh" */
+/* @helix:include "DepE.mqh" */
 
 string GetExpertTestValue() {
     return "ExpertTest started! " + GetDepCValue() + " " + GetDepDValue() + " " + GetDepEValue();

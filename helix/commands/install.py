@@ -258,12 +258,11 @@ class FlatModeProcessor:
         resolved_deps: ResolvedDeps
     ) -> Path:
         """Search for an #include file in the current project and all resolved dependencies."""
-        include_dir = self.project_dir / INCLUDE_DIR
 
+        # TODO change this to prevent regular #include to automatically resolve to helix/include
         candidates = [
             (base_path.parent / inc_file).resolve(),
-            (include_dir / inc_file).resolve() if include_dir.exists() else None,
-            *[(dep_path / inc_file).resolve() for _name, dep_path in resolved_deps]
+            *[(dep_path / INCLUDE_DIR / inc_file).resolve() for _name, dep_path in resolved_deps]
         ]
 
         for path in candidates:
@@ -290,10 +289,10 @@ class FlatModeProcessor:
             if directive is None:
                 inc_file = include_path.strip()
             elif directive == 'include':
-                inc_file = INCLUDE_DIR / replace_path.strip()
+                inc_file = replace_path.strip()
                 self.console.log(f"[dim]@helix:include found:[/] '{inc_file}'")
             elif directive == 'replace-with':
-                inc_file = INCLUDE_DIR / replace_path.strip()
+                inc_file = replace_path.strip()
                 self.console.log(f"[dim]@helix:replace-with found:[/] '{inc_file}'")
             else:
                 self.console.log(
