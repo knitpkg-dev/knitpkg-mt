@@ -221,6 +221,13 @@ class HelixManifest(BaseModel):
         description="License identifier"
     )
 
+    organization: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        pattern=r"^[\w\-\.]+$",
+        description="Organization or company ID (alphanumeric, hyphens, underscores, dots only)"
+    )
+
     # Generic target (string - platform-specific subclasses will use enums)
     target: str = Field(
         ...,

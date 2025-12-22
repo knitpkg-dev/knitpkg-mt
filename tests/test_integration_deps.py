@@ -119,9 +119,9 @@ DEP_D_MQH_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "../autocomplete/autocomplete.mqh" /* @helix:replace-with "DepA.mqh" */
+#include "../../../autocomplete/autocomplete.mqh" /* @helix:replace-with "Acme/DepA/DepA.mqh" */
 
-/* @helix:include "DepB/DepB.mqh" */
+/* @helix:include "Acme/DepB/DepB.mqh" */
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -139,9 +139,9 @@ DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "DepA.mqh" /*** ← dependence resolved by Helix. Original include: "../autocomplete/autocomplete.mqh" ***/
+#include "../DepA/DepA.mqh" /*** ← dependence resolved by Helix. Original include: "../../../autocomplete/autocomplete.mqh" ***/
 
-#include "DepB/DepB.mqh" /*** ← dependence added by Helix ***/
+#include "../DepB/DepB.mqh" /*** ← dependence added by Helix ***/
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -156,7 +156,7 @@ DEP_D_MQ5_CONTENT = """
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#include "helix/include/DepD.mqh"
+#include "helix/include/Acme/DepD/DepD.mqh"
 //+------------------------------------------------------------------+
 //| Script program start function                                    |
 //+------------------------------------------------------------------+
@@ -170,6 +170,7 @@ void OnStart()
 DEP_D_YAML_CONTENT = """
 
 name: DepD
+organization: Acme
 version: 1.0.0
 type: package
 target: MQL5
@@ -177,7 +178,6 @@ description: Dependency D package
 dependencies:
   DepA: ../DepA
   DepB: ../DepB
-
 compile:
   - DepD.mq5
 """
@@ -194,9 +194,9 @@ DEP_C_MQH_CONTENT = """
 //|  Dependency C: Depends on DepA.                                  |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "../autocomplete/autocomplete.mqh" 
+#include "../../autocomplete/autocomplete.mqh" 
  
-/* @helix:include "DepA.mqh" */
+/* @helix:include "Acme/DepA/DepA.mqh" */
 
 string GetDepCValue() { return "DepC_Value(" + GetDepAValue() + ")"; }
 """
@@ -213,15 +213,16 @@ DEP_C_INCLUDE_MODE_RESOLVED_CONTENT = """
 //|  Dependency C: Depends on DepA.                                  |
 //|                                                                  |
 //+------------------------------------------------------------------+
-// #include "../autocomplete/autocomplete.mqh"  /*** ← disabled by Helix install (dev helper) ***/
+// #include "../../autocomplete/autocomplete.mqh"  /*** ← disabled by Helix install (dev helper) ***/
  
-#include "DepA.mqh" /*** ← dependence added by Helix ***/
+#include "DepA/DepA.mqh" /*** ← dependence added by Helix ***/
 
 string GetDepCValue() { return "DepC_Value(" + GetDepAValue() + ")"; }
 """
 
 DEP_C_YAML_CONTENT = """
 name: DepC
+organization: Acme
 version: 1.0.0
 type: package
 target: MQL5
@@ -248,6 +249,7 @@ string GetDepBValue() { return "DepB_Value"; }
 
 DEP_B_YAML_CONTENT = """
 name: DepB
+organization: Acme
 version: 1.0.0
 type: package
 target: MQL5
@@ -271,6 +273,7 @@ string GetDepAValue() { return "DepA_Value"; }
 
 DEP_A_YAML_CONTENT = """
 name: DepA
+organization: Acme
 version: 1.0.0
 type: package
 target: MQL5
@@ -290,8 +293,8 @@ EXPERT_TEST_MQH_CONTENT = """
 //|  ExpertTest: Main Expert Advisor header.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "helix/include/DepC.mqh"
-#include "helix/include/DepD.mqh"
+#include "helix/include/Acme/DepC.mqh"
+#include "helix/include/Acme/DepD/DepD.mqh"
 #include "helix/include/DepE.mqh"
 
 string GetExpertTestValue() {
@@ -454,11 +457,11 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
     # Create dependency projects (Level 4)
     create_project_files(root_dir, "DepE", "helix/include", DEP_E_MQH_CONTENT, DEP_E_YAML_CONTENT)
     # Create dependency projects (Level 3)
-    create_project_files(root_dir, "DepC", "helix/include", DEP_C_MQH_CONTENT, DEP_C_YAML_CONTENT)
-    create_project_files(root_dir, "DepD", "helix/include", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
+    create_project_files(root_dir, "DepC", "helix/include/Acme", DEP_C_MQH_CONTENT, DEP_C_YAML_CONTENT)
+    create_project_files(root_dir, "DepD", "helix/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
     # Create dependency projects (Level 2)
-    create_project_files(root_dir, "DepA", "helix/include", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
-    create_project_files(root_dir, "DepB", "helix/include/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
+    create_project_files(root_dir, "DepA", "helix/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
+    create_project_files(root_dir, "DepB", "helix/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
     # Create Expert project (Level 1)
     create_project_files(root_dir, "ExpertTest", ".", EXPERT_TEST_MQH_CONTENT, expert_test_yaml_content, ".", expert_test_mq5_content)
 
@@ -563,9 +566,9 @@ def test_autocomplete(tmp_path: Path):
     print('='*50)
     root_dir.mkdir()
 
-    create_project_files(root_dir, "DepD", "helix/include", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
-    create_project_files(root_dir, "DepA", "helix/include", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
-    create_project_files(root_dir, "DepB", "helix/include", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
+    create_project_files(root_dir, "DepD", "helix/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
+    create_project_files(root_dir, "DepA", "helix/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
+    create_project_files(root_dir, "DepB", "helix/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
 
     depd_test_path = root_dir / "DepD"
 
@@ -623,8 +626,8 @@ def test_autocomplete(tmp_path: Path):
     # Assertions to check if DepA.mqh and DepB.mqh are included
     assert "//+------------------------------------------------------------------+\n//|                                          autocomplete.mqh        |" in autocomplete_content
     
-    assert '#include "../../../DepA/helix/include/DepA.mqh"' in autocomplete_content
-    assert '#include "../../../DepB/helix/include/DepB.mqh"' in autocomplete_content
+    assert '#include "../../../DepA/helix/include/Acme/DepA/DepA.mqh"' in autocomplete_content
+    assert '#include "../../../DepB/helix/include/Acme/DepB/DepB.mqh"' in autocomplete_content
 
     print("\nAutocomplete include file created and verified successfully using MockConsole!")
 
@@ -634,7 +637,7 @@ def check_include_mode(root_dir: Path):
     expert_test_includes_path = expert_test_path / "helix" / "include"
 
     # Verify if DepA.mqh include file was created with expected content
-    depa_path = expert_test_includes_path / "DepA.mqh"
+    depa_path = expert_test_includes_path / "Acme" / "DepA" / "DepA.mqh"
     assert depa_path.exists(), f"DepA.mqh include file not found: {depa_path}"
 
     with open(depa_path, "r", encoding="utf-8") as f:
@@ -643,7 +646,7 @@ def check_include_mode(root_dir: Path):
     assert depa_content == DEP_A_MQH_CONTENT
 
     # Verify if DepB.mqh include file was created with expected content
-    depb_path = expert_test_includes_path / "DepB" / "DepB.mqh"
+    depb_path = expert_test_includes_path / "Acme" / "DepB" / "DepB.mqh"
     assert depb_path.exists(), f"DepB.mqh include file not found: {depb_path}"
 
     with open(depb_path, "r", encoding="utf-8") as f:
@@ -652,7 +655,7 @@ def check_include_mode(root_dir: Path):
     assert depb_content == DEP_B_MQH_CONTENT
 
     # Verify if DepC.mqh include file was created with expected content
-    depc_path = expert_test_includes_path / "DepC.mqh"
+    depc_path = expert_test_includes_path / "Acme" / "DepC.mqh"
     assert depc_path.exists(), f"DepC.mqh include file not found: {depc_path}"
 
     with open(depc_path, "r", encoding="utf-8") as f:
@@ -661,7 +664,7 @@ def check_include_mode(root_dir: Path):
     assert depc_content == DEP_C_INCLUDE_MODE_RESOLVED_CONTENT
 
     # Verify if DepD.mqh include file was created with expected content
-    depd_path = expert_test_includes_path / "DepD.mqh"
+    depd_path = expert_test_includes_path / "Acme" / "DepD" / "DepD.mqh"
     assert depd_path.exists(), f"DepD.mqh include file not found: {depd_path}"
 
     with open(depd_path, "r", encoding="utf-8") as f:
