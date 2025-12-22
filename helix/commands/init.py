@@ -6,13 +6,14 @@ from pathlib import Path
 import re
 import yaml
 from enum import Enum
+from jinja2 import Template
 
 from git import Repo
-from git.exc import InvalidGitRepositoryError
 
 from helix.mql.models import MQLProjectType, Target, IncludeMode
 
 
+# .gitignore content templates
 GITIGNORE_PACKAGE = """
 .helix/
 helix/autocomplete/
@@ -23,9 +24,9 @@ helix/flat/
 **/*.ex5
 **/*.ex4
 **/*.log
-"""
+""".strip()
 
-GITIGNORE_OTHER = """
+GITIGNORE_DEFAULT = """
 .helix/
 helix/autocomplete/
 helix/flat/
@@ -36,8 +37,325 @@ helix/include
 **/*.ex5
 **/*.ex4
 **/*.log
+""".strip()
+
+# MQL5/MQL4 source code templates
+TEMPLATE_INCLUDE = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+
+//--------------------------------------------------------------------
+// For packages with dependencies, use the following Helix features:
+//
+// 1. Autocomplete support for MetaEditor IntelliSense.
+// Run `helix autocomplete` to generate this file and uncomment the
+// include below:
+//
+// #include "{{autocomplete_path_prefix}}/autocomplete/autocomplete.mqh"
+//
+//
+// 2. Include directives. For headers with external dependencies, specify
+// the file path relative to helix/include and uncomment the Helix directive
+// below. Helix automatically resolves dependencies based on these directives.
+// See documentation for details.
+//
+// /* @helix:include "Path/To/Dependency/Header.mqh" */
+//--------------------------------------------------------------------
+
+// Add your package code here and rename the file as needed.
 """
 
+TEMPLATE_UNITTESTS = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+#property copyright   "<Add copyright here>"
+#property link        "<Add link here>"
+#property description ""
+#property description "Version: {{version}}"
+#property description ""
+#property description "Description: Unit tests for package {{name}}"
+#property description "Organization: {{organization}}"
+#property description "Author: {{author}}"
+#property description "License: {{license}}"
+#property description ""
+#property description "Powered by Helix for MetaTrader"
+#property description "http://helix.dev"
+
+// Include the headers under test
+//#include "helix/include/{{organization}}/MyHeaderHere.mqh"
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool TestName()
+  {
+   // Add your test code here. Rename this function to a descriptive name.
+   // Create more test functions like this as needed.
+   return false;
+  }
+//+------------------------------------------------------------------+
+//| DoTests                                                          |
+//+------------------------------------------------------------------+
+void DoTests(int &testsPerformed,int &testsPassed)
+  {
+   string testName="";
+
+   //--- TestName
+   testsPerformed++;
+   testName="TestName";
+   if(TestName())
+     {
+      testsPassed++;
+      PrintFormat("%s pass",testName);
+     }
+   else
+      PrintFormat("%s failed",testName);
+
+   //---
+   // Add more tests here as needed
+  }
+//+------------------------------------------------------------------+
+//| UnitTests()                                                      |
+//+------------------------------------------------------------------+
+void UnitTests(const string packageName)
+  {
+   PrintFormat("Unit tests for Package %s\\n",packageName);
+   //--- initial values
+   int testsPerformed=0;
+   int testsPassed=0;
+   //--- test distributions
+   DoTests(testsPerformed,testsPassed);
+   //--- print statistics
+   PrintFormat("\\n%d of %d passed",testsPassed,testsPerformed);
+  }
+//+------------------------------------------------------------------+
+//| Script program start function                                    |
+//+------------------------------------------------------------------+
+void OnStart()
+  {
+   UnitTests("{{name}}");
+  }
+//+------------------------------------------------------------------+
+"""
+
+TEMPLATE_EXPERT = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+#property copyright   "<Add copyright here>"
+#property link        "<Add link here>"
+#property description ""
+#property description "Version: {{version}}"
+#property description ""
+#property description "Description: {{description}}"
+#property description "Organization: {{organization}}"
+#property description "Author: {{author}}"
+#property description "License: {{license}}"
+#property description ""
+#property description "Powered by Helix for MetaTrader"
+#property description "http://helix.dev"
+
+// ***** Add your code and rename the file as needed. *****
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   //---
+
+   //---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+   //---
+
+  }
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+   //---
+
+  }
+//+------------------------------------------------------------------+
+"""
+
+TEMPLATE_BARS = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+#property copyright   "<Add copyright here>"
+#property link        "<Add link here>"
+#property description ""
+#property description "Version: {{version}}"
+#property description ""
+#property description "Description: {{description}}"
+#property description "Organization: {{organization}}"
+#property description "Author: {{author}}"
+#property description "License: {{license}}"
+#property description ""
+#property description "Powered by Helix for MetaTrader"
+#property description "http://helix.dev"
+
+// ***** Add your code and rename the file as needed. *****
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   //--- indicator buffers mapping
+
+   //---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int32_t rates_total,
+                const int32_t prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int32_t &spread[])
+  {
+   //---
+
+   //--- return value of prev_calculated for next call
+   return(rates_total);
+  }
+//+------------------------------------------------------------------+
+"""
+
+TEMPLATE_SERIES = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+#property copyright   "<Add copyright here>"
+#property link        "<Add link here>"
+#property description ""
+#property description "Version: {{version}}"
+#property description ""
+#property description "Description: {{description}}"
+#property description "Organization: {{organization}}"
+#property description "Author: {{author}}"
+#property description "License: {{license}}"
+#property description ""
+#property description "Powered by Helix for MetaTrader"
+#property description "http://helix.dev"
+
+// ***** Add your code and rename the file as needed. *****
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   //--- indicator buffers mapping
+
+   //---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int32_t rates_total,
+                const int32_t prev_calculated,
+                const int32_t begin,
+                const double &price[])
+  {
+   //---
+
+   //--- return value of prev_calculated for next call
+   return(rates_total);
+  }
+//+------------------------------------------------------------------+
+"""
+
+TEMPLATE_LIBRARY = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+#property library
+#property copyright   "<Add copyright here>"
+#property link        "<Add link here>"
+#property description ""
+#property description "Version: {{version}}"
+#property description ""
+#property description "Description: {{description}}"
+#property description "Organization: {{organization}}"
+#property description "Author: {{author}}"
+#property description "License: {{license}}"
+#property description ""
+#property description "Powered by Helix for MetaTrader"
+#property description "http://helix.dev"
+
+// ***** Add your code and rename the file as needed. *****
+
+//+------------------------------------------------------------------+
+//| My function                                                      |
+//+------------------------------------------------------------------+
+// int MyCalculator(int value,int value2) export
+//   {
+//    return(value+value2);
+//   }
+//+------------------------------------------------------------------+
+"""
+
+TEMPLATE_SERVICE = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+#property service
+#property copyright   "<Add copyright here>"
+#property link        "<Add link here>"
+#property description ""
+#property description "Version: {{version}}"
+#property description ""
+#property description "Description: {{description}}"
+#property description "Organization: {{organization}}"
+#property description "Author: {{author}}"
+#property description "License: {{license}}"
+#property description ""
+#property description "Powered by Helix for MetaTrader"
+#property description "http://helix.dev"
+
+// ***** Add your code and rename the file as needed. *****
+
+//+------------------------------------------------------------------+
+//| Service program start function                                   |
+//+------------------------------------------------------------------+
+void OnStart()
+  {
+   //---
+
+  }
+//+------------------------------------------------------------------+
+"""
+
+class IndicatorInputType(str, Enum):
+    """Indicator data input type."""
+    OHLC = "OHLC"
+    SERIES = "Series"
 
 class ProjectInitializer:
     """Encapsulates the logic for initializing a new Helix project."""
@@ -48,6 +366,7 @@ class ProjectInitializer:
 
         # Project attributes
         self.project_type: MQLProjectType | None = None
+        self.indicator_input_type: IndicatorInputType | None = None
         self.name: str | None = None
         self.organization: str | None = None
         self.version: str | None = None
@@ -57,6 +376,7 @@ class ProjectInitializer:
         self.target: Target | None = None
         self.include_mode: IncludeMode | None = None
         self.entrypoints: list[str] = []
+        self.compile: list[str] = []
         self.project_root: Path | None = None
         self.git_init: bool = False
         self.dry_run: bool = False
@@ -74,90 +394,89 @@ class ProjectInitializer:
     def get_gitignore_content(self) -> str:
         """Returns the appropriate .gitignore content based on project type."""
         if self.project_type == MQLProjectType.PACKAGE:
-            return GITIGNORE_PACKAGE.strip()
+            return GITIGNORE_PACKAGE
         else:
-            return GITIGNORE_OTHER.strip()
+            return GITIGNORE_DEFAULT
 
-    def create_example_file(self):
-        """Creates a basic example file based on project type."""
-        if self.project_type == MQLProjectType.PACKAGE:
-            if self.entrypoints:
-                file_name = self.entrypoints[0]
-            else:
-                file_name = f"{self.name}.mqh"
-            content = f"""//+------------------------------------------------------------------+
-//|                                                      {file_name} |
-//|                                          https://www.helix.dev |
-//+------------------------------------------------------------------+
-#property copyright "No name"
-#property link      "https://www.helix.dev"
-#property version   "1.00"
+    def render_template(self, template_str: str, context: dict = {}) -> str:
+        """Render a Jinja2 template with project context."""
+        return Template(template_str).render(**context)
 
-// Example function for your package
-void OnStart()
-{{
-    Print("Hello from Helix package: {self.name}!");
-}}
-"""
-            (self.project_root / file_name).write_text(content.strip())
+    def create_package_files(self) -> None:
+        """Create files for package project type."""
+        org_dir = self.organization if self.organization else "."
 
-        elif self.project_type in [
-            MQLProjectType.EXPERT,
-            MQLProjectType.INDICATOR,
-            MQLProjectType.LIBRARY,
-            MQLProjectType.SERVICE,
-        ]:
-            main_file_name = f"{self.name}.mq5"
-            content = f"""//+------------------------------------------------------------------+
-//|                                                    {main_file_name} |
-//|                                          https://www.helix.dev |
-//+------------------------------------------------------------------+
-#property copyright "No name"
-#property link      "https://www.helix.dev"
-#property version   "1.00"
-#property strict
+        # Create Header.mqh
+        header_dir = self.project_root / "helix" / "include" / org_dir / self.name
+        header_dir.mkdir(parents=True, exist_ok=True)
+        header_path = header_dir / "Header.mqh"
 
-// If using 'flat' include mode, your entrypoints will be flattened into helix/flat/
-// You might include them like this:
-// #include <helix/flat/{self.entrypoints[0] if self.entrypoints else 'MyEntrypoint.mqh'}>
+        header_content = self.render_template(TEMPLATE_INCLUDE)
+        header_path.write_text(header_content.strip() + "\n", encoding="utf-8")
+        self.console.print(f"[green]Created {header_path.relative_to(self.project_root)}[/green]")
 
-//+------------------------------------------------------------------+
-//| Program initialization function                                  |
-//+------------------------------------------------------------------+
-int OnInit()
-{{
-   //---
-   Print("Hello from Helix {self.project_type.value}: {self.name}!");
-   //---
-   return(INIT_SUCCEEDED);
-}}
-//+------------------------------------------------------------------+
-//| Program deinitialization function                                |
-//+------------------------------------------------------------------+
-void OnDeinit(const int reason)
-{{
-   //---
+        # Create UnitTests
+        tests_dir = self.project_root / "tests"
+        tests_dir.mkdir(parents=True, exist_ok=True)
+        unit_file_name = "UnitTests.mq5" if self.target == Target.MQL5 else "UnitTests.mq4"
+        unit_path = tests_dir / unit_file_name
+        self.compile.append(f"tests/UnitTests.mq5")
 
-}}
-//+------------------------------------------------------------------+
-//| Program tick function (for Expert Advisors)                      |
-//+------------------------------------------------------------------+
-void OnTick()
-{{
-   //---
+        unit_content = self.render_template(TEMPLATE_UNITTESTS)
+        unit_path.write_text(unit_content.strip() + "\n", encoding="utf-8")
+        self.console.print(f"[green]Created {unit_path.relative_to(self.project_root)}[/green]")
 
-}}
-"""
-            (self.project_root / main_file_name).write_text(content.strip())
+    def create_expert_files(self) -> None:
+        """Create files for expert project type."""
+        src_dir = self.project_root / "src"
+        src_dir.mkdir(parents=True, exist_ok=True)
 
-            if self.entrypoints:
-                for ep_file in self.entrypoints:
-                    (self.project_root / ep_file).write_text(
-                        f"// {ep_file} for {self.name}\n// Add your shared code here\n"
-                    )
+        file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
+        expert_path = src_dir / f"{self.name}{file_ext}"
+
+        expert_content = self.render_template(TEMPLATE_EXPERT)
+        expert_path.write_text(expert_content.strip() + "\n", encoding="utf-8")
+        self.console.print(f"[green]Created {expert_path.relative_to(self.project_root)}[/green]")
+
+    def create_indicator_files(self) -> None:
+        """Create files for indicator project type."""
+        src_dir = self.project_root / "src"
+        src_dir.mkdir(parents=True, exist_ok=True)
+
+        file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
+        indicator_path = src_dir / f"{self.name}{file_ext}"
+
+        template = TEMPLATE_BARS if self.indicator_input_type == IndicatorInputType.OHLC else TEMPLATE_SERIES
+        indicator_content = self.render_template(template)
+        indicator_path.write_text(indicator_content.strip() + "\n", encoding="utf-8")
+        self.console.print(f"[green]Created {indicator_path.relative_to(self.project_root)}[/green]")
+
+    def create_library_files(self) -> None:
+        """Create files for library project type."""
+        src_dir = self.project_root / "src"
+        src_dir.mkdir(parents=True, exist_ok=True)
+
+        file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
+        library_path = src_dir / f"{self.name}{file_ext}"
+
+        library_content = self.render_template(TEMPLATE_LIBRARY)
+        library_path.write_text(library_content.strip() + "\n", encoding="utf-8")
+        self.console.print(f"[green]Created {library_path.relative_to(self.project_root)}[/green]")
+
+    def create_service_files(self) -> None:
+        """Create files for service project type."""
+        src_dir = self.project_root / "src"
+        src_dir.mkdir(parents=True, exist_ok=True)
+
+        file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
+        service_path = src_dir / f"{self.name}{file_ext}"
+
+        service_content = self.render_template(TEMPLATE_SERVICE)
+        service_path.write_text(service_content.strip() + "\n", encoding="utf-8")
+        self.console.print(f"[green]Created {service_path.relative_to(self.project_root)}[/green]")
 
     def select_project_type(self, project_type: MQLProjectType | None) -> None:
-        """Step 1: Select project type."""
+        """Select project type."""
         if project_type is None:
             project_type_input = Prompt.ask(
                 "What is the project type?",
@@ -174,8 +493,29 @@ void OnTick()
                 )
                 raise typer.Exit(code=1)
 
+    def select_indicator_input_type(self, indicator_input_type: IndicatorInputType | None) -> None:
+        """Select indicator input type (only for indicator projects)."""
+        if self.project_type != MQLProjectType.INDICATOR:
+            return
+
+        if indicator_input_type is None:
+            input_type_input = Prompt.ask(
+                "Indicator data input type",
+                choices=[it.value for it in IndicatorInputType],
+                default=IndicatorInputType.SERIES.value,
+            )
+            self.indicator_input_type = IndicatorInputType(input_type_input)
+        else:
+            try:
+                self.indicator_input_type = IndicatorInputType(indicator_input_type)
+            except ValueError:
+                self.console.print(
+                    f"[red]Error: Invalid indicator input type '{indicator_input_type}'. Choose from {', '.join([it.value for it in IndicatorInputType])}.[/red]"
+                )
+                raise typer.Exit(code=1)
+
     def prompt_project_name(self, name: str | None) -> None:
-        """Step 2: Prompt for and validate project name."""
+        """Prompt for and validate project name."""
         if name is None:
             while True:
                 name = Prompt.ask(
@@ -198,7 +538,7 @@ void OnTick()
             self.name = name
 
     def prompt_organization(self, organization: str | None) -> None:
-        """Step 3: Prompt for organization name (optional but recommended)."""
+        """Prompt for organization name (optional but recommended)."""
         if organization is None:
             while True:
                 organization = Prompt.ask(
@@ -225,32 +565,32 @@ void OnTick()
             self.organization = organization if organization else None
 
     def prompt_version(self, version: str | None) -> None:
-        """Step 4: Prompt for project version."""
+        """Prompt for project version."""
         if version is None:
             version = Prompt.ask("Project version (SemVer)", default="1.0.0")
         self.version = version
 
     def prompt_description(self, description: str | None) -> None:
-        """Step 5: Prompt for project description."""
+        """Prompt for project description."""
         if description is None:
             default_description = f"{self.project_type.value} for MetaTrader"
             description = Prompt.ask("Project description", default=default_description)
         self.description = description
 
     def prompt_author(self, author: str | None) -> None:
-        """Step 6: Prompt for author name."""
+        """Prompt for author name."""
         if author is None:
             author = Prompt.ask("Author's name", default="No name")
         self.author = author
 
     def prompt_license(self, license: str | None) -> None:
-        """Step 7: Prompt for license identifier."""
+        """Prompt for license identifier."""
         if license is None:
             license = Prompt.ask("License identifier", default="Undefined")
         self.license = license
 
     def select_target(self, target: Target | None) -> None:
-        """Step 8: Select MetaTrader platform target."""
+        """Select MetaTrader platform target."""
         if target is None:
             target_input = Prompt.ask(
                 "MetaTrader platform target",
@@ -272,13 +612,13 @@ void OnTick()
         include_mode: IncludeMode | None,
         entrypoints_str: str | None,
     ) -> None:
-        """Step 9: Select include mode and entrypoints (conditional for non-package projects)."""
+        """Select include mode and entrypoints (conditional for non-package projects)."""
         if self.project_type != MQLProjectType.PACKAGE:
             if include_mode is None:
                 include_mode_input = Prompt.ask(
                     "Include resolution mode",
                     choices=[im.value for im in IncludeMode],
-                    default=IncludeMode.INCLUDE.value,
+                    default=IncludeMode.FLAT.value,
                 )
                 self.include_mode = IncludeMode(include_mode_input)
             else:
@@ -311,7 +651,7 @@ void OnTick()
                         raise typer.Exit(code=1)
 
     def determine_project_location(self, location: Path | None) -> None:
-        """Step 10: Determine project location."""
+        """Determine project location."""
         if location is None:
             location_str = Prompt.ask(
                 "Directory where the project will be created", default="."
@@ -324,7 +664,7 @@ void OnTick()
             self.project_root = location.resolve() / self.name
 
     def handle_existing_directory(self) -> None:
-        """Step 11: Check if target directory exists and handle warnings."""
+        """Check if target directory exists and handle warnings."""
         if self.project_root.exists():
             self.console.print(
                 f"[yellow]Warning: Directory '{self.project_root}' already exists.[/yellow]"
@@ -356,16 +696,18 @@ void OnTick()
             self.console.print(f"[blue]Directory '{self.project_root}' will be created.[/blue]")
 
     def prompt_git_init(self, git_init: bool) -> None:
-        """Step 12: Prompt for Git initialization."""
+        """Prompt for Git initialization."""
         if not git_init:
             self.git_init = Confirm.ask("Do you want to initialize a Git repository?", default=True)
         else:
             self.git_init = git_init
 
     def display_summary_and_confirm(self) -> bool:
-        """Step 13: Display summary and confirm project creation."""
+        """Display summary and confirm project creation."""
         self.console.print(Text("\n--- Project Summary ---", style="bold magenta"))
         self.console.print(f"  Type: [cyan]{self.project_type.value}[/cyan]")
+        if self.project_type == MQLProjectType.INDICATOR:
+            self.console.print(f"  Indicator Input Type: [cyan]{self.indicator_input_type.value}[/cyan]")
         self.console.print(f"  Name: [cyan]{self.name}[/cyan]")
         if self.organization:
             self.console.print(f"  Organization: [cyan]{self.organization}[/cyan]")
@@ -407,15 +749,7 @@ void OnTick()
             if self.entrypoints:
                 manifest_data["entrypoints"] = self.entrypoints
 
-            if self.project_type in [
-                MQLProjectType.EXPERT,
-                MQLProjectType.INDICATOR,
-                MQLProjectType.LIBRARY,
-                MQLProjectType.SERVICE,
-            ]:
-                manifest_data["compile"] = [f"{self.name}.mq5"]
-            else:
-                manifest_data["compile"] = []
+            manifest_data["compile"] = self.compile
 
             manifest_data["dependencies"] = {}
 
@@ -438,11 +772,17 @@ void OnTick()
                 (helix_dir / "include").mkdir(exist_ok=True)
             self.console.print(f"[green]Created Helix internal directories under {helix_dir}[/green]")
 
-            # Create example file(s)
-            self.create_example_file()
-            self.console.print(
-                f"[green]Created initial example file(s) for {self.project_type.value} project.[/green]"
-            )
+            # Create project-specific files based on type
+            if self.project_type == MQLProjectType.PACKAGE:
+                self.create_package_files()
+            elif self.project_type == MQLProjectType.EXPERT:
+                self.create_expert_files()
+            elif self.project_type == MQLProjectType.INDICATOR:
+                self.create_indicator_files()
+            elif self.project_type == MQLProjectType.LIBRARY:
+                self.create_library_files()
+            elif self.project_type == MQLProjectType.SERVICE:
+                self.create_service_files()
 
             # Initialize Git repository using GitPython
             if self.git_init:
@@ -485,6 +825,7 @@ void OnTick()
         entrypoints_str: str | None,
         location: Path | None,
         git_init: bool,
+        indicator_input_type: IndicatorInputType | None = None,
     ) -> None:
         """Execute the project initialization workflow."""
         self.dry_run = dry_run
@@ -492,6 +833,7 @@ void OnTick()
 
         # Execute steps
         self.select_project_type(project_type)
+        self.select_indicator_input_type(indicator_input_type)
         self.prompt_project_name(name)
         self.prompt_organization(organization)
         self.prompt_version(version)
@@ -517,6 +859,13 @@ void OnTick()
 
         # Create artifacts
         self.create_artifacts()
+
+
+
+class IndicatorInputType(str, Enum):
+    """Indicator data input type."""
+    OHLC = "OHLC"
+    SERIES = "Series"
 
 
 def register(app):

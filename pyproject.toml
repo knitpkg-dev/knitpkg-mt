@@ -17,6 +17,7 @@ typer = {extras = ["all"], version = "^0.20.0"}
 packaging = "^25.0"
 chardet = "^5.2.0"
 pyyaml = "^6.0.3"
+jinja2 = "^3.1.6"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.1"
