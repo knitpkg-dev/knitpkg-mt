@@ -19,18 +19,17 @@ import typer
 
 from helix.core.utils import navigate_path
 from helix.core.file_reading import load_helix_manifest, read_file_smart
-from helix.core.constants import CACHE_DIR
 
 # Import MQL-specific models and downloader
 from helix.mql.constants import FLAT_DIR, INCLUDE_DIR
 from helix.mql.models import MQLHelixManifest, MQLProjectType, IncludeMode
 from helix.mql.dependency_downloader import MQLDependencyDownloader
 from helix.mql.validators import validate_mql_project_structure
+from helix.mql.constants import INCLUDE_DIR
 
 # Import shared types from core
 from helix.core.dependency_downloader import (
     DependencyNode,
-    ResolvedDep,
     ResolvedDeps,
     DependencyTree
 )
@@ -141,13 +140,13 @@ class IncludeModeProcessor:
 
                     if directive == 'include':
                         lines[i] = (
-                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / replace_path).as_posix()}" '
+                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
                             f'/*** ← dependence added by Helix ***/'
                         )
                         modified = True
                     elif directive == 'replace-with':
                         lines[i] = (
-                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / replace_path).as_posix()}" '
+                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
                             f'/*** ← dependence resolved by Helix. Original include: "{include_path}" ***/'
                         )
                         modified = True
@@ -291,10 +290,10 @@ class FlatModeProcessor:
             if directive is None:
                 inc_file = include_path.strip()
             elif directive == 'include':
-                inc_file = replace_path.strip()
+                inc_file = INCLUDE_DIR / replace_path.strip()
                 self.console.log(f"[dim]@helix:include found:[/] '{inc_file}'")
             elif directive == 'replace-with':
-                inc_file = replace_path.strip()
+                inc_file = INCLUDE_DIR / replace_path.strip()
                 self.console.log(f"[dim]@helix:replace-with found:[/] '{inc_file}'")
             else:
                 self.console.log(

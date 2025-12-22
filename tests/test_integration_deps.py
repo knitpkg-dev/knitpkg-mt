@@ -119,9 +119,9 @@ DEP_D_MQH_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "../autocomplete/autocomplete.mqh" /* @helix:replace-with "helix/include/DepA.mqh" */
+#include "../autocomplete/autocomplete.mqh" /* @helix:replace-with "DepA.mqh" */
 
-/* @helix:include "helix/include/DepB/DepB.mqh" */
+/* @helix:include "DepB/DepB.mqh" */
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -196,7 +196,7 @@ DEP_C_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 #include "../autocomplete/autocomplete.mqh" 
  
-/* @helix:include "helix/include/DepA.mqh" */
+/* @helix:include "DepA.mqh" */
 
 string GetDepCValue() { return "DepC_Value(" + GetDepAValue() + ")"; }
 """
