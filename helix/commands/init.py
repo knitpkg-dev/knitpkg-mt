@@ -11,7 +11,32 @@ from git import Repo
 from git.exc import InvalidGitRepositoryError
 
 from helix.mql.models import MQLProjectType, Target, IncludeMode
-from rich.console import Console
+
+
+GITIGNORE_PACKAGE = """
+.helix/
+helix/autocomplete/
+helix/flat/
+
+*.mqproj
+
+**/*.ex5
+**/*.ex4
+**/*.log
+"""
+
+GITIGNORE_OTHER = """
+.helix/
+helix/autocomplete/
+helix/flat/
+helix/include
+
+*.mqproj
+
+**/*.ex5
+**/*.ex4
+**/*.log
+"""
 
 
 class ProjectInitializer:
@@ -48,33 +73,10 @@ class ProjectInitializer:
 
     def get_gitignore_content(self) -> str:
         """Returns the appropriate .gitignore content based on project type."""
-        package_ignore = """
-.helix/
-helix/autocomplete/
-helix/flat/
-
-*.mqproj
-
-**/*.ex5
-**/*.ex4
-**/*.log
-"""
-        others_ignore = """
-.helix/
-helix/autocomplete/
-helix/flat/
-helix/include
-
-*.mqproj
-
-**/*.ex5
-**/*.ex4
-**/*.log
-"""
         if self.project_type == MQLProjectType.PACKAGE:
-            return package_ignore.strip()
+            return GITIGNORE_PACKAGE.strip()
         else:
-            return others_ignore.strip()
+            return GITIGNORE_OTHER.strip()
 
     def create_example_file(self):
         """Creates a basic example file based on project type."""
