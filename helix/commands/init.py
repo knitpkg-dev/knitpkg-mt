@@ -24,6 +24,7 @@ helix/flat/
 **/*.ex5
 **/*.ex4
 **/*.log
+GETTING_STARTED
 """.strip()
 
 GITIGNORE_DEFAULT = """
@@ -37,10 +38,11 @@ helix/include
 **/*.ex5
 **/*.ex4
 **/*.log
+GETTING_STARTED
 """.strip()
 
 # MQL5/MQL4 source code templates
-TEMPLATE_INCLUDE = """//+------------------------------------------------------------------+
+TEMPLATE_PACKAGE_INCLUDE = """//+------------------------------------------------------------------+
 //| {{header_file_name}}
 //| {{header_name}}
 //| {{header_organization}}
@@ -67,7 +69,7 @@ TEMPLATE_INCLUDE = """//+-------------------------------------------------------
 // Add your package code here and rename the file as needed.
 """
 
-TEMPLATE_UNITTESTS = """//+------------------------------------------------------------------+
+TEMPLATE_PACKAGE_UNITTESTS = """//+------------------------------------------------------------------+
 //| {{header_file_name}}
 //| {{header_name}}
 //| {{header_organization}}
@@ -86,7 +88,7 @@ TEMPLATE_UNITTESTS = """//+-----------------------------------------------------
 #property description "http://helix.dev"
 
 // Include the headers under test
-//#include "helix/include/{{organization}}/MyHeaderHere.mqh"
+//#include "{{header_path}}"
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -140,6 +142,58 @@ void OnStart()
    UnitTests("{{name}}");
   }
 //+------------------------------------------------------------------+
+"""
+
+TEMPLATE_PACKAGE_GETTING_STARTED = """================================================================================
+                GETTING STARTED WITH HELIX PACKAGE DEVELOPMENT
+================================================================================
+
+This file should be deleted after reading. It is excluded from version control
+and serves only as a quick reference during initial setup.
+
+================================================================================
+                              PACKAGE STRUCTURE
+================================================================================
+
+Export headers exclusively in the helix/include directory. Headers located in
+other paths will be ignored during package resolution and compilation.
+
+A sample header file has been created at:
+
+  {{header_path}}
+
+Use it as a foundation for developing your own headers. Additional headers can
+be created in the same directory or in subdirectories within this location.
+
+================================================================================
+                            UNIT TESTING GUIDELINES
+================================================================================
+
+Place unit tests in the tests directory. A basic unit test skeleton has been
+created to help you begin development at {{unit_test_path}}
+
+Refer to the test file for examples on how to structure and execute tests for
+your package components.
+
+================================================================================
+                              NEXT STEPS
+================================================================================
+
+1. If your package has dependencies on other packages:
+   - Add them to the dependencies section in helix.yaml
+   - Run 'helix autocomplete' to resolve dependencies and IntelliSense support
+
+2. Review the sample header in {{header_path}}
+
+3. Develop your package headers following the same structure
+
+4. Add unit tests in the tests directory
+
+5. Delete this file when setup is complete
+
+For detailed documentation, visit: https://helix.dev/docs
+
+================================================================================
 """
 
 TEMPLATE_EXPERT = """//+------------------------------------------------------------------+
@@ -402,6 +456,10 @@ class ProjectInitializer:
         """Render a Jinja2 template with project context."""
         return Template(template_str).render(**context)
 
+    def format_mql_header(txt: str) -> str:
+        header_dashes_len = len("//+------------------------------------------------------------------+")
+        return f"{' '*(header_dashes_len-len(txt)-6)}{txt} |"
+
     def create_package_files(self) -> None:
         """Create files for package project type."""
         org_dir = self.organization if self.organization else "."
@@ -411,7 +469,12 @@ class ProjectInitializer:
         header_dir.mkdir(parents=True, exist_ok=True)
         header_path = header_dir / "Header.mqh"
 
-        header_content = self.render_template(TEMPLATE_INCLUDE)
+        header_content = self.render_template(TEMPLATE_PACKAGE_INCLUDE, {
+            "header_file_name": ProjectInitializer.format_mql_header("Header.mqh"),
+            "header_name": ProjectInitializer.format_mql_header(f"Package {self.name}"),
+            "header_organization": ProjectInitializer.format_mql_header(f"Organization: {self.organization}" if self.organization else "No organization"),
+            "autocomplete_path_prefix": "../../..",
+        })
         header_path.write_text(header_content.strip() + "\n", encoding="utf-8")
         self.console.print(f"[green]Created {header_path.relative_to(self.project_root)}[/green]")
 
@@ -420,11 +483,30 @@ class ProjectInitializer:
         tests_dir.mkdir(parents=True, exist_ok=True)
         unit_file_name = "UnitTests.mq5" if self.target == Target.MQL5 else "UnitTests.mq4"
         unit_path = tests_dir / unit_file_name
-        self.compile.append(f"tests/UnitTests.mq5")
+        self.compile.append("tests/UnitTests.mq5")
 
-        unit_content = self.render_template(TEMPLATE_UNITTESTS)
+        unit_content = self.render_template(TEMPLATE_PACKAGE_UNITTESTS, {
+            "header_file_name": ProjectInitializer.format_mql_header(unit_file_name),
+            "header_name": ProjectInitializer.format_mql_header(f"Unit Tests for Package {self.name}"),
+            "header_organization": ProjectInitializer.format_mql_header(f"Organization: {self.organization}" if self.organization else "No organization"),
+            "name": self.name,
+            "organization": self.organization if self.organization else "No organization",
+            "version": self.version,
+            "author": self.author,
+            "license": self.license,
+            "header_path": f"../{header_path.relative_to(self.project_root).as_posix()}",
+        })
         unit_path.write_text(unit_content.strip() + "\n", encoding="utf-8")
         self.console.print(f"[green]Created {unit_path.relative_to(self.project_root)}[/green]")
+
+        # Create GETTING_STARTED
+        getting_started_content = self.render_template(TEMPLATE_PACKAGE_GETTING_STARTED, {
+            "header_path": header_path.relative_to(self.project_root).as_posix(),
+            "unit_test_path": "tests/UnitTests.mq5"
+        })
+        getting_started_path = self.project_root / "GETTING_STARTED"
+        getting_started_path.write_text(getting_started_content.strip() + "\n", encoding="utf-8")
+        self.console.print(f"[green]Created {getting_started_path.relative_to(self.project_root)}[/green]")
 
     def create_expert_files(self) -> None:
         """Create files for expert project type."""
@@ -586,7 +668,7 @@ class ProjectInitializer:
     def prompt_license(self, license: str | None) -> None:
         """Prompt for license identifier."""
         if license is None:
-            license = Prompt.ask("License identifier", default="Undefined")
+            license = Prompt.ask("License identifier", default="MIT")
         self.license = license
 
     def select_target(self, target: Target | None) -> None:
@@ -732,31 +814,6 @@ class ProjectInitializer:
             self.project_root.mkdir(parents=True, exist_ok=True)
             self.console.print(f"[green]Created project directory: {self.project_root}[/green]")
 
-            # Create helix.yaml
-            manifest_data = {
-                "name": self.name,
-                "version": self.version,
-                "description": self.description,
-                "author": self.author,
-                "license": self.license,
-                "target": self.target.value,
-                "type": self.project_type.value,
-            }
-            if self.organization:
-                manifest_data["organization"] = self.organization
-            if self.include_mode:
-                manifest_data["include_mode"] = self.include_mode.value
-            if self.entrypoints:
-                manifest_data["entrypoints"] = self.entrypoints
-
-            manifest_data["compile"] = self.compile
-
-            manifest_data["dependencies"] = {}
-
-            with open(self.project_root / "helix.yaml", "w") as f:
-                yaml.dump(manifest_data, f, sort_keys=False)
-            self.console.print(f"[green]Created {self.project_root / 'helix.yaml'}[/green]")
-
             # Create .gitignore
             gitignore_content = self.get_gitignore_content()
             with open(self.project_root / ".gitignore", "w") as f:
@@ -783,6 +840,31 @@ class ProjectInitializer:
                 self.create_library_files()
             elif self.project_type == MQLProjectType.SERVICE:
                 self.create_service_files()
+
+            # Create helix.yaml
+            manifest_data = {
+                "name": self.name,
+                "version": self.version,
+                "description": self.description,
+                "author": self.author,
+                "license": self.license,
+                "target": self.target.value,
+                "type": self.project_type.value,
+            }
+            if self.organization:
+                manifest_data["organization"] = self.organization
+            if self.include_mode:
+                manifest_data["include_mode"] = self.include_mode.value
+            if self.entrypoints:
+                manifest_data["entrypoints"] = self.entrypoints
+
+            manifest_data["compile"] = self.compile
+
+            manifest_data["dependencies"] = {}
+
+            with open(self.project_root / "helix.yaml", "w") as f:
+                yaml.dump(manifest_data, f, sort_keys=False)
+            self.console.print(f"[green]Created {self.project_root / 'helix.yaml'}[/green]")
 
             # Initialize Git repository using GitPython
             if self.git_init:
