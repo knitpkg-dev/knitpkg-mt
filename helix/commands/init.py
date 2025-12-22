@@ -245,7 +245,7 @@ void OnTick()
 //+------------------------------------------------------------------+
 """
 
-TEMPLATE_BARS = """//+------------------------------------------------------------------+
+TEMPLATE_INDICATOR_BARS = """//+------------------------------------------------------------------+
 //| {{header_file_name}}
 //| {{header_name}}
 //| {{header_organization}}
@@ -297,7 +297,7 @@ int OnCalculate(const int32_t rates_total,
 //+------------------------------------------------------------------+
 """
 
-TEMPLATE_SERIES = """//+------------------------------------------------------------------+
+TEMPLATE_INDICATOR_SERIES = """//+------------------------------------------------------------------+
 //| {{header_file_name}}
 //| {{header_name}}
 //| {{header_organization}}
@@ -528,7 +528,7 @@ class ProjectInitializer:
         file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
         indicator_path = src_dir / f"{self.name}{file_ext}"
 
-        template = TEMPLATE_BARS if self.indicator_input_type == IndicatorInputType.OHLC else TEMPLATE_SERIES
+        template = TEMPLATE_INDICATOR_BARS if self.indicator_input_type == IndicatorInputType.OHLC else TEMPLATE_INDICATOR_SERIES
         indicator_content = self.render_template(template)
         indicator_path.write_text(indicator_content.strip() + "\n", encoding="utf-8")
         self.console.print(f"[green]Created {indicator_path.relative_to(self.project_root)}[/green]")
@@ -884,6 +884,7 @@ class ProjectInitializer:
             )
             self.console.print(Text("Next steps:", style="bold blue"))
             self.console.print(f"  cd {self.project_root.name}")
+            self.console.print(f"  Read GETTING_STARTED")
             self.console.print(f"  Start coding your {self.project_type.value}!")
 
         except Exception as e:
