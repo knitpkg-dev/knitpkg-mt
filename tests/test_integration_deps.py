@@ -99,6 +99,7 @@ string GetDepEValue() { return "DepE_Value"; }
 
 DEP_E_YAML_CONTENT = """
 name: DepE
+organization: NullSolutions
 version: 1.0.0
 type: package
 target: MQL5
@@ -283,7 +284,7 @@ description: Dependency A package
 """
 
 # Level 1 (Expert)
-EXPERT_TEST_MQH_CONTENT = """
+EXPERT_TEST_MQH_FLAT_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mqh |
 //|                                                                  |
@@ -297,7 +298,29 @@ EXPERT_TEST_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 /* @helix:include "Acme/DepC.mqh" */
 /* @helix:include "Acme/DepD/DepD.mqh" */
-/* @helix:include "DepE.mqh" */
+/* @helix:include "NullSolutions/DepE.mqh" */
+
+string GetExpertTestValue() {
+    return "ExpertTest started! " + GetDepCValue() + " " + GetDepDValue() + " " + GetDepEValue();
+}
+"""
+
+EXPERT_TEST_MQH_INCMODE_CONTENT = """
+//+------------------------------------------------------------------+
+//|                                                  ExpertTest.mqh |
+//|                                                                  |
+//|                    Helix for MetaTrader                          |
+//|                                                                  |
+//|                          MIT License                             |
+//|                    Copyright (c) 2025 Douglas Rechia             |
+//|                                                                  |
+//|  ExpertTest: Main Expert Advisor header.                         |
+//|                                                                  |
+//+------------------------------------------------------------------+
+
+#include "helix/include/Acme/DepC.mqh"
+#include "helix/include/Acme/DepD/DepD.mqh"
+#include "helix/include/NullSolutions/DepE.mqh"
 
 string GetExpertTestValue() {
     return "ExpertTest started! " + GetDepCValue() + " " + GetDepDValue() + " " + GetDepEValue();
@@ -390,7 +413,7 @@ dependencies:
   DepB: ../DepB # Local dependency
   DepC: ../DepC # Local dependency
   DepD: ../DepD # Local dependency
-  DepE: ../DepE # Local dependency
+  '@NullSolutions/DepE': ../DepE # Local dependency
 """
 
 EXPERT_TEST_YAML_CONTENT_2 = """
@@ -405,7 +428,7 @@ entrypoints:
 dependencies:
   DepC: ../DepC # Local dependency
   DepD: ../DepD # Local dependency
-  DepE: ../DepE # Local dependency
+  '@NullSolutions/DepE': ../DepE # Local dependency
 """
 
 EXPERT_TEST_YAML_CONTENT_3 = """
@@ -420,7 +443,7 @@ compile:
 dependencies:
   DepC: ../DepC # Local dependency
   DepD: ../DepD # Local dependency
-  DepE: ../DepE # Local dependency
+  '@NullSolutions/DepE': ../DepE # Local dependency
 """
 
 # --- Helper function to create project files ---
@@ -445,7 +468,7 @@ def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_c
         with open(mq5_file_path, "w", encoding="utf-8") as f:
             f.write(mq5_content)
 
-def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str, expert_test_mq5_content: str) -> str:
+def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str, expert_test_mq5_content: str, expert_test_mqh_content: str) -> str:
     """
     Tests the resolution of a complex dependency tree (4 levels with merge)
     and the correct generation of the flat include file by instantiating HelixInstaller directly.
@@ -457,7 +480,7 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
     root_dir.mkdir()
 
     # Create dependency projects (Level 4)
-    create_project_files(root_dir, "DepE", "helix/include", DEP_E_MQH_CONTENT, DEP_E_YAML_CONTENT)
+    create_project_files(root_dir, "DepE", "helix/include/NullSolutions", DEP_E_MQH_CONTENT, DEP_E_YAML_CONTENT)
     # Create dependency projects (Level 3)
     create_project_files(root_dir, "DepC", "helix/include/Acme", DEP_C_MQH_CONTENT, DEP_C_YAML_CONTENT)
     create_project_files(root_dir, "DepD", "helix/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
@@ -465,7 +488,7 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
     create_project_files(root_dir, "DepA", "helix/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
     create_project_files(root_dir, "DepB", "helix/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
     # Create Expert project (Level 1)
-    create_project_files(root_dir, "ExpertTest", ".", EXPERT_TEST_MQH_CONTENT, expert_test_yaml_content, ".", expert_test_mq5_content)
+    create_project_files(root_dir, "ExpertTest", ".", expert_test_mqh_content, expert_test_yaml_content, ".", expert_test_mq5_content)
 
     expert_test_path = root_dir / "ExpertTest"
 
@@ -556,10 +579,10 @@ def check_flat_content(root_dir: Path):
 
 # --- Pytest Integration Test ---
 def test_complex_dependency_tree_and_flat_include_expert_yaml1(tmp_path: Path):
-    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_1, EXPERT_TEST_MQ5_CONTENT_FLAT_MODE))
+    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_1, EXPERT_TEST_MQ5_CONTENT_FLAT_MODE, EXPERT_TEST_MQH_FLAT_CONTENT))
 
 def test_complex_dependency_tree_and_flat_include_expert_yaml2(tmp_path: Path):
-    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_2, EXPERT_TEST_MQ5_CONTENT_FLAT_MODE))
+    check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_2, EXPERT_TEST_MQ5_CONTENT_FLAT_MODE, EXPERT_TEST_MQH_FLAT_CONTENT))
 
 def test_autocomplete(tmp_path: Path):
     root_dir = tmp_path / "helix_test_root"
@@ -675,7 +698,7 @@ def check_include_mode(root_dir: Path):
     assert depd_content == DEP_D_INCLUDE_MODE_RESOLVED_CONTENT
 
     # Verify if DepE.mqh include file was created with expected content
-    depe_path = expert_test_includes_path / "DepE.mqh"
+    depe_path = expert_test_includes_path / "NullSolutions" / "DepE.mqh"
     assert depe_path.exists(), f"DepE.mqh include file not found: {depe_path}"
 
     with open(depe_path, "r", encoding="utf-8") as f:
@@ -684,4 +707,4 @@ def check_include_mode(root_dir: Path):
     assert depe_content == DEP_E_MQH_CONTENT
 
 def test_helix_directives_and_include_mode(tmp_path: Path):
-    check_include_mode(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_3, EXPERT_TEST_MQ5_CONTENT_INCLUDE_MODE))
+    check_include_mode(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_3, EXPERT_TEST_MQ5_CONTENT_INCLUDE_MODE, EXPERT_TEST_MQH_INCMODE_CONTENT))
