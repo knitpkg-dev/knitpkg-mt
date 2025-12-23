@@ -284,7 +284,7 @@ description: Dependency A package
 """
 
 # Level 1 (Expert)
-EXPERT_TEST_MQH_FLAT_CONTENT = """
+EXPERT_TEST_MQH_FLAT_CONTENT = r"""
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mqh |
 //|                                                                  |
@@ -297,7 +297,7 @@ EXPERT_TEST_MQH_FLAT_CONTENT = """
 //|                                                                  |
 //+------------------------------------------------------------------+
 /* @helix:include "Acme/DepC.mqh" */
-/* @helix:include "Acme/DepD/DepD.mqh" */
+/* @helix:include "Acme\DepD\DepD.mqh" */
 /* @helix:include "NullSolutions/DepE.mqh" */
 
 string GetExpertTestValue() {
@@ -305,7 +305,7 @@ string GetExpertTestValue() {
 }
 """
 
-EXPERT_TEST_MQH_INCMODE_CONTENT = """
+EXPERT_TEST_MQH_INCMODE_CONTENT = r"""
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mqh |
 //|                                                                  |
@@ -318,7 +318,7 @@ EXPERT_TEST_MQH_INCMODE_CONTENT = """
 //|                                                                  |
 //+------------------------------------------------------------------+
 
-#include "helix/include/Acme/DepC.mqh"
+#include "helix\include\Acme\DepC.mqh"
 #include "helix/include/Acme/DepD/DepD.mqh"
 #include "helix/include/NullSolutions/DepE.mqh"
 
