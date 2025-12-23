@@ -333,8 +333,7 @@ class DependencyDownloader:
         """
         base_url = specifier.split("#")[0].rstrip("/")
         ref_spec = specifier.split("#", 1)[1] if "#" in specifier else "HEAD"
-        cache_key = hashlib.sha256(specifier.encode()).hexdigest()[:16]
-        dep_path = CACHE_DIR / f"{name}_{cache_key}"
+        dep_path = CACHE_DIR / f"{name.strip().lower().replace('/', '_')}"
 
         lock_data = load_lockfile()
         locked = lock_data["dependencies"].get(name, {})
@@ -513,14 +512,14 @@ class DependencyDownloader:
                 return False
 
             if sub_manifest.organization:
-                expected_dep_name = f"{sub_manifest.name.strip()}@{sub_manifest.organization.strip()}"
+                expected_dep_name = f"@{sub_manifest.organization.strip()}/{sub_manifest.name.strip()}"
             else:
                 expected_dep_name = sub_manifest.name
 
             if dep_name != expected_dep_name:
                 self.console.log(
                     f"[yellow]Warning:[/] Dependency name mismatch: "
-                    f"'{dep_name}' != '{expected_dep_name}'"
+                    f"'{dep_name}'. Expected: '{expected_dep_name}'."
                 )
                 self.console.log(
                     f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → "

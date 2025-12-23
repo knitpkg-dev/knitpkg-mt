@@ -140,6 +140,9 @@ class HelixSection(BaseModel):
 # VERSION REFERENCE VALIDATION
 # ==============================================================
 
+# Validation for dependencies names
+NAME_PATTERN = re.compile(r"^(@[\w\-\.]+/)?[\w\-\.]+$")
+
 # Main regex: covers all SemVer + NPM-style ranges + prefixed refs (branch=, tag=, commit=)
 REF_PATTERN = re.compile(
     r"^"
@@ -285,12 +288,18 @@ class HelixManifest(BaseModel):
         if not isinstance(v, dict):
             raise ValueError("dependencies must be a dictionary")
 
+
         for dep_name, spec in v.items():
             if not isinstance(spec, str):
                 raise ValueError(f"Dependency '{dep_name}' must be a string")
             spec = spec.strip()
             if not spec:
                 raise ValueError(f"Dependency '{dep_name}' is empty")
+            
+            if not NAME_PATTERN.fullmatch(dep_name):
+                raise ValueError(
+                    f"Dependency name '{dep_name}' must follow 'package-name' or '@organization/package-name' format"
+                )   
 
             # Local file:// protocol (path existence checked at install time)
             if spec.startswith("file://"):

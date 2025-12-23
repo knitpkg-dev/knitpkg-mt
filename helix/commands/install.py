@@ -291,11 +291,19 @@ class FlatModeProcessor:
             try:
                 if directive is None:
                     inc_file = include_path.strip()
+                    if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
+                        return f"// Ignoring autocomplete.mqh\n"
+                    
                     inc_path = self._find_include_file_local(inc_file, base_path)
+
                 elif directive == 'include':
                     inc_file = directive_path.strip()
+                    if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
+                        return f"// Ignoring autocomplete.mqh\n"
+                    
                     inc_path = self._find_include_file_deps(inc_file, resolved_deps)
                     self.console.log(f"[dim]@helix:include found:[/] '{inc_file}'")
+
                 else:
                     self.console.log(
                         f"[red]ERROR:[/] Invalid @helix:<directive> → '{directive}'"
