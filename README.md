@@ -82,7 +82,9 @@ Helix fixes this forever — with pure elegance.
 #### While developing an include library (e.g. `Calc.mqh` in `helix-calc`, which depends on `Bar.mqh` in `helix-bar`):
 
 ```mql5
-#include "../../autocomplete/autocomplete.mqh"   /* @helix:replace-with "helix/include/Bar/Bar.mqh" */
+#include "../../autocomplete/autocomplete.mqh"   
+
+/* @helix:include "helix/include/Bar/Bar.mqh" */
 /* @helix:include "helix/include/Math/Utils.mqh" */
 ```
 

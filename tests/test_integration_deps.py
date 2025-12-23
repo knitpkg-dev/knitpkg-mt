@@ -119,8 +119,9 @@ DEP_D_MQH_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "../../../autocomplete/autocomplete.mqh" /* @helix:replace-with "Acme/DepA/DepA.mqh" */
-
+#include "../../../autocomplete/autocomplete.mqh" 
+ 
+/* @helix:include "Acme/DepA/DepA.mqh" */
 /* @helix:include "Acme/DepB/DepB.mqh" */
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
@@ -139,8 +140,9 @@ DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-#include "../DepA/DepA.mqh" /*** ← dependence resolved by Helix. Original include: "../../../autocomplete/autocomplete.mqh" ***/
-
+// #include "../../../autocomplete/autocomplete.mqh"  /*** ← disabled by Helix install (dev helper) ***/
+ 
+#include "../DepA/DepA.mqh" /*** ← dependence added by Helix ***/
 #include "../DepB/DepB.mqh" /*** ← dependence added by Helix ***/
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }

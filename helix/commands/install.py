@@ -50,7 +50,6 @@ class ResolveHelixIncludePattern:
     Parses Helix include directives from MQL source code.
 
     Matches patterns like:
-    - #include "autocomplete/autocomplete.mqh" /* @helix:replace-with "new/path.mqh" */
     - /* @helix:include "helix/include/AdditionalPath.mqh" */
 
     Attributes:
@@ -63,21 +62,20 @@ class ResolveHelixIncludePattern:
     def __init__(self):
         self.include_path = None
         self.directive = None
-        self.replace_path = None
+        self.directive_path = None
 
         self.pattern = re.compile(
-            r'^\s*#\s*include\s+"(?P<include>[^"]+)"'
-            r'(?:\s*/\*\s*@helix:(?P<directive1>\w+(?:-\w+)*)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
+            r'^\s*#\s*include\s+"(?P<include_path>[^"]+)"\s*$'
             r'|'
-            r'^\s*/\*\s*@helix:(?P<directive2>\w+(?:-\w+)*)\s+"(?P<path2>[^"]+)"\s*\*/\s*$',
+            r'^\s*/\*\s*@helix:(?P<directive>\w+(?:-\w+)*)\s+"(?P<directive_path>[^"]+)"\s*\*/\s*$',
             re.MULTILINE
         )
 
     def extract_groups(self, match: re.Match) -> None:
         """Extract named groups from regex match and store in instance variables."""
-        self.include_path = match.group("include")
-        self.directive = match.group("directive1") or match.group("directive2")
-        self.replace_path = match.group("path1") or match.group("path2")
+        self.include_path = match.group("include_path")
+        self.directive = match.group("directive")
+        self.directive_path = match.group("directive_path")
 
 # ==============================================================
 # INCLUDE MODE PROCESSOR CLASS
@@ -136,18 +134,12 @@ class IncludeModeProcessor:
                     self.resolve_include_pattern.extract_groups(match)
                     include_path = self.resolve_include_pattern.include_path
                     directive = self.resolve_include_pattern.directive
-                    replace_path = self.resolve_include_pattern.replace_path
+                    replace_path = self.resolve_include_pattern.directive_path
 
                     if directive == 'include':
                         lines[i] = (
                             f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
                             f'/*** ← dependence added by Helix ***/'
-                        )
-                        modified = True
-                    elif directive == 'replace-with':
-                        lines[i] = (
-                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
-                            f'/*** ← dependence resolved by Helix. Original include: "{include_path}" ***/'
                         )
                         modified = True
                     elif '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix():
@@ -251,25 +243,33 @@ class FlatModeProcessor:
             flat_file.write_text(content, encoding="utf-8")
             self.console.log(f"[green]Check[/] {flat_file.name} generated")
 
-    def _find_include_file(
+    def _find_include_file_local(
         self,
         inc_file: str,
         base_path: Path,
+    ) -> Path:
+        """Search for an #include file in the current project."""
+
+        path = (base_path.parent / inc_file).resolve()
+        if path and path.exists() and path.suffix.lower() in {".mqh", ".mq4", ".mq5"}:
+            return path
+
+        raise FileNotFoundError(f"Include not found in the current project: {inc_file}")
+
+    def _find_include_file_deps(
+        self,
+        inc_file: str,
         resolved_deps: ResolvedDeps
     ) -> Path:
-        """Search for an #include file in the current project and all resolved dependencies."""
+        """Search for an #include file in all resolved dependencies."""
 
-        # TODO change this to prevent regular #include to automatically resolve to helix/include
-        candidates = [
-            (base_path.parent / inc_file).resolve(),
-            *[(dep_path / INCLUDE_DIR / inc_file).resolve() for _name, dep_path in resolved_deps]
-        ]
+        candidates = [(dep_path / INCLUDE_DIR / inc_file).resolve() for _name, dep_path in resolved_deps]
 
         for path in candidates:
             if path and path.exists() and path.suffix.lower() in {".mqh", ".mq4", ".mq5"}:
                 return path
 
-        raise FileNotFoundError(f"Include not found: {inc_file}")
+        raise FileNotFoundError(f"Include not found in any resolved dependencies: {inc_file}")
 
     def _resolve_includes(
         self,
@@ -284,24 +284,24 @@ class FlatModeProcessor:
             self.resolve_include_pattern.extract_groups(match)
             include_path: str = self.resolve_include_pattern.include_path
             directive: str = self.resolve_include_pattern.directive
-            replace_path: str = self.resolve_include_pattern.replace_path
+            directive_path: str = self.resolve_include_pattern.directive_path
 
-            if directive is None:
-                inc_file = include_path.strip()
-            elif directive == 'include':
-                inc_file = replace_path.strip()
-                self.console.log(f"[dim]@helix:include found:[/] '{inc_file}'")
-            elif directive == 'replace-with':
-                inc_file = replace_path.strip()
-                self.console.log(f"[dim]@helix:replace-with found:[/] '{inc_file}'")
-            else:
-                self.console.log(
-                    f"[red]ERROR:[/] Invalid @helix:<directive> → '{directive}'"
-                )
-                return f"// ERROR: Invalid @helix:<directive> → '{directive}'"
-
+            inc_file = None
+            inc_path = None
             try:
-                inc_path = self._find_include_file(inc_file, base_path, resolved_deps)
+                if directive is None:
+                    inc_file = include_path.strip()
+                    inc_path = self._find_include_file_local(inc_file, base_path)
+                elif directive == 'include':
+                    inc_file = directive_path.strip()
+                    inc_path = self._find_include_file_deps(inc_file, resolved_deps)
+                    self.console.log(f"[dim]@helix:include found:[/] '{inc_file}'")
+                else:
+                    self.console.log(
+                        f"[red]ERROR:[/] Invalid @helix:<directive> → '{directive}'"
+                    )
+                    return f"// ERROR: Invalid @helix:<directive> → '{directive}'"
+
             except FileNotFoundError:
                 self.console.log(
                     f"[red]ERROR:[/] Include not found in {base_path} → {inc_file}"

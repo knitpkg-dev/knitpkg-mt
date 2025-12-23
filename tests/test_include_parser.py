@@ -53,11 +53,6 @@ def parse_helix_line(line: str):
             '#include "helix/include/Calc/Calc.mqh"',
             {"include": "helix/include/Calc/Calc.mqh", "directive": None, "replace": None},
         ),
-        # 2. #include + @helix:replace-with (with spaces)
-        (
-            '#include "../../old.mqh" /* @helix:replace-with "helix/new.mqh" */',
-            {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/new.mqh"},
-        ),
         # 3. Standalone include directive
         (
             '/* @helix:include "helix/include/Utils.mqh" */',
@@ -68,25 +63,10 @@ def parse_helix_line(line: str):
             '#include "../../autocomplete/autocomplete.mqh"',
             {"include": "../../autocomplete/autocomplete.mqh", "directive": None, "replace": None},
         ),
-        # 5. Glued comment (no space before /*)
-        (
-            '#include "../../old.mqh" /*@helix:replace-with "helix/include/Bar/Bar.mqh"*/',
-            {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/include/Bar/Bar.mqh"},
-        ),
-        # 6. Fully glued extreme case – NOT supported
-        (
-            '#include"../../old.mqh"/*@helix:replace-with"helix/include/Bar/Bar.mqh"*/',
-            None,
-        ),
         # 7. Glued standalone directive
         (
             '/*@helix:include "helix/include/Utils.mqh"*/',
             {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
-        ),
-        # 8. With extra whitespace/tabs
-        (
-            '#include "simple.mqh"     /* @helix:replace-with "novo/caminho.mqh" */',
-            {"include": "simple.mqh", "directive": "replace-with", "replace": "novo/caminho.mqh"},
         ),
         # 9. Path with spaces inside quotes
         (
@@ -118,21 +98,13 @@ def test_full_real_world_block():
 
 #include "helix/include/Calc/Calc.mqh"
 
-#include "../../old.mqh" /* @helix:replace-with "helix/new.mqh" */
-
 /* @helix:include "helix/include/Utils.mqh" */
 
 #include "../../autocomplete/autocomplete.mqh"
 
-#include "../../old.mqh" /* @helix:replace-with "helix/include/Bar/Bar.mqh" */
-
-#include "../../old.mqh" /*@helix:replace-with "helix/include/Bar/Bar.mqh"*/
-
 /* @helix:include "helix/include/Utils.mqh" */
 
 /*@helix:include "helix/include/Utils.mqh"*/
-
-#include "simple.mqh"     /* @helix:replace-with "novo/caminho.mqh" */
 
 /* @helix: "helix/include/Utils.mqh" */
 
@@ -142,14 +114,10 @@ def test_full_real_world_block():
 
     expected_results = [
         {"include": "helix/include/Calc/Calc.mqh", "directive": None, "replace": None},
-        {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/new.mqh"},
         {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
         {"include": "../../autocomplete/autocomplete.mqh", "directive": None, "replace": None},
-        {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/include/Bar/Bar.mqh"},
-        {"include": "../../old.mqh", "directive": "replace-with", "replace": "helix/include/Bar/Bar.mqh"},
         {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
         {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
-        {"include": "simple.mqh", "directive": "replace-with", "replace": "novo/caminho.mqh"},
         {"include": " d ", "directive": "include", "replace": " d "},
     ]
 
