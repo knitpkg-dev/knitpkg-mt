@@ -506,16 +506,21 @@ class DependencyDownloader:
         which can be overridden by platform-specific subclasses.
         """
         try:
-            sub_manifest = load_helix_manifest(dep_path)
+            sub_manifest: dict = load_helix_manifest(dep_path)
 
             # Platform-specific validation (overridable)
             if not self.validate_manifest(sub_manifest, dep_path):
                 return False
 
-            if dep_name != sub_manifest.name:
+            if sub_manifest.organization:
+                expected_dep_name = f"{sub_manifest.name.strip()}@{sub_manifest.organization.strip()}"
+            else:
+                expected_dep_name = sub_manifest.name
+
+            if dep_name != expected_dep_name:
                 self.console.log(
                     f"[yellow]Warning:[/] Dependency name mismatch: "
-                    f"'{dep_name}' != '{sub_manifest.name}'"
+                    f"'{dep_name}' != '{expected_dep_name}'"
                 )
                 self.console.log(
                     f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → "

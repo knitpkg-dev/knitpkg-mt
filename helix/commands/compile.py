@@ -210,17 +210,6 @@ class MQLCompiler:
         """
         files = []
 
-        # Collect from compile list (unless entrypoints_only)
-        if not entrypoints_only and self.manifest.compile:
-            for file_str in self.manifest.compile:
-                file_path = self.project_dir / file_str
-                if file_path.exists():
-                    files.append(file_path)
-                else:
-                    self.console.log(
-                        f"[yellow]Warning:[/] File not found (compile): {file_str}"
-                    )
-
         # Collect from entrypoints (unless compile_only)
         if not compile_only and self.manifest.entrypoints:
             # Only compile entrypoints if include_mode is 'flat'
@@ -252,6 +241,17 @@ class MQLCompiler:
                     f"[yellow]Warning:[/] Entrypoints defined in manifest but include_mode is not 'flat'. "
                     f"Entrypoints will not be compiled. Set include_mode to 'flat' or use 'compile' field."
                 )
+
+        # Collect from compile list (unless entrypoints_only)
+        if not entrypoints_only and self.manifest.compile:
+            for file_str in self.manifest.compile:
+                file_path = self.project_dir / file_str
+                if file_path.exists():
+                    files.append(file_path)
+                else:
+                    self.console.log(
+                        f"[yellow]Warning:[/] File not found (compile): {file_str}"
+                    )
 
         # Remove duplicates while preserving order
         seen = set()
