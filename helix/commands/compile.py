@@ -24,6 +24,7 @@ from helix.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
 from helix.mql.constants import FLAT_DIR
 from helix.mql.settings import get_mql4_data_folder_path, get_mql5_data_folder_path
 from helix.mql.constants import COMPILE_LOGS_DIR
+from helix.mql.mql_paths import find_mql_paths
 
 # Import MQL-specific exceptions
 from helix.mql.exceptions import (
@@ -298,37 +299,8 @@ class MQLCompiler:
                 )
 
         # 2. Fallback to auto-detection logic
-        possible_paths = [
-            Path.home() / "AppData" / "Roaming" / "MetaQuotes" / "Terminal",
-        ]
-
-        if self.manifest.target == Target.MQL5:
-            possible_paths.append(
-                Path("C:/Program Files/MetaTrader 5/Terminal"), # Common default for MQL5
-            )
-        elif self.manifest.target == Target.MQL4:
-            possible_paths.append(
-                Path("C:/Program Files (x86)/MetaTrader 4/Terminal"),
-            )
-
-        found_mql_paths: List[Path] = []
+        found_mql_paths: List[Path] = find_mql_paths(self.manifest.target)
         target_folder_name = self.manifest.target.value # MQL5 or MQL4
-
-        for base_path in possible_paths:
-            if not base_path.exists():
-                continue
-
-            # Iterate through subfolders (e.g., "D0E8209F77C15E0B37B07412A6190423")
-            # Using os.walk to ensure we only go one level deep in the terminal folders
-            for root, dirs, _ in os.walk(base_path):
-                for d in dirs:
-                    terminal_id_path = Path(root) / d
-                    mql_path = terminal_id_path / target_folder_name
-                    include_path = mql_path / "Include"
-                    if include_path.is_dir():
-                        found_mql_paths.append(mql_path)
-                # Only search one level deep in Terminal folders
-                break 
 
         if not found_mql_paths:
             self.console.log(
