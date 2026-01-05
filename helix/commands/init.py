@@ -1538,6 +1538,24 @@ class ProjectInitializer:
         """Prompt for project version."""
         if version is None:
             version = Prompt.ask("Project version (SemVer)", default="1.0.0")
+        
+        # Validate SemVer format and check major version
+        semver_pattern = re.compile(
+            r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
+            r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?" 
+            r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+        )
+        
+        match = semver_pattern.match(version)
+        if not match:
+            self.console.log("[red]Error: Version must follow SemVer format (e.g., 1.0.0, 2.1.3-beta.1)[/red]")
+            raise typer.Exit(code=1)
+        
+        major_version = int(match.group('major'))
+        if major_version == 0:
+            self.console.log("[red]Error: Major version 0 is not supported. Please use version 1.0.0 or higher.[/red]")
+            raise typer.Exit(code=1)
+        
         self.version = version
 
     def prompt_description(self, description: str | None) -> None:
