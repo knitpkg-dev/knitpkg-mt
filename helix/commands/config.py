@@ -59,7 +59,6 @@ def register(app):
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
-            "-v",
             help="Show detailed output with file/line information"
         )
     ):

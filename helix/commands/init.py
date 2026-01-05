@@ -448,7 +448,7 @@ For the full Helix documentation visit: https://helix.dev/docs
 ================================================================================
 """
 
-TEMPLATE_INDICATOR_BARS = """//+------------------------------------------------------------------+
+TEMPLATE_INDICATOR_BARS_MQL5 = """//+------------------------------------------------------------------+
 //| {{header_file_name}}
 //| {{header_name}}
 //| {{header_organization}}
@@ -494,6 +494,61 @@ int OnCalculate(const int32_t rates_total,
                 const long &tick_volume[],
                 const long &volume[],
                 const int32_t &spread[])
+  {
+   //---
+
+   //--- return value of prev_calculated for next call
+   return(rates_total);
+  }
+//+------------------------------------------------------------------+
+"""
+
+TEMPLATE_INDICATOR_BARS_MQL4 = """//+------------------------------------------------------------------+
+//| {{header_file_name}}
+//| {{header_name}}
+//| {{header_organization}}
+//+------------------------------------------------------------------+
+#property copyright   "<Add copyright here>"
+#property link        "<Add link here>"
+#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property description ""
+#property description "Version: {{version}}"
+#property description ""
+#property description "Description: {{description}}"
+#property description "Organization: {{organization}}"
+#property description "Author: {{author}}"
+#property description "License: {{license}}"
+#property description ""
+#property description "Powered by Helix for MetaTrader"
+#property description "http://helix.dev"
+
+{{project_includes}}
+
+// ***** Add your code and rename the file as needed. *****
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   //--- indicator buffers mapping
+
+   //---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long& tick_volume[],
+                const long& volume[],
+                const int& spread[])
   {
    //---
 
@@ -1379,7 +1434,10 @@ class ProjectInitializer:
         self.create_project_files('Expert Advisor', TEMPLATE_EXPERT, TEMPLATE_EXPERT_GETTING_STARTED)
 
     def create_indicator_files(self) -> None:
-        template = TEMPLATE_INDICATOR_BARS if self.indicator_input_type == IndicatorInputType.OHLC else TEMPLATE_INDICATOR_SERIES
+        if self.target == Target.MQL4:
+            template = TEMPLATE_INDICATOR_BARS_MQL4
+        else:
+            template = TEMPLATE_INDICATOR_BARS_MQL5 if self.indicator_input_type == IndicatorInputType.OHLC else TEMPLATE_INDICATOR_SERIES
         self.create_project_files('Indicator', template, TEMPLATE_INDICATOR_GETTING_STARTED)
 
     def create_script_files(self) -> None:
@@ -1467,6 +1525,10 @@ class ProjectInitializer:
     def select_indicator_input_type(self, indicator_input_type: IndicatorInputType | None) -> None:
         """Select indicator input type (only for indicator projects)."""
         if self.project_type != MQLProjectType.INDICATOR:
+            return
+        
+        if self.target == Target.MQL4:
+            self.indicator_input_type = IndicatorInputType.OHLC
             return
 
         if indicator_input_type is None:
@@ -1969,7 +2031,6 @@ def register(app):
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
-            "-v",
             help="Show detailed output with file/line information"
         )
     ):
