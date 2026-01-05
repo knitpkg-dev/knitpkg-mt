@@ -54,7 +54,7 @@ def main(
 
 def _version_callback(value: bool):
     if value:
-        console = Console()
+        console = Console(log_path=False)
         # TODO: Get version from pyproject.toml
         console.print("[bold green]Helix for MetaTrader[/] version [cyan]0.1.0[/]")
         raise typer.Exit()

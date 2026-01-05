@@ -1,5 +1,7 @@
 # helix/mql/settings.py
 
+from pathlib import Path
+
 """
 MQL-specific settings management.
 
@@ -12,7 +14,7 @@ from helix.core.settings import get_setting, set_setting
 
 # Default compiler paths for MetaTrader
 DEFAULT_MQL5_COMPILER = r"C:\Program Files\MetaTrader 5\MetaEditor64.exe"
-DEFAULT_MQL4_COMPILER = r"C:\Program Files (x86)\MetaTrader 4\MetaEditor.exe"
+DEFAULT_MQL4_COMPILER = r"C:\Program Files (x86)\MetaTrader 4\metaeditor.exe"
 
 def get_mql5_compiler_path() -> str:
     """Get configured MQL5 compiler path or default."""
@@ -20,7 +22,13 @@ def get_mql5_compiler_path() -> str:
 
 def set_mql5_compiler_path(path: str):
     """Set the MQL5 compiler path."""
-    set_setting("mql5-compiler-path", path)
+    compiler_path: Path = Path(path)
+    if compiler_path.is_dir():
+        compiler_path = compiler_path / "MetaEditor64.exe"
+    if not compiler_path.exists():
+        raise FileNotFoundError(f"Compiler not found at {compiler_path}")
+    
+    set_setting("mql5-compiler-path", str(compiler_path.absolute()))
 
 def get_mql4_compiler_path() -> str:
     """Get configured MQL4 compiler path or default."""
@@ -29,7 +37,13 @@ def get_mql4_compiler_path() -> str:
 
 def set_mql4_compiler_path(path: str):
     """Set the MQL4 compiler path."""
-    set_setting("mql4-compiler-path", path)
+    compiler_path: Path = Path(path)
+    if compiler_path.is_dir():
+        compiler_path = compiler_path / "metaeditor.exe"
+    if not compiler_path.exists():
+        raise FileNotFoundError(f"Compiler not found at {compiler_path}")
+    
+    set_setting("mql4-compiler-path", str(compiler_path.absolute()))
 
 # --- MQL5 Data Folder Path (NEW) ---
 

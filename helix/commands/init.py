@@ -1,4 +1,5 @@
 import typer
+from typing import Optional
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from rich.text import Text
@@ -1965,9 +1966,15 @@ def register(app):
             None, "--location", "-l", help="Directory where the project will be created."
         ),
         git_init: bool = typer.Option(None, "--git-init", help="Initialize a Git repository."),
+        verbose: Optional[bool] = typer.Option(
+            False,
+            "--verbose",
+            "-v",
+            help="Show detailed output with file/line information"
+        )
     ):
         """Initializes a new Helix project interactively."""
-        console = Console()
+        console = Console(log_path=verbose)
         initializer = ProjectInitializer(console)
         initializer.run(
             dry_run=dry_run,
