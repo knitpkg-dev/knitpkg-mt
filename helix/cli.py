@@ -13,10 +13,9 @@ from helix.commands import (
     autocomplete,
     compile,
     config,
+    login,
+    publish,
     # build, # Not yet implemented
-    # init, # Not yet implemented
-    # update, # Not yet implemented
-    # package, # Not yet implemented
     # deploy, # Not yet implemented
 )
 
@@ -34,6 +33,8 @@ autocomplete.register(app)
 compile.register(app)
 config.register(app)
 
+login.register(app)
+publish.register(app)
 
 @app.callback()
 def main(
