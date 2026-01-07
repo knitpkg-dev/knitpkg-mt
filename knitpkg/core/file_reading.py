@@ -1,9 +1,9 @@
-# helix/core/file_reading.py
+# knitpkg/core/file_reading.py
 
 """
-File reading utilities for Helix manifests.
+File reading utilities for KnitPkg manifests.
 
-This module provides functions to read manifest files (helix.yaml/helix.json)
+This module provides functions to read manifest files (knitpkg.yaml/knitpkg.json)
 and source code files with proper encoding detection.
 """
 
@@ -61,12 +61,12 @@ def load_helix_manifest(
     manifest_class: Optional[Type[HelixManifest]] = None
 ) -> HelixManifest:
     """
-    Load helix.json OR helix.yaml (YAML takes precedence if both exist).
+    Load knitpkg.json OR knitpkg.yaml (YAML takes precedence if both exist).
 
     Args:
         path:
             - None: current directory
-            - Path to file (helix.yaml/helix.json)
+            - Path to file (knitpkg.yaml/knitpkg.json)
             - Directory (searches for manifest inside it)
         manifest_class: Manifest class to use (defaults to HelixManifest).
             Use MQLHelixManifest for MQL-specific validation.
@@ -79,7 +79,7 @@ def load_helix_manifest(
         FileNotFoundError: No manifest found
 
     Example:
-        >>> from helix.mql.models import MQLHelixManifest
+        >>> from knitpkg.mql.models import MQLHelixManifest
         >>> manifest = load_helix_manifest("path/to/project", MQLHelixManifest)
         >>> print(manifest.target)  # Target.MQL5
     """
@@ -92,16 +92,16 @@ def load_helix_manifest(
     path = Path(path)
 
     if path.is_file():
-        if path.name not in ("helix.yaml", "helix.json"):
+        if path.name not in ("knitpkg.yaml", "knitpkg.json"):
             raise ValueError(
                 f"Invalid file: {path.name}\n"
-                f"Expected: helix.yaml or helix.json"
+                f"Expected: knitpkg.yaml or knitpkg.json"
             )
-        yaml_path = path if path.name == "helix.yaml" else None
-        json_path = path if path.name == "helix.json" else None
+        yaml_path = path if path.name == "knitpkg.yaml" else None
+        json_path = path if path.name == "knitpkg.json" else None
     elif path.is_dir():
-        yaml_path = path / "helix.yaml"
-        json_path = path / "helix.json"
+        yaml_path = path / "knitpkg.yaml"
+        json_path = path / "knitpkg.json"
     else:
         raise FileNotFoundError(f"Path not found: {path}")
 
@@ -111,24 +111,24 @@ def load_helix_manifest(
         return _load_from_json(json_path, manifest_class)
     else:
         raise FileNotFoundError(
-            f"No manifest file found in {path}: helix.yaml or helix.json"
+            f"No manifest file found in {path}: knitpkg.yaml or knitpkgkg.json"
         )
 
 def _load_from_yaml(path: Path, manifest_class: Type[HelixManifest]) -> HelixManifest:
-    """Load and parse a helix.yaml manifest file."""
+    """Load and parse a knitpkg.yaml manifest file."""
     try:
         raw = path.read_text(encoding="utf-8")
         data = yaml.safe_load(raw)
         if data is None:
-            raise ValueError("helix.yaml is empty")
+            raise ValueError("knitpkg.yaml is empty")
         return manifest_class(**data)
     except Exception as e:
-        raise ValueError(f"Error reading helix.yaml: {e}")
+        raise ValueError(f"Error reading knitpkg.yaml: {e}")
 
 def _load_from_json(path: Path, manifest_class: Type[HelixManifest]) -> HelixManifest:
-    """Load and parse a helix.json manifest file."""
+    """Load and parse a knitpkg.json manifest file."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         return manifest_class(**data)
     except Exception as e:
-        raise ValueError(f"Error reading helix.json: {e}")
+        raise ValueError(f"Error reading knitpkg.json: {e}")

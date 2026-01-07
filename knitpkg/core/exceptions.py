@@ -1,15 +1,15 @@
-# helix/core/exceptions.py
+# knitpkg/core/exceptions.py
 
 """
-Helix domain-specific exceptions.
+KnitPkg domain-specific exceptions.
 
-This module contains custom exceptions for the Helix package manager,
+This module contains custom exceptions for the KnitPkg package manager,
 providing clear error messages and separating concerns between library
 code (which raises exceptions) and CLI code (which handles them).
 """
 
 class HelixError(Exception):
-    """Base exception for all Helix errors."""
+    """Base exception for all KnitPkg errors."""
     pass
 
 # ==============================================================
@@ -63,7 +63,7 @@ class ManifestError(HelixError):
     pass
 
 class ManifestNotFoundError(ManifestError):
-    """Raised when helix.yaml/helix.json is not found."""
+    """Raised when knitpkg.yaml/knitpkg.json is not found."""
     def __init__(self, path: str):
         self.path = path
         super().__init__(f"No manifest file found in {path}")

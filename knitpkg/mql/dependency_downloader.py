@@ -1,4 +1,4 @@
-# helix/mql/dependency_downloader.py
+# knitpkg/mql/dependency_downloader.py
 
 """
 MQL-specific dependency downloader.
@@ -9,8 +9,8 @@ Extends the core DependencyDownloader with MQL-specific validation logic.
 from pathlib import Path
 from rich.console import Console
 
-from helix.core.dependency_downloader import DependencyDownloader
-from helix.mql.validators import (
+from knitpkg.core.dependency_downloader import DependencyDownloader
+from knitpkg.mql.validators import (
     validate_mql_project_structure,
     validate_mql_dependency_manifest
 )
@@ -38,7 +38,7 @@ class MQLDependencyDownloader(DependencyDownloader):
         project_dir: Path,
         is_dependency: bool = False
     ) -> None:
-        """Validate MQL project structure (helix/include/ for packages)."""
+        """Validate MQL project structure (knitpkg/include/ for packages)."""
         validate_mql_project_structure(
             manifest,
             project_dir,

@@ -1,4 +1,4 @@
-# helix/commands/login.py
+# knitpkg/commands/login.py
 
 import typer
 import webbrowser
@@ -14,7 +14,7 @@ import os
 REGISTRY_URL = "http://localhost:8000"  # Registry URL
 GITHUB_CLIENT_ID = "Iv23liRbPmtpNq5aJNXG"  # Pull from config or env
 REDIRECT_URI = "http://localhost:8080/callback"  # Local port for callback
-CREDENTIALS_SERVICE = "helix-mt"  # Name for keyring
+CREDENTIALS_SERVICE = "knitpkg-mt"  # Name for keyring
 GITLAB_CLIENT_ID = ""
 MQL5FORGE_CLIENT_ID = ""
 

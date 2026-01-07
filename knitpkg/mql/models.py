@@ -1,4 +1,4 @@
-# helix/mql/models.py
+# knitpkg/mql/models.py
 
 """
 MQL-specific manifest extensions for MetaTrader 4/5.
@@ -12,7 +12,7 @@ from enum import Enum
 from pydantic import Field, field_validator, model_validator
 from typing_extensions import Self  # ← Add this import
 
-from helix.core.models import HelixManifest, ProjectType
+from knitpkg.core.models import HelixManifest, ProjectType
 
 # ==============================================================
 # MQL-SPECIFIC ENUMS
@@ -38,7 +38,7 @@ class MQLProjectType(str, Enum):
 
 class IncludeMode(str, Enum):
     """MQL include processing modes."""
-    INCLUDE = "include"  # Copy .mqh to helix/include/
+    INCLUDE = "include"  # Copy .mqh to knitpkg/include/
     FLAT = "flat"        # Generate self-contained _flat files
 
 # ==============================================================

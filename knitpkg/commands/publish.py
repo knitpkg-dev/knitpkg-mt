@@ -8,13 +8,13 @@ from typing import Optional
 import git
 from pathlib import Path
 
-from helix.core.file_reading import load_helix_manifest
+from knitpkg.core.file_reading import load_helix_manifest
 
 app = typer.Typer()
 
 # Configurations (pull from .env or config; adjust for production)
 REGISTRY_URL = "http://localhost:8000"  # Registry base URL
-CREDENTIALS_SERVICE = "helix-mt"  # Same as in login
+CREDENTIALS_SERVICE = "knitpkg-mt"  # Same as in login
 DEFAULT_PROVIDER = "github"  # Default provider
 
 def get_stored_token(provider: str) -> Optional[str]:
@@ -32,12 +32,12 @@ def register(app):
     """Register the login command with the Typer app."""
 
     @app.command()
-    def publish(manifest_path: str = typer.Option("helix.yaml", "--manifest", help="Caminho para o arquivo helix.yaml")):
+    def publish(manifest_path: str = typer.Option("knitpkg.yaml", "--manifest", help="Caminho para o arquivo knitpkg.yaml")):
         """Publish the current project into the registry."""
         # Check if logged in
         token = get_stored_token(DEFAULT_PROVIDER)
         if not token:
-            typer.echo("You need to login to your git provider first. Run `helix-mt login`.")
+            typer.echo("You need to login to your git provider first. Run `kp-mt login`.")
             raise typer.Exit(code=1)
 
         # Load manifest

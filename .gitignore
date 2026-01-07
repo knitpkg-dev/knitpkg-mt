@@ -1,4 +1,4 @@
-# Helix — .gitignore oficial (2025)
+# KnitPkg — .gitignore oficial (2025)
 # Python / desenvolvimento
 __pycache__/
 *.py[cod]

@@ -1,13 +1,13 @@
 from typing import Dict
 import json
-from helix.core.constants import LOCK_FILE
+from knitpkg.core.constants import LOCK_FILE
 
 # ==============================================================
 # LOCKFILE
 # ==============================================================
 
 def load_lockfile() -> Dict:
-    """Load the helix/lock.json file. Creates a minimal structure if missing or corrupted."""
+    """Load the knitpkg/lock.json file. Creates a minimal structure if missing or corrupted."""
     if LOCK_FILE.exists():
         try:
             return json.loads(LOCK_FILE.read_text(encoding="utf-8"))

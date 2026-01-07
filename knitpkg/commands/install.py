@@ -1,7 +1,7 @@
-# helix/commands/install.py
+# knitpkg/commands/install.py
 
 """
-Helix for Metatrader install command — dependency resolution and output generation.
+KnitPkg for Metatrader install command — dependency resolution and output generation.
 
 This module orchestrates the installation process: downloading dependencies,
 processing them in include or flat mode, and generating output files.
@@ -17,25 +17,25 @@ from typing import List, Tuple, Set, Optional
 from rich.console import Console
 import typer
 
-from helix.core.utils import navigate_path
-from helix.core.file_reading import load_helix_manifest, read_file_smart
+from knitpkg.core.utils import navigate_path
+from knitpkg.core.file_reading import load_helix_manifest, read_file_smart
 
 # Import MQL-specific models and downloader
-from helix.mql.constants import FLAT_DIR, INCLUDE_DIR
-from helix.mql.models import MQLHelixManifest, MQLProjectType, IncludeMode
-from helix.mql.dependency_downloader import MQLDependencyDownloader
-from helix.mql.validators import validate_mql_project_structure
-from helix.mql.constants import INCLUDE_DIR
+from knitpkg.mql.constants import FLAT_DIR, INCLUDE_DIR
+from knitpkg.mql.models import MQLHelixManifest, MQLProjectType, IncludeMode
+from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
+from knitpkg.mql.validators import validate_mql_project_structure
+from knitpkg.mql.constants import INCLUDE_DIR
 
 # Import shared types from core
-from helix.core.dependency_downloader import (
+from knitpkg.core.dependency_downloader import (
     DependencyNode,
     ResolvedDeps,
     DependencyTree
 )
 
 # Import custom exceptions
-from helix.core.exceptions import (
+from knitpkg.core.exceptions import (
     LocalDependencyNotFoundError,
     LocalDependencyNotGitError,
     DependencyHasLocalChangesError,
@@ -47,14 +47,14 @@ from helix.core.exceptions import (
 
 class ResolveHelixIncludePattern:
     """
-    Parses Helix include directives from MQL source code.
+    Parses KnitPkg include directives from MQL source code.
 
     Matches patterns like:
-    - /* @helix:include "helix/include/AdditionalPath.mqh" */
+    - /* @knitpkg:include "knitpkg/include/AdditionalPath.mqh" */
 
     Attributes:
         include_path: Original include path from #include statement
-        directive: Helix directive type ('include' or 'replace-with')
+        directive: KnitPkg directive type ('include' or 'replace-with')
         replace_path: Replacement path specified in directive
         pattern: Compiled regex pattern for matching
     """
@@ -67,7 +67,7 @@ class ResolveHelixIncludePattern:
         self.pattern = re.compile(
             r'^\s*#\s*include\s+"(?P<include_path>[^"]+)"\s*$'
             r'|'
-            r'^\s*/\*\s*@helix:(?P<directive>\w+(?:-\w+)*)\s+"(?P<directive_path>[^"]+)"\s*\*/\s*$',
+            r'^\s*/\*\s*@knitpkg:(?P<directive>\w+(?:-\w+)*)\s+"(?P<directive_path>[^"]+)"\s*\*/\s*$',
             re.MULTILINE
         )
 
@@ -100,9 +100,9 @@ class IncludeModeProcessor:
         total_copied = 0
 
         for dep, dep_path in resolved_deps:
-            dep_include_dir = dep_path / "helix" / "include"
+            dep_include_dir = dep_path / "knitpkg" / "include"
             if not dep_include_dir.exists():
-                self.console.log(f"[dim]no include[/] {dep} → no helix/include/")
+                self.console.log(f"[dim]no include[/] {dep} → no knitpkg/include/")
                 continue
 
             mqh_files = list(dep_include_dir.rglob("*.mqh"))
@@ -116,12 +116,12 @@ class IncludeModeProcessor:
 
         self.console.log(
             f"[bold green]Check Include mode:[/] {total_copied} file(s) copied → "
-            f"[bold]helix/include/[/]"
+            f"[bold]knitpkg/include/[/]"
         )
         self._process_directives(include_dir)
 
     def _process_directives(self, include_dir: Path) -> None:
-        """Process helix directives in copied files."""
+        """Process knitpkg directives in copied files."""
         log_neutralize = True
         for mqh_file in include_dir.rglob("*.mqh"):
             content = mqh_file.read_text(encoding="utf-8")
@@ -139,7 +139,7 @@ class IncludeModeProcessor:
                     if directive == 'include':
                         lines[i] = (
                             f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
-                            f'/*** ← dependence added by Helix ***/'
+                            f'/*** ← dependence added by KnitPkg ***/'
                         )
                         modified = True
                     elif '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix():
@@ -150,7 +150,7 @@ class IncludeModeProcessor:
                             log_neutralize = False
                         lines[i] = (
                             f"// {line.strip()}  "
-                            f"/*** ← disabled by Helix install (dev helper) ***/"
+                            f"/*** ← disabled by KnitPkg install (dev helper) ***/"
                         )
                         modified = True
 
@@ -166,7 +166,7 @@ class IncludeModeProcessor:
         """Copy a header detecting and warning about content conflicts."""
         try:
             for parent in src.parents:
-                if parent.name == "include" and parent.parent.name == "helix":
+                if parent.name == "include" and parent.parent.name == "knitpkg":
                     rel_path = src.relative_to(parent)
                     break
             else:
@@ -302,13 +302,13 @@ class FlatModeProcessor:
                         return f"// Ignoring autocomplete.mqh\n"
                     
                     inc_path = self._find_include_file_deps(inc_file, resolved_deps)
-                    self.console.log(f"[dim]@helix:include found:[/] '{inc_file}'")
+                    self.console.log(f"[dim]@knitpkg:include found:[/] '{inc_file}'")
 
                 else:
                     self.console.log(
-                        f"[red]ERROR:[/] Invalid @helix:<directive> → '{directive}'"
+                        f"[red]ERROR:[/] Invalid @knitpkg:<directive> → '{directive}'"
                     )
-                    return f"// ERROR: Invalid @helix:<directive> → '{directive}'"
+                    return f"// ERROR: Invalid @knitpkg:<directive> → '{directive}'"
 
             except FileNotFoundError:
                 self.console.log(
@@ -355,7 +355,7 @@ class FlatModeProcessor:
 
 class HelixInstaller:
     """
-    Encapsulates Helix install functionality for dependency resolution
+    Encapsulates KnitPkg install functionality for dependency resolution
     and output generation.
     """
 
@@ -421,7 +421,7 @@ class HelixInstaller:
         effective_mode: IncludeMode
     ) -> None:
         self.console.log(
-            f"[bold magenta]helix install[/] → [bold cyan]{manifest.name}[/] "
+            f"[bold magenta]knitpkg install[/] → [bold cyan]{manifest.name}[/] "
             f"v{manifest.version} {manifest.type.value}"
         )
         if effective_mode != manifest.include_mode:

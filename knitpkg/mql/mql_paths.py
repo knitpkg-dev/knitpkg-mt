@@ -27,7 +27,7 @@ def find_mql_paths(target: Target) -> List[Path]:
     Notes
     -----
     * Does not raise an exception if no paths are found; returns an empty list.
-    * Used by commands like `helix compile` and `helix init` for auto-detection.
+    * Used by commands like `kp-mt compile` and `kp-mt init` for auto-detection.
     """
     possible_paths = [
         Path.home() / "AppData" / "Roaming" / "MetaQuotes" / "Terminal",

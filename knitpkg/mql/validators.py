@@ -1,4 +1,4 @@
-# helix/mql/validators.py
+# knitpkg/mql/validators.py
 
 """
 MQL-specific validation logic.
@@ -10,8 +10,8 @@ project structure validation and manifest constraints.
 from pathlib import Path
 from rich.console import Console
 
-from helix.mql.models import MQLProjectType, Target
-from helix.mql.constants import INCLUDE_DIR
+from knitpkg.mql.models import MQLProjectType, Target
+from knitpkg.mql.constants import INCLUDE_DIR
 
 # ==============================================================
 # MQL PROJECT STRUCTURE VALIDATION
@@ -24,7 +24,7 @@ def validate_mql_project_structure(
     console: Console = None
 ) -> None:
     """
-    Ensure include-type projects have their .mqh files inside helix/include/.
+    Ensure include-type projects have their .mqh files inside knitpkg/include/.
 
     Called for both the main project and recursive dependencies.
     Emits friendly warnings only (does not break the build).
@@ -96,7 +96,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )
         console.log(
-            f"    → target is '{manifest.target.value}', but `helix install` only "
+            f"    → target is '{manifest.target.value}', but `knitpkg install` only "
             f"supports '{Target.MQL4.value}' or '{Target.MQL5.value}' projects."
         )
 
@@ -108,7 +108,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )
         console.log(
-            f"    → type is '{manifest.type.value}', but `helix install` only "
+            f"    → type is '{manifest.type.value}', but `knitpkg install` only "
             f"supports 'package' projects."
         )
 

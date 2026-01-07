@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>helix.yaml – Helix Manifest Specification</title>
+  <title>knitpkg.yaml – KnitPkg Manifest Specification</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -24,8 +24,8 @@
 </head>
 <body>
 <article class="markdown-body">
-  <h1>helix.yaml – Helix Project Manifest</h1>
-  <p><strong>The official configuration file for all Helix-powered projects.</strong></p>
+  <h1>knitpkg.yaml – KnitPkg Project Manifest</h1>
+  <p><strong>The official configuration file for all KnitPkg-powered projects.</strong></p>
   
   <hr>
 
@@ -43,7 +43,7 @@
     <tr><td><code>include_mode</code></td><td class="optional">No</td><td>IncludeMode</td><td><code>include</code></td><td>Specific for MQL4/5 projects. Use 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='package'.</td></tr>
     <tr><td><code>entrypoints</code></td><td class="optional">No*</td><td>Optional</td><td><code>None</code></td><td>Main source files. Required except for type='package'</td></tr>
     <tr><td><code>dist</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>Distribution package configuration</td></tr>
-    <tr><td><code>helix</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>Helix Pro and Enterprise settings</td></tr>
+    <tr><td><code>knitpkg</code></td><td class="optional">No</td><td>Optional</td><td><code>None</code></td><td>KnitPkg Pro and Enterprise settings</td></tr>
   </table>
 
   <h2>Project Types (<code>type</code>)</h2>
@@ -58,7 +58,7 @@
   <h2>Dependency Formats (supported)</h2>
   <ul>
     <li><code>https://github.com/user/repo.git#v1.2.3</code> → Git + version/tag/branch/commit</li>
-    <li><code>file://../my-lib</code> → Local Helix project</li>
+    <li><code>file://../my-lib</code> → Local KnitPkg project</li>
     <li><code>./libs/utils</code> or <code>../common</code> → Relative path</li>
   </ul>
 
@@ -95,7 +95,7 @@ dist:
 
   <hr>
   <p style="text-align:center; color:#8b949e; font-size:0.9em;">
-    Helix 2025 – The future of MQL5 development
+    KnitPkg 2025 – The future of MQL5 development
   </p>
 </article>
 </body>

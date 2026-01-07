@@ -3,8 +3,8 @@
 import pytest
 from pathlib import Path
 import json
-from helix.core.file_reading import load_helix_manifest
-from helix.mql.models import MQLHelixManifest
+from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.mql.models import MQLHelixManifest
 
 VALID_URLS = [
     # === SemVer clássico (com e sem v), versão exata ===
@@ -14,7 +14,7 @@ VALID_URLS = [
     "git@github.com:user/lib.mql.git#3.1.4",
 
     # === SemVer com versão não exata ===
-    "https://github.com/helix/core.git#^2.0.0",
+    "https://github.com/knitpkg/core.git#^2.0.0",
     "https://github.com/ai/mql-engine.git#>=3.1.0 <4.0.0",
     "https://github.com/pro/risk-manager.git#~1.8.5",
     "https://github.com/pro/indicators.git#^4.2.0",
@@ -84,10 +84,10 @@ def test_valid_dependency_urls(tmp_path: Path, url: str):
             "mylib": url
         }
     }
-    (d / "helix.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (d / "knitpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     # Should load without error using MQL manifest
-    manifest_obj = load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
+    manifest_obj = load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
     assert manifest_obj.dependencies["mylib"] == url
 
 @pytest.mark.parametrize("url", INVALID_URLS)
@@ -105,14 +105,14 @@ def test_invalid_dependency_urls(tmp_path: Path, url: str):
             "mylib": url
         }
     }
-    (d / "helix.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (d / "knitpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     # Should raise ValueError with clear message
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
+        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
 
     error_msg = str(exc.value)
-    assert "Invalid dependency 'mylib'" in error_msg or "Error reading helix." in error_msg
+    assert "Invalid dependency 'mylib'" in error_msg or "Error reading knitpkg." in error_msg
 
 def test_branch_main_is_accepted(tmp_path: Path):
     """Test that branch=main is accepted (real use case)."""
@@ -128,6 +128,6 @@ def test_branch_main_is_accepted(tmp_path: Path):
             "telegram": "git@github.com:fabiuz/telegram.mql.git#branch=main"
         }
     }
-    (d / "helix.json").write_text(json.dumps(manifest), encoding="utf-8")
-    obj = load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
+    (d / "knitpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
+    obj = load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
     assert obj.dependencies["telegram"] == "git@github.com:fabiuz/telegram.mql.git#branch=main"

@@ -5,15 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from helix.mql.models import MQLHelixManifest, MQLProjectType, Target
-from helix.core.file_reading import load_helix_manifest
+from knitpkg.mql.models import MQLHelixManifest, MQLProjectType, Target
+from knitpkg.core.file_reading import load_helix_manifest
 
 # --------------------------------------------------------------------------- #
 # Fixtures
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def sample_dir(tmp_path: Path) -> Path:
-    """Create a temporary directory with a valid helix.json"""
+    """Create a temporary directory with a valid knitpkg.json"""
     d = tmp_path / "sample-project"
     d.mkdir()
 
@@ -31,18 +31,18 @@ def sample_dir(tmp_path: Path) -> Path:
             "telegram": "git@github.com:fabiuz/telegram.mql.git#branch=main",
             "utils": "https://gitlab.com/mql-libs/utils.git#v3.1.0"
         },
-        "helix": {
+        "knitpkg": {
             "pro": {
                 "private": True,
                 "oauth_provider": "github"
             },
             "enterprise": {
-                "proxy_url": "https://helix-proxy.bankcorp.com"
+                "proxy_url": "https://knitpkg-proxy.bankcorp.com"
             }
         }
     }
 
-    manifest_path = d / "helix.json"
+    manifest_path = d / "knitpkg.json"
     manifest_path.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
     return d
 
@@ -60,7 +60,7 @@ def package_project(tmp_path: Path) -> Path:
         "dependencies": {}
     }
 
-    (d / "helix.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+    (d / "knitpkg.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
     return d
 
 # --------------------------------------------------------------------------- #
@@ -68,7 +68,7 @@ def package_project(tmp_path: Path) -> Path:
 # --------------------------------------------------------------------------- #
 def test_load_valid_manifest(sample_dir: Path):
     """Test loading a complete valid manifest"""
-    manifest = load_helix_manifest(sample_dir / "helix.json", manifest_class=MQLHelixManifest)
+    manifest = load_helix_manifest(sample_dir / "knitpkg.json", manifest_class=MQLHelixManifest)
 
     assert isinstance(manifest, MQLHelixManifest)
     assert manifest.name == "super-rsi-alert"
@@ -87,17 +87,17 @@ def test_load_valid_manifest(sample_dir: Path):
     assert manifest.dependencies["json.mql"] == "https://github.com/fxdss/json.mql.git#v1.8.2"
     assert manifest.dependencies["telegram"] == "git@github.com:fabiuz/telegram.mql.git#branch=main"
 
-    # helix section
-    assert manifest.helix is not None
-    assert manifest.helix.pro is not None
-    assert manifest.helix.pro.private is True
-    assert manifest.helix.pro.oauth_provider.value == "github"
-    assert manifest.helix.enterprise is not None
-    assert str(manifest.helix.enterprise.proxy_url) == "https://helix-proxy.bankcorp.com/"
+    # knitpkg section
+    assert manifest.knitpkg is not None
+    assert manifest.knitpkg.pro is not None
+    assert manifest.knitpkg.pro.private is True
+    assert manifest.knitpkg.pro.oauth_provider.value == "github"
+    assert manifest.knitpkg.enterprise is not None
+    assert str(manifest.knitpkg.enterprise.proxy_url) == "https://knitpkg-proxy.bankcorp.com/"
 
 def test_package_has_no_entrypoint(package_project: Path):
     """Ensure package projects are accepted without entrypoints"""
-    manifest = load_helix_manifest(package_project / "helix.json", manifest_class=MQLHelixManifest)
+    manifest = load_helix_manifest(package_project / "knitpkg.json", manifest_class=MQLHelixManifest)
 
     assert manifest.target == Target.MQL5
     assert manifest.type == MQLProjectType.PACKAGE
@@ -114,10 +114,10 @@ def test_missing_entrypoint_for_flat_mode(tmp_path: Path):
         "include_mode": "flat",
         "target": "MQL5",
     }
-    (d / "helix.json").write_text(json.dumps(data), encoding="utf-8")
+    (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")
 
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
+        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
 
     assert "Include mode 'flat' requires at least one entrypoint" in str(exc.value)
 
@@ -135,13 +135,13 @@ def test_invalid_git_url(tmp_path: Path):
             "badlib": "https://github.com/user/lib"  # ← missing .git
         }
     }
-    (d / "helix.json").write_text(json.dumps(data))
+    (d / "knitpkg.json").write_text(json.dumps(data))
 
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
+        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
 
     error_msg = str(exc.value)
-    assert "Invalid dependency 'badlib'" in error_msg or "Error reading helix." in error_msg
+    assert "Invalid dependency 'badlib'" in error_msg or "Error reading knitpkg." in error_msg
 
 def test_invalid_semver(tmp_path: Path):
     """Version not following SemVer"""
@@ -154,14 +154,14 @@ def test_invalid_semver(tmp_path: Path):
         "target": "MQL5",
         "entrypoints": ["X.mq5"],
     }
-    (d / "helix.json").write_text(json.dumps(data), encoding="utf-8")
+    (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")
 
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "helix.json", manifest_class=MQLHelixManifest)
+        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
 
     assert "version must follow SemVer format" in str(exc.value)
 
 def test_file_not_found():
-    """helix.json not found"""
+    """knitpkg.json not found"""
     with pytest.raises(FileNotFoundError):
-        load_helix_manifest("/path/that/does/not/exist/helix.json", manifest_class=MQLHelixManifest)
+        load_helix_manifest("/path/that/does/not/exist/knitpkg.json", manifest_class=MQLHelixManifest)

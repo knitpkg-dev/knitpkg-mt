@@ -1,6 +1,6 @@
 # No seu test_integration_deps.py
-from helix.commands.install import HelixInstaller
-from helix.commands.autocomplete import AutocompleteGenerator
+from knitpkg.commands.install import HelixInstaller
+from knitpkg.commands.autocomplete import AutocompleteGenerator
 from pathlib import Path
 import pytest
 
@@ -86,7 +86,7 @@ DEP_E_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                           DepE.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -112,7 +112,7 @@ DEP_D_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                           DepD.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -122,8 +122,8 @@ DEP_D_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 #include "../../../autocomplete/autocomplete.mqh" 
  
-/* @helix:include "Acme/DepA/DepA.mqh" */
-/* @helix:include "Acme/DepB/DepB.mqh" */
+/* @knitpkg:include "Acme/DepA/DepA.mqh" */
+/* @knitpkg:include "Acme/DepB/DepB.mqh" */
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -133,7 +133,7 @@ DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                           DepD.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -141,10 +141,10 @@ DEP_D_INCLUDE_MODE_RESOLVED_CONTENT = """
 //|  Dependency D: Depends on DepA and DepB.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-// #include "../../../autocomplete/autocomplete.mqh"  /*** ← disabled by Helix install (dev helper) ***/
+// #include "../../../autocomplete/autocomplete.mqh"  /*** ← disabled by KnitPkg install (dev helper) ***/
  
-#include "../DepA/DepA.mqh" /*** ← dependence added by Helix ***/
-#include "../DepB/DepB.mqh" /*** ← dependence added by Helix ***/
+#include "../DepA/DepA.mqh" /*** ← dependence added by KnitPkg ***/
+#include "../DepB/DepB.mqh" /*** ← dependence added by KnitPkg ***/
 
 string GetDepDValue() { return "DepD_Value(" + GetDepAValue() + "," + GetDepBValue() + ")"; }
 """
@@ -159,7 +159,7 @@ DEP_D_MQ5_CONTENT = """
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#include "helix/include/Acme/DepD/DepD.mqh"
+#include "knitpkg/include/Acme/DepD/DepD.mqh"
 //+------------------------------------------------------------------+
 //| Script program start function                                    |
 //+------------------------------------------------------------------+
@@ -189,7 +189,7 @@ DEP_C_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                           DepC.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -199,7 +199,7 @@ DEP_C_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 #include "../../autocomplete/autocomplete.mqh" 
  
-/* @helix:include "Acme/DepA/DepA.mqh" */
+/* @knitpkg:include "Acme/DepA/DepA.mqh" */
 
 string GetDepCValue() { return "DepC_Value(" + GetDepAValue() + ")"; }
 """
@@ -208,7 +208,7 @@ DEP_C_INCLUDE_MODE_RESOLVED_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                           DepC.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -216,9 +216,9 @@ DEP_C_INCLUDE_MODE_RESOLVED_CONTENT = """
 //|  Dependency C: Depends on DepA.                                  |
 //|                                                                  |
 //+------------------------------------------------------------------+
-// #include "../../autocomplete/autocomplete.mqh"  /*** ← disabled by Helix install (dev helper) ***/
+// #include "../../autocomplete/autocomplete.mqh"  /*** ← disabled by KnitPkg install (dev helper) ***/
  
-#include "DepA/DepA.mqh" /*** ← dependence added by Helix ***/
+#include "DepA/DepA.mqh" /*** ← dependence added by KnitPkg ***/
 
 string GetDepCValue() { return "DepC_Value(" + GetDepAValue() + ")"; }
 """
@@ -239,7 +239,7 @@ DEP_B_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                           DepB.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -263,7 +263,7 @@ DEP_A_MQH_CONTENT = """
 //+------------------------------------------------------------------+
 //|                                                           DepA.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -288,7 +288,7 @@ EXPERT_TEST_MQH_FLAT_CONTENT = r"""
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -296,9 +296,9 @@ EXPERT_TEST_MQH_FLAT_CONTENT = r"""
 //|  ExpertTest: Main Expert Advisor header.                         |
 //|                                                                  |
 //+------------------------------------------------------------------+
-/* @helix:include "Acme/DepC.mqh" */
-/* @helix:include "Acme\DepD\DepD.mqh" */
-/* @helix:include "NullSolutions/DepE.mqh" */
+/* @knitpkg:include "Acme/DepC.mqh" */
+/* @knitpkg:include "Acme\DepD\DepD.mqh" */
+/* @knitpkg:include "NullSolutions/DepE.mqh" */
 
 string GetExpertTestValue() {
     return "ExpertTest started! " + GetDepCValue() + " " + GetDepDValue() + " " + GetDepEValue();
@@ -309,7 +309,7 @@ EXPERT_TEST_MQH_INCMODE_CONTENT = r"""
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mqh |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -318,9 +318,9 @@ EXPERT_TEST_MQH_INCMODE_CONTENT = r"""
 //|                                                                  |
 //+------------------------------------------------------------------+
 
-#include "helix\include\Acme\DepC.mqh"
-#include "helix/include/Acme/DepD/DepD.mqh"
-#include "helix/include/NullSolutions/DepE.mqh"
+#include "knitpkg\include\Acme\DepC.mqh"
+#include "knitpkg/include/Acme/DepD/DepD.mqh"
+#include "knitpkg/include/NullSolutions/DepE.mqh"
 
 string GetExpertTestValue() {
     return "ExpertTest started! " + GetDepCValue() + " " + GetDepDValue() + " " + GetDepEValue();
@@ -331,7 +331,7 @@ EXPERT_TEST_MQ5_CONTENT_FLAT_MODE = """
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mq5 |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -340,11 +340,11 @@ EXPERT_TEST_MQ5_CONTENT_FLAT_MODE = """
 //|                                                                  |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, Douglas Rechia"
-#property link      "https://www.helix-mt.com"
+#property link      "https://knitpkg.dev"
 #property version   "1.00"
 #property description "Integration Test Expert"
 
-#include "helix/flat/ExpertTest_flat.mqh" // This will be replaced by the flat include
+#include "knitpkg/flat/ExpertTest_flat.mqh" // This will be replaced by the flat include
 
 int OnInit()
 {
@@ -367,7 +367,7 @@ EXPERT_TEST_MQ5_CONTENT_INCLUDE_MODE = """
 //+------------------------------------------------------------------+
 //|                                                  ExpertTest.mq5 |
 //|                                                                  |
-//|                    Helix for MetaTrader                          |
+//|                    KnitPkg for MetaTrader                          |
 //|                                                                  |
 //|                          MIT License                             |
 //|                    Copyright (c) 2025 Douglas Rechia             |
@@ -376,7 +376,7 @@ EXPERT_TEST_MQ5_CONTENT_INCLUDE_MODE = """
 //|                                                                  |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, Douglas Rechia"
-#property link      "https://www.helix-mt.com"
+#property link      "https://knitpkg.dev"
 #property version   "1.00"
 #property description "Integration Test Expert"
 
@@ -451,8 +451,8 @@ def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_c
     project_path = root_dir / project_name
     project_path.mkdir(parents=True, exist_ok=True)
 
-    # Create helix.yaml
-    with open(project_path / "helix.yaml", "w", encoding="utf-8") as f:
+    # Create knitpkg.yaml
+    with open(project_path / "knitpkg.yaml", "w", encoding="utf-8") as f:
         f.write(yaml_content)
 
     # Create .mqh file
@@ -480,13 +480,13 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
     root_dir.mkdir()
 
     # Create dependency projects (Level 4)
-    create_project_files(root_dir, "DepE", "helix/include/NullSolutions", DEP_E_MQH_CONTENT, DEP_E_YAML_CONTENT)
+    create_project_files(root_dir, "DepE", "knitpkg/include/NullSolutions", DEP_E_MQH_CONTENT, DEP_E_YAML_CONTENT)
     # Create dependency projects (Level 3)
-    create_project_files(root_dir, "DepC", "helix/include/Acme", DEP_C_MQH_CONTENT, DEP_C_YAML_CONTENT)
-    create_project_files(root_dir, "DepD", "helix/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
+    create_project_files(root_dir, "DepC", "knitpkg/include/Acme", DEP_C_MQH_CONTENT, DEP_C_YAML_CONTENT)
+    create_project_files(root_dir, "DepD", "knitpkg/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
     # Create dependency projects (Level 2)
-    create_project_files(root_dir, "DepA", "helix/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
-    create_project_files(root_dir, "DepB", "helix/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
+    create_project_files(root_dir, "DepA", "knitpkg/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
+    create_project_files(root_dir, "DepB", "knitpkg/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
     # Create Expert project (Level 1)
     create_project_files(root_dir, "ExpertTest", ".", expert_test_mqh_content, expert_test_yaml_content, ".", expert_test_mq5_content)
 
@@ -541,7 +541,7 @@ def check_flat_content(root_dir: Path):
     expert_test_path = root_dir / "ExpertTest"
 
     # Verify if the flat include file was created
-    flat_include_path = expert_test_path / "helix" / "flat" / "ExpertTest_flat.mqh"
+    flat_include_path = expert_test_path / "knitpkg" / "flat" / "ExpertTest_flat.mqh"
     assert flat_include_path.exists(), f"Flat include file not found: {flat_include_path}"
 
     # Verify the content of the flat include file
@@ -551,7 +551,7 @@ def check_flat_content(root_dir: Path):
     print(f"\nContent of {flat_include_path}:\n{flat_content}")
 
     # Assertions to check if dependencies were included and in correct order (or at least present)
-    # The exact order might vary depending on Helix implementation, but all must be present.
+    # The exact order might vary depending on KnitPkg implementation, but all must be present.
     assert "//+------------------------------------------------------------------+\n//|                                                           DepE.mqh |" in flat_content
     assert "//+------------------------------------------------------------------+\n//|                                                           DepC.mqh |" in flat_content
     assert "//+------------------------------------------------------------------+\n//|                                                           DepD.mqh |" in flat_content
@@ -591,9 +591,9 @@ def test_autocomplete(tmp_path: Path):
     print('='*50)
     root_dir.mkdir()
 
-    create_project_files(root_dir, "DepD", "helix/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
-    create_project_files(root_dir, "DepA", "helix/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
-    create_project_files(root_dir, "DepB", "helix/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
+    create_project_files(root_dir, "DepD", "knitpkg/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
+    create_project_files(root_dir, "DepA", "knitpkg/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
+    create_project_files(root_dir, "DepB", "knitpkg/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
 
     depd_test_path = root_dir / "DepD"
 
@@ -606,7 +606,7 @@ def test_autocomplete(tmp_path: Path):
 
     print(f"\nRunning AutocompleteGenerator.generate for {depd_test_path}")
     try:
-        # Generates helix/autocomplete/autocomplete.mqh
+        # Generates knitpkg/autocomplete/autocomplete.mqh
         generator.generate()
 
         # Print captured output for debugging if needed
@@ -639,7 +639,7 @@ def test_autocomplete(tmp_path: Path):
         pytest.fail(f"AutocompleteGenerator.install failed: {e}")
 
     # Verify if autocomplete.mqh include file was created
-    autocomplete_path = depd_test_path / "helix" / "autocomplete" / "autocomplete.mqh"
+    autocomplete_path = depd_test_path / "knitpkg" / "autocomplete" / "autocomplete.mqh"
     assert autocomplete_path.exists(), f"autocomplete.mqh file not found: {autocomplete_path}"
 
     # Verify the content of the autocomplete include file
@@ -651,15 +651,15 @@ def test_autocomplete(tmp_path: Path):
     # Assertions to check if DepA.mqh and DepB.mqh are included
     assert "//+------------------------------------------------------------------+\n//|                                          autocomplete.mqh        |" in autocomplete_content
     
-    assert '#include "../../../DepA/helix/include/Acme/DepA/DepA.mqh"' in autocomplete_content
-    assert '#include "../../../DepB/helix/include/Acme/DepB/DepB.mqh"' in autocomplete_content
+    assert '#include "../../../DepA/knitpkg/include/Acme/DepA/DepA.mqh"' in autocomplete_content
+    assert '#include "../../../DepB/knitpkg/include/Acme/DepB/DepB.mqh"' in autocomplete_content
 
     print("\nAutocomplete include file created and verified successfully using MockConsole!")
 
 def check_include_mode(root_dir: Path):
     
     expert_test_path = root_dir / "ExpertTest"
-    expert_test_includes_path = expert_test_path / "helix" / "include"
+    expert_test_includes_path = expert_test_path / "knitpkg" / "include"
 
     # Verify if DepA.mqh include file was created with expected content
     depa_path = expert_test_includes_path / "Acme" / "DepA" / "DepA.mqh"

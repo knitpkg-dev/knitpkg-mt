@@ -4,25 +4,25 @@ import pytest
 import re
 
 # ----------------------------------------------------------------------
-# Helix directive parser – uses the new @helix:<directive> syntax
+# KnitPkg directive parser – uses the new @knitpkg:<directive> syntax
 # ----------------------------------------------------------------------
 
 # Pattern definition (copied from commands/install.py for testing)
 HELIX_PATTERN = re.compile(
     r'^\s*#\s*include\s+"(?P<include>[^"]+)"'
-    r'(?:\s*/\*\s*@helix:(?P<directive1>\w+(?:-\w+)*)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
+    r'(?:\s*/\*\s*@knitpkg:(?P<directive1>\w+(?:-\w+)*)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
     r'|'
-    r'^\s*/\*\s*@helix:(?P<directive2>\w+(?:-\w+)*)\s+"(?P<path2>[^"]+)"\s*\*/\s*$',
+    r'^\s*/\*\s*@knitpkg:(?P<directive2>\w+(?:-\w+)*)\s+"(?P<path2>[^"]+)"\s*\*/\s*$',
     re.MULTILINE
 )
 
 def parse_helix_line(line: str):
     """
-    Parse a line containing a Helix directive.
+    Parse a line containing a KnitPkg directive.
 
     Returns:
         dict with keys: "include", "directive", "replace"
-        or None if the line does not match any supported Helix pattern.
+        or None if the line does not match any supported KnitPkg pattern.
     """
     m = HELIX_PATTERN.match(line)
     if not m:
@@ -32,7 +32,7 @@ def parse_helix_line(line: str):
     directive = m.group('directive1') or m.group('directive2')
     replace_path = m.group('path1') or m.group('path2')
 
-    # Special case: standalone /* @helix:include "file.mqh" */
+    # Special case: standalone /* @knitpkg:include "file.mqh" */
     if include_path is None and directive == "include":
         include_path = replace_path
 
@@ -48,15 +48,15 @@ def parse_helix_line(line: str):
 @pytest.mark.parametrize(
     "line, expected",
     [
-        # 1. Simple #include – no Helix directive
+        # 1. Simple #include – no KnitPkg directive
         (
-            '#include "helix/include/Calc/Calc.mqh"',
-            {"include": "helix/include/Calc/Calc.mqh", "directive": None, "replace": None},
+            '#include "knitpkg/include/Calc/Calc.mqh"',
+            {"include": "knitpkg/include/Calc/Calc.mqh", "directive": None, "replace": None},
         ),
         # 3. Standalone include directive
         (
-            '/* @helix:include "helix/include/Utils.mqh" */',
-            {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
+            '/* @knitpkg:include "knitpkg/include/Utils.mqh" */',
+            {"include": "knitpkg/include/Utils.mqh", "directive": "include", "replace": "knitpkg/include/Utils.mqh"},
         ),
         # 4. Normal include, no directive
         (
@@ -65,17 +65,17 @@ def parse_helix_line(line: str):
         ),
         # 7. Glued standalone directive
         (
-            '/*@helix:include "helix/include/Utils.mqh"*/',
-            {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
+            '/*@knitpkg:include "knitpkg/include/Utils.mqh"*/',
+            {"include": "knitpkg/include/Utils.mqh", "directive": "include", "replace": "knitpkg/include/Utils.mqh"},
         ),
         # 9. Path with spaces inside quotes
         (
-            '/* @helix:include "  file with spaces.mqh  " */',
+            '/* @knitpkg:include "  file with spaces.mqh  " */',
             {"include": "  file with spaces.mqh  ", "directive": "include", "replace": "  file with spaces.mqh  "},
         ),
         # 10. Invalid – missing directive name
         (
-            '/* @helix: "something.mqh" */',
+            '/* @knitpkg: "something.mqh" */',
             None,
         ),
     ],
@@ -96,28 +96,28 @@ def test_full_real_world_block():
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#include "helix/include/Calc/Calc.mqh"
+#include "knitpkg/include/Calc/Calc.mqh"
 
-/* @helix:include "helix/include/Utils.mqh" */
+/* @knitpkg:include "knitpkg/include/Utils.mqh" */
 
 #include "../../autocomplete/autocomplete.mqh"
 
-/* @helix:include "helix/include/Utils.mqh" */
+/* @knitpkg:include "knitpkg/include/Utils.mqh" */
 
-/*@helix:include "helix/include/Utils.mqh"*/
+/*@knitpkg:include "knitpkg/include/Utils.mqh"*/
 
-/* @helix: "helix/include/Utils.mqh" */
+/* @knitpkg: "knitpkg/include/Utils.mqh" */
 
-/* @helix:include " d " */
+/* @knitpkg:include " d " */
 
 '''
 
     expected_results = [
-        {"include": "helix/include/Calc/Calc.mqh", "directive": None, "replace": None},
-        {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
+        {"include": "knitpkg/include/Calc/Calc.mqh", "directive": None, "replace": None},
+        {"include": "knitpkg/include/Utils.mqh", "directive": "include", "replace": "knitpkg/include/Utils.mqh"},
         {"include": "../../autocomplete/autocomplete.mqh", "directive": None, "replace": None},
-        {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
-        {"include": "helix/include/Utils.mqh", "directive": "include", "replace": "helix/include/Utils.mqh"},
+        {"include": "knitpkg/include/Utils.mqh", "directive": "include", "replace": "knitpkg/include/Utils.mqh"},
+        {"include": "knitpkg/include/Utils.mqh", "directive": "include", "replace": "knitpkg/include/Utils.mqh"},
         {"include": " d ", "directive": "include", "replace": " d "},
     ]
 

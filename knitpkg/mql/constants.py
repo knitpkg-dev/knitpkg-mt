@@ -4,6 +4,6 @@
 from pathlib import Path
 
 
-INCLUDE_DIR = Path("helix/include")
-FLAT_DIR = Path("helix/flat")
-COMPILE_LOGS_DIR = Path(".helix/compile-logs")
+INCLUDE_DIR = Path("knitpkg/include")
+FLAT_DIR = Path("knitpkg/flat")
+COMPILE_LOGS_DIR = Path(".knitpkg/compile-logs")

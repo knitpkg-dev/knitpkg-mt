@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "helix-mt"
+name = "knitpkg-mt"
 version = "0.1.0"
-description = "Helix for MetaTrader – Professional package manager for MQL5/MQL4"
+description = "KnitPkg for MetaTrader – Professional package manager for MQL5/MQL4"
 authors = ["Douglas Rechia <rechia@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "helix"}]
+packages = [{include = "knitpkg"}]
 
 [tool.poetry.dependencies]
 python = "^3.13"
@@ -36,10 +36,10 @@ build-backend = "poetry.core.masonry.api"
 [tool.taskipy.tasks]
 test = "pytest"
 tests = "pytest -xvs"
-cov = "pytest --cov=helix --cov-report=term-missing --cov-report=html:htmlcov"
-ci = "pytest --junitxml=reports/junit.xml --cov=helix --cov-report=xml"
+cov = "pytest --cov=knitpkg --cov-report=term-missing --cov-report=html:htmlcov"
+ci = "pytest --junitxml=reports/junit.xml --cov=knitpkg --cov-report=xml"
 watch = "pytest-watch -- -xvs"
 manifest = "pytest tests/test_manifest.py -v"
 
 [tool.poetry.scripts]
-helix-mt = "helix.cli:app"
+kp-mt = "knitpkg.cli:app"

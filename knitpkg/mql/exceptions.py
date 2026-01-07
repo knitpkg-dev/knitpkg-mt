@@ -1,4 +1,4 @@
-# helix/mql/exceptions.py
+# knitpkg/mql/exceptions.py
 
 """
 MQL-specific exceptions.
@@ -7,7 +7,7 @@ These exceptions are raised by MQL compilation and processing subsystems.
 The CLI layer catches them and translates into appropriate exit codes.
 """
 
-from helix.core.exceptions import HelixError
+from knitpkg.core.exceptions import HelixError
 
 
 class MQLCompilationError(HelixError):

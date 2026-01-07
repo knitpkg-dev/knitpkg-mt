@@ -1,4 +1,4 @@
-# helix/mql/settings.py
+# knitpkg/mql/settings.py
 
 from pathlib import Path
 
@@ -10,7 +10,7 @@ related to MetaTrader installations, such as compiler paths and
 data folder paths.
 """
 
-from helix.core.settings import get_setting, set_setting
+from knitpkg.core.settings import get_setting, set_setting
 
 # Default compiler paths for MetaTrader
 DEFAULT_MQL5_COMPILER = r"C:\Program Files\MetaTrader 5\MetaEditor64.exe"

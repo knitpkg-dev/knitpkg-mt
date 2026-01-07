@@ -1,19 +1,19 @@
 # tests/test_exceptions.py
 
-"""Tests for custom Helix exceptions."""
+"""Tests for custom KnitPkg exceptions."""
 
 import pytest
 from pathlib import Path
 import json
 
-from helix.core.exceptions import (
+from knitpkg.core.exceptions import (
     LocalDependencyNotFoundError,
     LocalDependencyNotGitError,
     DependencyHasLocalChangesError,
 )
-from helix.core.file_reading import load_helix_manifest
-from helix.mql.models import MQLHelixManifest
-from helix.mql.dependency_downloader import MQLDependencyDownloader
+from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.mql.models import MQLHelixManifest
+from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from rich.console import Console
 
 def test_local_dependency_not_found(tmp_path: Path):
@@ -31,7 +31,7 @@ def test_local_dependency_not_found(tmp_path: Path):
             "missing": "./nonexistent/path"
         }
     }
-    (d / "helix.json").write_text(json.dumps(manifest_data))
+    (d / "knitpkg.json").write_text(json.dumps(manifest_data))
 
     manifest = load_helix_manifest(d, manifest_class=MQLHelixManifest)
     downloader = MQLDependencyDownloader(Console(), Path.cwd())
@@ -57,7 +57,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
         "type": "package",
         "target": "MQL5"
     }
-    (dep_dir / "helix.json").write_text(json.dumps(dep_manifest))
+    (dep_dir / "knitpkg.json").write_text(json.dumps(dep_manifest))
 
     # Main project depends on local dep
     main_manifest = {
@@ -70,7 +70,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
             "local-dep": f"file://{dep_dir}"
         }
     }
-    (main_dir / "helix.json").write_text(json.dumps(main_manifest))
+    (main_dir / "knitpkg.json").write_text(json.dumps(main_manifest))
 
     manifest = load_helix_manifest(main_dir, manifest_class=MQLHelixManifest)
     downloader = MQLDependencyDownloader(Console(), Path.cwd())

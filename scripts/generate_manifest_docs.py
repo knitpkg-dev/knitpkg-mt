@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Gera docs/helix-manifest.html automaticamente
+Gera docs/knitpkg-manifest.html automaticamente
 100% compatível com Pydantic v2 (2.0 até 2.12.5+)
 Testado com Pydantic 2.12.5
 """
@@ -12,19 +12,19 @@ from textwrap import dedent
 from typing import get_origin, get_args
 
 # Ajuste conforme seu projeto
-from helix.core import models
+from knitpkg.core import models
 
 # ===================================================================
 # Configuração
 # ===================================================================
-OUTPUT_FILE = Path("docs/helix-manifest.html")
+OUTPUT_FILE = Path("docs/knitpkg-manifest.html")
 
 TEMPLATE = """\
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>helix.yaml – Helix Manifest Specification</title>
+  <title>knitpkg.yaml – KnitPkg Manifest Specification</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -46,8 +46,8 @@ TEMPLATE = """\
 </head>
 <body>
 <article class="markdown-body">
-  <h1>helix.yaml – Helix Project Manifest</h1>
-  <p><strong>The official configuration file for all Helix-powered projects.</strong></p>
+  <h1>knitpkg.yaml – KnitPkg Project Manifest</h1>
+  <p><strong>The official configuration file for all KnitPkg-powered projects.</strong></p>
   
   <hr>
 
@@ -69,7 +69,7 @@ TEMPLATE = """\
   <h2>Dependency Formats (supported)</h2>
   <ul>
     <li><code>https://github.com/user/repo.git#v1.2.3</code> → Git + version/tag/branch/commit</li>
-    <li><code>file://../my-lib</code> → Local Helix project</li>
+    <li><code>file://../my-lib</code> → Local KnitPkg project</li>
     <li><code>./libs/utils</code> or <code>../common</code> → Relative path</li>
   </ul>
 
@@ -80,7 +80,7 @@ TEMPLATE = """\
 
   <hr>
   <p style="text-align:center; color:#8b949e; font-size:0.9em;">
-    Helix 2025 – The future of MQL5 development
+    KnitPkg 2025 – The future of MQL5 development
   </p>
 </article>
 </body>

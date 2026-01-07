@@ -11,15 +11,15 @@ from jinja2 import Template
 
 from git import Repo
 
-from helix.mql.models import MQLProjectType, Target, IncludeMode
-from helix.mql.mql_paths import find_mql_paths
+from knitpkg.mql.models import MQLProjectType, Target, IncludeMode
+from knitpkg.mql.mql_paths import find_mql_paths
 
 
 # .gitignore content templates
 GITIGNORE_PACKAGE = """
-.helix/
-helix/autocomplete/
-helix/flat/
+.knitpkg/
+knitpkg/autocomplete/
+knitpkg/flat/
 
 *.mqproj
 
@@ -30,10 +30,10 @@ GETTING_STARTED
 """.strip()
 
 GITIGNORE_DEFAULT = """
-.helix/
-helix/autocomplete/
-helix/flat/
-helix/include
+.knitpkg/
+knitpkg/autocomplete/
+knitpkg/flat/
+knitpkg/include
 
 *.mqproj
 
@@ -51,24 +51,24 @@ TEMPLATE_PACKAGE_INCLUDE = """//+-----------------------------------------------
 //+------------------------------------------------------------------+
 
 //--------------------------------------------------------------------
-// For packages with dependencies, use the following Helix features:
+// For packages with dependencies, use the following KnitPkg features:
 //
 // 1. Autocomplete support for MetaEditor IntelliSense.
-// Run `helix-mt autocomplete` to generate this file and uncomment
+// Run `kp-mt autocomplete` to generate this file and uncomment
 // the include below:
 //
 // #include "{{autocomplete_path_prefix}}/autocomplete/autocomplete.mqh"
 //
 //
 // 2. Include directives. For headers with external dependencies, 
-// specify the file path relative to helix/include directory, see an 
+// specify the file path relative to knitpkg/include directory, see an 
 // example below (inactive due to the double slashes at the begin of
 // the line). 
 //
-// /* @helix:include "Path/To/Dependency/Header.mqh" */
+// /* @knitpkg:include "Path/To/Dependency/Header.mqh" */
 //
 // When this project is installed as a dependency in another
-// project, Helix automatically resolves the includes based on these 
+// project, KnitPkg automatically resolves the includes based on these 
 // directives. See documentation for details.
 //--------------------------------------------------------------------
 
@@ -90,8 +90,8 @@ TEMPLATE_PACKAGE_UNITTESTS = """//+---------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 // Include the headers under test
 #include "{{header_path}}"
@@ -161,7 +161,7 @@ and serves only as a quick reference during initial setup.
                               PACKAGE STRUCTURE
 ================================================================================
 
-Export headers exclusively in the helix/include directory. Headers located in
+Export headers exclusively in the knitpkg/include directory. Headers located in
 other paths will be ignored during package resolution and compilation.
 
 A sample header file has been created at:
@@ -186,8 +186,8 @@ your package components.
 ================================================================================
 
 1. If your package has dependencies on other packages:
-   - Add them to the dependencies section in helix.yaml
-   - Run 'helix autocomplete' to resolve dependencies and IntelliSense support
+   - Add them to the dependencies section in knitpkg.yaml
+   - Run 'kp-mt autocomplete' to resolve dependencies and IntelliSense support
 
 2. Review the sample header in {{header_path}}
 
@@ -197,7 +197,7 @@ your package components.
 
 5. Delete this file when setup is complete
 
-For detailed documentation, visit: https://helix.dev/docs
+For detailed documentation, visit: https://knitpkg.dev/docs
 
 ================================================================================
 """
@@ -218,8 +218,8 @@ TEMPLATE_EXPERT = """//+--------------------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 {{project_includes}}
 
@@ -260,15 +260,15 @@ TEMPLATE_ENTRYPOINT_MQH = """//+------------------------------------------------
 //+------------------------------------------------------------------+
 
 //--------------------------------------------------------------------
-// In order to generate the flattened headers with Helix, specify 
-// the content of this file as a list of @helix:include directives. 
-// Each @helix:include refers to an external header file path relative 
-// to helix/include directory, see an example below (inactive due to 
+// In order to generate the flattened headers with KnitPkg, specify 
+// the content of this file as a list of @knitpkg:include directives. 
+// Each @knitpkg:include refers to an external header file path relative 
+// to knitpkg/include directory, see an example below (inactive due to 
 // the double slashes at the begin of the line). 
 //
-// /* @helix:include "Path/To/Dependency/Header.mqh" */
+// /* @knitpkg:include "Path/To/Dependency/Header.mqh" */
 //
-// Run `helix-mt install` after you add your headers.
+// Run `kp-mt install` after you add your headers.
 //--------------------------------------------------------------------
 
 """
@@ -280,15 +280,15 @@ TEMPLATE_ENTRYPOINT_MQL = """//+------------------------------------------------
 //+------------------------------------------------------------------+
 
 //--------------------------------------------------------------------
-// In order to generate the flattened headers with Helix, specify 
-// the content of this file as a list of @helix:include directives. 
-// Each @helix:include refers to an external header file path relative 
-// to helix/include directory, see an example below (inactive due to 
+// In order to generate the flattened headers with KnitPkg, specify 
+// the content of this file as a list of @knitpkg:include directives. 
+// Each @knitpkg:include refers to an external header file path relative 
+// to knitpkg/include directory, see an example below (inactive due to 
 // the double slashes at the begin of the line). 
 //
-// /* @helix:include "Path/To/Dependency/Header.mqh" */
+// /* @knitpkg:include "Path/To/Dependency/Header.mqh" */
 //
-// Run `helix-mt install` after you add your headers.
+// Run `kp-mt install` after you add your headers.
 //--------------------------------------------------------------------
 
 // ***** Add your code here. *****
@@ -306,70 +306,70 @@ is ignored by version control.
 ================================================================================
 
 An Expert Advisor project has the following structure (generated by
-`helix-mt init --type expert`):
+`kp-mt init --type expert`):
 
-  helix/
+  <ProjectName>/
     flat/                # Generated flat files (only when include_mode = flat)
     include/             # Used only when include_mode = include
   src/
     <ProjectName>.mq5    # Main EA source file (or .mq4 for MQL4)
     <EntryPointN>.mqh    # Dependencies entrypoint (only when include_mode = flat)
-  helix.yaml             # Project manifest
+  knitpkg.yaml             # Project manifest
   .gitignore             # Git ignore
   GETTING_STARTED        # This file
 
-When **flat** mode is used (recommended), `helix-mt install` will generate a 
-flattened header named `<EntryPointN>_flat.mqh` in `helix/flat/` for each 
-entry point declared in `helix.yaml`. Those are the files that should be 
+When **flat** mode is used (recommended), `kp-mt install` will generate a 
+flattened header named `<EntryPointN>_flat.mqh` in `knitpkg/flat/` for each 
+entry point declared in `knitpkg.yaml`. Those are the files that should be 
 included in your Expert. The flattened headers will contain all resolved 
-dependencies based upon `@helix:include` directives declared in
+dependencies based upon `@knitpkg:include` directives declared in
 `src/<EntryPointN>.mqh`. 
 
 If you chose **include** mode, any headers that you want to include from 
-dependencies will be placed automatically under `helix/include/` (mirroring the 
-package layout) after you run `helix-mt install`. 
+dependencies will be placed automatically under `knitpkg/include/` (mirroring the 
+package layout) after you run `kp-mt install`. 
 
 IMPORTANT: All source code of your EA lives under `src/`. Do not change anything 
-in `helix/include/` or `helix/flat/` as they are generated automatically by 
-Helix.
+in `knitpkg/include/` or `knitpkg/flat/` as they are generated automatically by 
+KnitPkg.
 
 ================================================================================
                          DEPENDENCY MANAGEMENT
 ================================================================================
 
-* Add a dependency: edit `helix.yaml` manifest file and add any package you want
+* Add a dependency: edit `knitpkg.yaml` manifest file and add any package you want
 under the `dependencies` section. For example:
 
   dependencies:
     # others dependencies...
-    '@helix.dev/helix-mt-bar': https://forge.mql5.io/DouglasRechia/helix-mt-bar.git#^4.0.0
+    '@knitpkg.dev/knitpkg-mt-bar': https://forge.mql5.io/DouglasRechia/knitpkg-mt-bar.git#^4.0.0
 
   
   FLAT MODE: if your're using include_mode = flat, edit your dependencies 
   entrypoint `src/<EntryPointN>.mqh` at this point and add the headers you'll 
-  be using in your EA by means of Helix directives. Skip this step otherwise.
+  be using in your EA by means of KnitPkg directives. Skip this step otherwise.
 
-* Download and resolve dependencies: run the following Helix command:
+* Download and resolve dependencies: run the following KnitPkg command:
 
-      helix-mt install
+      kp-mt install
 
-  The command reads all the dependencies from `helix.yaml`, downloads the 
-  required packages and resolves all `@helix:include` directives. After the 
-  first install you will see either `helix/flat/` directory containing the 
-  flattened headers or `helix/include` directory containing the resolved 
+  The command reads all the dependencies from `knitpkg.yaml`, downloads the 
+  required packages and resolves all `@knitpkg:include` directives. After the 
+  first install you will see either `knitpkg/flat/` directory containing the 
+  flattened headers or `knitpkg/include` directory containing the resolved 
   headers, depending on your choice as configured by include_mode entry in 
-  `helix.yaml`.
+  `knitpkg.yaml`.
 
 * Update a dependency: in the case you need to update a dependency, just
-  update the version in `helix.yaml` and run `helix-mt install` again to
-  re-run the resolver and update `helix/flat` or `helix/include`.
+  update the version in `knitpkg.yaml` and run `kp-mt install` again to
+  re-run the resolver and update `knitpkg/flat` or `knitpkg/include`.
 
-      helix-mt install 
+      kp-mt install 
 
 * Remove a dependency
 
-  Delete the entry from the `dependencies` map in `helix.yaml` and run
-  `helix-mt install` again.
+  Delete the entry from the `dependencies` map in `knitpkg.yaml` and run
+  `kp-mt install` again.
 
 ================================================================================
                          QUICK START - CREATE YOUR EA
@@ -384,7 +384,7 @@ under the `dependencies` section. For example:
 
    INCLUDE MODE: if you're using include_mode = include, edit your EA
    `src/<ProjectName>.mq5` at this point and add the required external headers 
-   Helix just installed in `helix/include`. Use the standard MQL #include 
+   KnitPkg just installed in `knitpkg/include`. Use the standard MQL #include 
    directive.
 
    FLAT MODE: if your're using include_mode = flat, you don't have to do anything
@@ -397,8 +397,8 @@ under the `dependencies` section. For example:
 
        #include <Trade/SymbolInfo.mqh>
 
-   NOTE: all the Helix includes, no matter if it is a regular MQL `#include` or 
-   `@helix:include`, must use double quotes as the delimiter to the header
+   NOTE: all the KnitPkg includes, no matter if it is a regular MQL `#include` or 
+   `@knitpkg:include`, must use double quotes as the delimiter to the header
    path. Angle brackets are used with the MQL Standard library only.
    
 4. **Write your trading logic**  
@@ -414,10 +414,10 @@ under the `dependencies` section. For example:
 
 1. Run the compiler:
 
-   helix-mt compile
+   kp-mt compile
 
    The compiler will compile, if applicable, all the generated flat files
-   helix/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
+   knitpkg/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
    `compile` entries as defined in the manifest.
 
 2. Run the EA
@@ -431,19 +431,19 @@ under the `dependencies` section. For example:
 ================================================================================
 
 1. **Documentation** - update the `version` and `description` fields in 
-   `helix.yaml` and consider adding a `README.md` with usage instructions 
+   `knitpkg.yaml` and consider adding a `README.md` with usage instructions 
    for your EA.
 
 2. **Version control** - commit all the files respecting the default 
-   `.gitignore` (automatically generated by `helix-mt init`). If you prefer, 
-   delete the `GETTING_STARTED`. The `helix/flat` and `helix/include` 
+   `.gitignore` (automatically generated by `kp-mt init`). If you prefer, 
+   delete the `GETTING_STARTED`. The `knitpkg/flat` and `knitpkg/include` 
    directories are ignored from version control by default, because 
-   `helix-mt install` will add the resolved dependencies into one of 
+   `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
 4. **Publish** - when you are ready, push the repository to a Git host.
 
-For the full Helix documentation visit: https://helix.dev/docs
+For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
 ================================================================================
 """
@@ -464,8 +464,8 @@ TEMPLATE_INDICATOR_BARS_MQL5 = """//+-------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 {{project_includes}}
 
@@ -519,8 +519,8 @@ TEMPLATE_INDICATOR_BARS_MQL4 = """//+-------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 {{project_includes}}
 
@@ -574,8 +574,8 @@ TEMPLATE_INDICATOR_SERIES = """//+----------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 {{project_includes}}
 
@@ -619,70 +619,70 @@ is ignored by version control.
 ================================================================================
 
 An Indicator project has the following structure (generated by
-`helix-mt init --type indicator`):
+`kp-mt init --type indicator`):
 
-  helix/
+  <ProjectName>/
     flat/                # Generated flat files (only when include_mode = flat)
     include/             # Used only when include_mode = include
   src/
     <ProjectName>.mq5    # Main EA source file (or .mq4 for MQL4)
     <EntryPointN>.mqh    # Dependencies entrypoint (only when include_mode = flat)
-  helix.yaml             # Project manifest
+  knitpkg.yaml             # Project manifest
   .gitignore             # Git ignore
   GETTING_STARTED        # This file
 
-When **flat** mode is used (recommended), `helix-mt install` will generate a 
-flattened header named `<EntryPointN>_flat.mqh` in `helix/flat/` for each 
-entry point declared in `helix.yaml`. Those are the files that should be 
+When **flat** mode is used (recommended), `kp-mt install` will generate a 
+flattened header named `<EntryPointN>_flat.mqh` in `knitpkg/flat/` for each 
+entry point declared in `knitpkg.yaml`. Those are the files that should be 
 included in your Indicator. The flattened headers will contain all resolved 
-dependencies based upon `@helix:include` directives declared in
+dependencies based upon `@knitpkg:include` directives declared in
 `src/<EntryPointN>.mqh`. 
 
 If you chose **include** mode, any headers that you want to include from 
-dependencies will be placed automatically under `helix/include/` (mirroring the 
-package layout) after you run `helix-mt install`. 
+dependencies will be placed automatically under `knitpkg/include/` (mirroring the 
+package layout) after you run `kp-mt install`. 
 
 IMPORTANT: All source code of your EA lives under `src/`. Do not change anything 
-in `helix/include/` or `helix/flat/` as they are generated automatically by 
-Helix.
+in `knitpkg/include/` or `knitpkg/flat/` as they are generated automatically by 
+KnitPkg.
 
 ================================================================================
                          DEPENDENCY MANAGEMENT
 ================================================================================
 
-* Add a dependency: edit `helix.yaml` manifest file and add any package you want
+* Add a dependency: edit `knitpkg.yaml` manifest file and add any package you want
 under the `dependencies` section. For example:
 
   dependencies:
     # others dependencies...
-    '@helix.dev/helix-mt-bar': https://forge.mql5.io/DouglasRechia/helix-mt-bar.git#^4.0.0
+    '@knitpkg.dev/knitpkg-mt-bar': https://forge.mql5.io/DouglasRechia/knitpkg-mt-bar.git#^4.0.0
 
   
   FLAT MODE: if your're using include_mode = flat, edit your dependencies 
   entrypoint `src/<EntryPointN>.mqh` at this point and add the headers you'll 
-  be using in your EA by means of Helix directives. Skip this step otherwise.
+  be using in your EA by means of KnitPkg directives. Skip this step otherwise.
 
-* Download and resolve dependencies: run the following Helix command:
+* Download and resolve dependencies: run the following KnitPkg command:
 
-      helix-mt install
+      kp-mt install
 
-  The command reads all the dependencies from `helix.yaml`, downloads the 
-  required packages and resolves all `@helix:include` directives. After the 
-  first install you will see either `helix/flat/` directory containing the 
-  flattened headers or `helix/include` directory containing the resolved 
+  The command reads all the dependencies from `knitpkg.yaml`, downloads the 
+  required packages and resolves all `@knitpkg:include` directives. After the 
+  first install you will see either `knitpkg/flat/` directory containing the 
+  flattened headers or `knitpkg/include` directory containing the resolved 
   headers, depending on your choice as configured by include_mode entry in 
-  `helix.yaml`.
+  `knitpkg.yaml`.
 
 * Update a dependency: in the case you need to update a dependency, just
-  update the version in `helix.yaml` and run `helix-mt install` again to
-  re-run the resolver and update `helix/flat` or `helix/include`.
+  update the version in `knitpkg.yaml` and run `kp-mt install` again to
+  re-run the resolver and update `knitpkg/flat` or `knitpkg/include`.
 
-      helix-mt install 
+      kp-mt install 
 
 * Remove a dependency
 
-  Delete the entry from the `dependencies` map in `helix.yaml` and run
-  `helix-mt install` again.
+  Delete the entry from the `dependencies` map in `knitpkg.yaml` and run
+  `kp-mt install` again.
 
 ================================================================================
                          QUICK START - CREATE YOUR EA
@@ -697,7 +697,7 @@ under the `dependencies` section. For example:
 
    INCLUDE MODE: if you're using include_mode = include, edit your EA
    `src/<ProjectName>.mq5` at this point and add the required external headers 
-   Helix just installed in `helix/include`. Use the standard MQL #include 
+   KnitPkg just installed in `knitpkg/include`. Use the standard MQL #include 
    directive.
 
    FLAT MODE: if your're using include_mode = flat, you don't have to do anything
@@ -710,8 +710,8 @@ under the `dependencies` section. For example:
 
        #include <Trade/SymbolInfo.mqh>
 
-   NOTE: all the Helix includes, no matter if it is a regular MQL `#include` or 
-   `@helix:include`, must use double quotes as the delimiter to the header
+   NOTE: all the KnitPkg includes, no matter if it is a regular MQL `#include` or 
+   `@knitpkg:include`, must use double quotes as the delimiter to the header
    path. Angle brackets are used with the MQL Standard library only.
    
 4. **Write your trading logic**  
@@ -727,10 +727,10 @@ under the `dependencies` section. For example:
 
 1. Run the compiler:
 
-   helix-mt compile
+   kp-mt compile
 
    The compiler will compile, if applicable, all the generated flat files
-   helix/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
+   knitpkg/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
    `compile` entries as defined in the manifest.
 
 2. Run the EA
@@ -744,19 +744,19 @@ under the `dependencies` section. For example:
 ================================================================================
 
 1. **Documentation** - update the `version` and `description` fields in 
-   `helix.yaml` and consider adding a `README.md` with usage instructions 
+   `knitpkg.yaml` and consider adding a `README.md` with usage instructions 
    for your EA.
 
 2. **Version control** - commit all the files respecting the default 
-   `.gitignore` (automatically generated by `helix-mt init`). If you prefer, 
-   delete the `GETTING_STARTED`. The `helix/flat` and `helix/include` 
+   `.gitignore` (automatically generated by `kp-mt init`). If you prefer, 
+   delete the `GETTING_STARTED`. The `knitpkg/flat` and `knitpkg/include` 
    directories are ignored from version control by default, because 
-   `helix-mt install` will add the resolved dependencies into one of 
+   `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
 4. **Publish** - when you are ready, push the repository to a Git host.
 
-For the full Helix documentation visit: https://helix.dev/docs
+For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
 ================================================================================
 """
@@ -777,8 +777,8 @@ TEMPLATE_SCRIPT = """//+--------------------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 {{project_includes}}
 
@@ -807,70 +807,70 @@ is ignored by version control.
 ================================================================================
 
 An Script project has the following structure (generated by
-`helix-mt init --type script`):
+`kp-mt init --type script`):
 
-  helix/
+  <ProjectName>/
     flat/                # Generated flat files (only when include_mode = flat)
     include/             # Used only when include_mode = include
   src/
     <ProjectName>.mq5    # Main EA source file (or .mq4 for MQL4)
     <EntryPointN>.mqh    # Dependencies entrypoint (only when include_mode = flat)
-  helix.yaml             # Project manifest
+  knitpkg.yaml             # Project manifest
   .gitignore             # Git ignore
   GETTING_STARTED        # This file
 
-When **flat** mode is used (recommended), `helix-mt install` will generate a 
-flattened header named `<EntryPointN>_flat.mqh` in `helix/flat/` for each 
-entry point declared in `helix.yaml`. Those are the files that should be 
+When **flat** mode is used (recommended), `kp-mt install` will generate a 
+flattened header named `<EntryPointN>_flat.mqh` in `knitpkg/flat/` for each 
+entry point declared in `knitpkg.yaml`. Those are the files that should be 
 included in your Script. The flattened headers will contain all resolved 
-dependencies based upon `@helix:include` directives declared in
+dependencies based upon `@knitpkg:include` directives declared in
 `src/<EntryPointN>.mqh`. 
 
 If you chose **include** mode, any headers that you want to include from 
-dependencies will be placed automatically under `helix/include/` (mirroring the 
-package layout) after you run `helix-mt install`. 
+dependencies will be placed automatically under `knitpkg/include/` (mirroring the 
+package layout) after you run `kp-mt install`. 
 
 IMPORTANT: All source code of your EA lives under `src/`. Do not change anything 
-in `helix/include/` or `helix/flat/` as they are generated automatically by 
-Helix.
+in `knitpkg/include/` or `knitpkg/flat/` as they are generated automatically by 
+KnitPkg.
 
 ================================================================================
                          DEPENDENCY MANAGEMENT
 ================================================================================
 
-* Add a dependency: edit `helix.yaml` manifest file and add any package you want
+* Add a dependency: edit `knitpkg.yaml` manifest file and add any package you want
 under the `dependencies` section. For example:
 
   dependencies:
     # others dependencies...
-    '@helix.dev/helix-mt-bar': https://forge.mql5.io/DouglasRechia/helix-mt-bar.git#^4.0.0
+    '@knitpkg.dev/knitpkg-mt-bar': https://forge.mql5.io/DouglasRechia/knitpkg-mt-bar.git#^4.0.0
 
   
   FLAT MODE: if your're using include_mode = flat, edit your dependencies 
   entrypoint `src/<EntryPointN>.mqh` at this point and add the headers you'll 
-  be using in your EA by means of Helix directives. Skip this step otherwise.
+  be using in your EA by means of KnitPkg directives. Skip this step otherwise.
 
-* Download and resolve dependencies: run the following Helix command:
+* Download and resolve dependencies: run the following KnitPkg command:
 
-      helix-mt install
+      kp-mt install
 
-  The command reads all the dependencies from `helix.yaml`, downloads the 
-  required packages and resolves all `@helix:include` directives. After the 
-  first install you will see either `helix/flat/` directory containing the 
-  flattened headers or `helix/include` directory containing the resolved 
+  The command reads all the dependencies from `knitpkg.yaml`, downloads the 
+  required packages and resolves all `@knitpkg:include` directives. After the 
+  first install you will see either `knitpkg/flat/` directory containing the 
+  flattened headers or `knitpkg/include` directory containing the resolved 
   headers, depending on your choice as configured by include_mode entry in 
-  `helix.yaml`.
+  `knitpkg.yaml`.
 
 * Update a dependency: in the case you need to update a dependency, just
-  update the version in `helix.yaml` and run `helix-mt install` again to
-  re-run the resolver and update `helix/flat` or `helix/include`.
+  update the version in `knitpkg.yaml` and run `kp-mt install` again to
+  re-run the resolver and update `knitpkg/flat` or `knitpkg/include`.
 
-      helix-mt install 
+      kp-mt install 
 
 * Remove a dependency
 
-  Delete the entry from the `dependencies` map in `helix.yaml` and run
-  `helix-mt install` again.
+  Delete the entry from the `dependencies` map in `knitpkg.yaml` and run
+  `kp-mt install` again.
 
 ================================================================================
                          QUICK START - CREATE YOUR EA
@@ -885,7 +885,7 @@ under the `dependencies` section. For example:
 
    INCLUDE MODE: if you're using include_mode = include, edit your EA
    `src/<ProjectName>.mq5` at this point and add the required external headers 
-   Helix just installed in `helix/include`. Use the standard MQL #include 
+   KnitPkg just installed in `knitpkg/include`. Use the standard MQL #include 
    directive.
 
    FLAT MODE: if your're using include_mode = flat, you don't have to do anything
@@ -898,8 +898,8 @@ under the `dependencies` section. For example:
 
        #include <Trade/SymbolInfo.mqh>
 
-   NOTE: all the Helix includes, no matter if it is a regular MQL `#include` or 
-   `@helix:include`, must use double quotes as the delimiter to the header
+   NOTE: all the KnitPkg includes, no matter if it is a regular MQL `#include` or 
+   `@knitpkg:include`, must use double quotes as the delimiter to the header
    path. Angle brackets are used with the MQL Standard library only.
    
 4. **Write your trading logic**  
@@ -915,10 +915,10 @@ under the `dependencies` section. For example:
 
 1. Run the compiler:
 
-   helix-mt compile
+   kp-mt compile
 
    The compiler will compile, if applicable, all the generated flat files
-   helix/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
+   knitpkg/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
    `compile` entries as defined in the manifest.
 
 2. Run the EA
@@ -932,19 +932,19 @@ under the `dependencies` section. For example:
 ================================================================================
 
 1. **Documentation** - update the `version` and `description` fields in 
-   `helix.yaml` and consider adding a `README.md` with usage instructions 
+   `knitpkg.yaml` and consider adding a `README.md` with usage instructions 
    for your EA.
 
 2. **Version control** - commit all the files respecting the default 
-   `.gitignore` (automatically generated by `helix-mt init`). If you prefer, 
-   delete the `GETTING_STARTED`. The `helix/flat` and `helix/include` 
+   `.gitignore` (automatically generated by `kp-mt init`). If you prefer, 
+   delete the `GETTING_STARTED`. The `knitpkg/flat` and `knitpkg/include` 
    directories are ignored from version control by default, because 
-   `helix-mt install` will add the resolved dependencies into one of 
+   `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
 4. **Publish** - when you are ready, push the repository to a Git host.
 
-For the full Helix documentation visit: https://helix.dev/docs
+For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
 ================================================================================
 """
@@ -966,8 +966,8 @@ TEMPLATE_LIBRARY = """//+-------------------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 {{project_includes}}
 
@@ -995,70 +995,70 @@ is ignored by version control.
 ================================================================================
 
 A Library project has the following structure (generated by
-`helix-mt init --type library`):
+`kp-mt init --type library`):
 
-  helix/
+  <ProjectName>/
     flat/                # Generated flat files (only when include_mode = flat)
     include/             # Used only when include_mode = include
   src/
     <ProjectName>.mq5    # Main EA source file (or .mq4 for MQL4)
     <EntryPointN>.mqh    # Dependencies entrypoint (only when include_mode = flat)
-  helix.yaml             # Project manifest
+  knitpkg.yaml             # Project manifest
   .gitignore             # Git ignore
   GETTING_STARTED        # This file
 
-When **flat** mode is used (recommended), `helix-mt install` will generate a 
-flattened header named `<EntryPointN>_flat.mqh` in `helix/flat/` for each 
-entry point declared in `helix.yaml`. Those are the files that should be 
+When **flat** mode is used (recommended), `kp-mt install` will generate a 
+flattened header named `<EntryPointN>_flat.mqh` in `knitpkg/flat/` for each 
+entry point declared in `knitpkg.yaml`. Those are the files that should be 
 included in your Library. The flattened headers will contain all resolved 
-dependencies based upon `@helix:include` directives declared in
+dependencies based upon `@knitpkg:include` directives declared in
 `src/<EntryPointN>.mqh`. 
 
 If you chose **include** mode, any headers that you want to include from 
-dependencies will be placed automatically under `helix/include/` (mirroring the 
-package layout) after you run `helix-mt install`. 
+dependencies will be placed automatically under `knitpkg/include/` (mirroring the 
+package layout) after you run `kp-mt install`. 
 
 IMPORTANT: All source code of your EA lives under `src/`. Do not change anything 
-in `helix/include/` or `helix/flat/` as they are generated automatically by 
-Helix.
+in `knitpkg/include/` or `knitpkg/flat/` as they are generated automatically by 
+KnitPkg.
 
 ================================================================================
                          DEPENDENCY MANAGEMENT
 ================================================================================
 
-* Add a dependency: edit `helix.yaml` manifest file and add any package you want
+* Add a dependency: edit `knitpkg.yaml` manifest file and add any package you want
 under the `dependencies` section. For example:
 
   dependencies:
     # others dependencies...
-    '@helix.dev/helix-mt-bar': https://forge.mql5.io/DouglasRechia/helix-mt-bar.git#^4.0.0
+    '@knitpkg.dev/knitpkg-mt-bar': https://forge.mql5.io/DouglasRechia/knitpkg-mt-bar.git#^4.0.0
 
   
   FLAT MODE: if your're using include_mode = flat, edit your dependencies 
   entrypoint `src/<EntryPointN>.mqh` at this point and add the headers you'll 
-  be using in your EA by means of Helix directives. Skip this step otherwise.
+  be using in your EA by means of KnitPkg directives. Skip this step otherwise.
 
-* Download and resolve dependencies: run the following Helix command:
+* Download and resolve dependencies: run the following KnitPkg command:
 
-      helix-mt install
+      kp-mt install
 
-  The command reads all the dependencies from `helix.yaml`, downloads the 
-  required packages and resolves all `@helix:include` directives. After the 
-  first install you will see either `helix/flat/` directory containing the 
-  flattened headers or `helix/include` directory containing the resolved 
+  The command reads all the dependencies from `knitpkg.yaml`, downloads the 
+  required packages and resolves all `@knitpkg:include` directives. After the 
+  first install you will see either `knitpkg/flat/` directory containing the 
+  flattened headers or `knitpkg/include` directory containing the resolved 
   headers, depending on your choice as configured by include_mode entry in 
-  `helix.yaml`.
+  `knitpkg.yaml`.
 
 * Update a dependency: in the case you need to update a dependency, just
-  update the version in `helix.yaml` and run `helix-mt install` again to
-  re-run the resolver and update `helix/flat` or `helix/include`.
+  update the version in `knitpkg.yaml` and run `kp-mt install` again to
+  re-run the resolver and update `knitpkg/flat` or `knitpkg/include`.
 
-      helix-mt install 
+      kp-mt install 
 
 * Remove a dependency
 
-  Delete the entry from the `dependencies` map in `helix.yaml` and run
-  `helix-mt install` again.
+  Delete the entry from the `dependencies` map in `knitpkg.yaml` and run
+  `kp-mt install` again.
 
 ================================================================================
                          QUICK START - CREATE YOUR EA
@@ -1073,7 +1073,7 @@ under the `dependencies` section. For example:
 
    INCLUDE MODE: if you're using include_mode = include, edit your EA
    `src/<ProjectName>.mq5` at this point and add the required external headers 
-   Helix just installed in `helix/include`. Use the standard MQL #include 
+   KnitPkg just installed in `knitpkg/include`. Use the standard MQL #include 
    directive.
 
    FLAT MODE: if your're using include_mode = flat, you don't have to do anything
@@ -1086,8 +1086,8 @@ under the `dependencies` section. For example:
 
        #include <Trade/SymbolInfo.mqh>
 
-   NOTE: all the Helix includes, no matter if it is a regular MQL `#include` or 
-   `@helix:include`, must use double quotes as the delimiter to the header
+   NOTE: all the KnitPkg includes, no matter if it is a regular MQL `#include` or 
+   `@knitpkg:include`, must use double quotes as the delimiter to the header
    path. Angle brackets are used with the MQL Standard library only.
    
 4. **Write your trading logic**  
@@ -1103,10 +1103,10 @@ under the `dependencies` section. For example:
 
 1. Run the compiler:
 
-   helix-mt compile
+   kp-mt compile
 
    The compiler will compile, if applicable, all the generated flat files
-   helix/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
+   knitpkg/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
    `compile` entries as defined in the manifest.
 
 2. Run the EA
@@ -1120,19 +1120,19 @@ under the `dependencies` section. For example:
 ================================================================================
 
 1. **Documentation** - update the `version` and `description` fields in 
-   `helix.yaml` and consider adding a `README.md` with usage instructions 
+   `knitpkg.yaml` and consider adding a `README.md` with usage instructions 
    for your EA.
 
 2. **Version control** - commit all the files respecting the default 
-   `.gitignore` (automatically generated by `helix-mt init`). If you prefer, 
-   delete the `GETTING_STARTED`. The `helix/flat` and `helix/include` 
+   `.gitignore` (automatically generated by `kp-mt init`). If you prefer, 
+   delete the `GETTING_STARTED`. The `knitpkg/flat` and `knitpkg/include` 
    directories are ignored from version control by default, because 
-   `helix-mt install` will add the resolved dependencies into one of 
+   `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
 4. **Publish** - when you are ready, push the repository to a Git host.
 
-For the full Helix documentation visit: https://helix.dev/docs
+For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
 ================================================================================
 """
@@ -1155,8 +1155,8 @@ TEMPLATE_SERVICE = """//+-------------------------------------------------------
 #property description "Author: {{author}}"
 #property description "License: {{license}}"
 #property description ""
-#property description "Powered by Helix for MetaTrader"
-#property description "http://helix.dev"
+#property description "Powered by KnitPkg for MetaTrader"
+#property description "http://knitpkg.dev"
 
 {{project_includes}}
 
@@ -1185,70 +1185,70 @@ is ignored by version control.
 ================================================================================
 
 A Service project has the following structure (generated by
-`helix-mt init --type service`):
+`kp-mt init --type service`):
 
-  helix/
+  <ProjectName>/
     flat/                # Generated flat files (only when include_mode = flat)
     include/             # Used only when include_mode = include
   src/
     <ProjectName>.mq5    # Main EA source file (or .mq4 for MQL4)
     <EntryPointN>.mqh    # Dependencies entrypoint (only when include_mode = flat)
-  helix.yaml             # Project manifest
+  knitpkg.yaml             # Project manifest
   .gitignore             # Git ignore
   GETTING_STARTED        # This file
 
-When **flat** mode is used (recommended), `helix-mt install` will generate a 
-flattened header named `<EntryPointN>_flat.mqh` in `helix/flat/` for each 
-entry point declared in `helix.yaml`. Those are the files that should be 
+When **flat** mode is used (recommended), `kp-mt install` will generate a 
+flattened header named `<EntryPointN>_flat.mqh` in `knitpkg/flat/` for each 
+entry point declared in `knitpkg.yaml`. Those are the files that should be 
 included in your Service. The flattened headers will contain all resolved 
-dependencies based upon `@helix:include` directives declared in
+dependencies based upon `@knitpkg:include` directives declared in
 `src/<EntryPointN>.mqh`. 
 
 If you chose **include** mode, any headers that you want to include from 
-dependencies will be placed automatically under `helix/include/` (mirroring the 
-package layout) after you run `helix-mt install`. 
+dependencies will be placed automatically under `knitpkg/include/` (mirroring the 
+package layout) after you run `kp-mt install`. 
 
 IMPORTANT: All source code of your EA lives under `src/`. Do not change anything 
-in `helix/include/` or `helix/flat/` as they are generated automatically by 
-Helix.
+in `knitpkg/include/` or `knitpkg/flat/` as they are generated automatically by 
+KnitPkg.
 
 ================================================================================
                          DEPENDENCY MANAGEMENT
 ================================================================================
 
-* Add a dependency: edit `helix.yaml` manifest file and add any package you want
+* Add a dependency: edit `knitpkg.yaml` manifest file and add any package you want
 under the `dependencies` section. For example:
 
   dependencies:
     # others dependencies...
-    '@helix.dev/helix-mt-bar': https://forge.mql5.io/DouglasRechia/helix-mt-bar.git#^4.0.0
+    '@knitpkg.dev/knitpkg-mt-bar': https://forge.mql5.io/DouglasRechia/knitpkg-mt-bar.git#^4.0.0
 
   
   FLAT MODE: if your're using include_mode = flat, edit your dependencies 
   entrypoint `src/<EntryPointN>.mqh` at this point and add the headers you'll 
-  be using in your EA by means of Helix directives. Skip this step otherwise.
+  be using in your EA by means of KnitPkg directives. Skip this step otherwise.
 
-* Download and resolve dependencies: run the following Helix command:
+* Download and resolve dependencies: run the following KnitPkg command:
 
-      helix-mt install
+      kp-mt install
 
-  The command reads all the dependencies from `helix.yaml`, downloads the 
-  required packages and resolves all `@helix:include` directives. After the 
-  first install you will see either `helix/flat/` directory containing the 
-  flattened headers or `helix/include` directory containing the resolved 
+  The command reads all the dependencies from `knitpkg.yaml`, downloads the 
+  required packages and resolves all `@knitpkg:include` directives. After the 
+  first install you will see either `knitpkg/flat/` directory containing the 
+  flattened headers or `knitpkg/include` directory containing the resolved 
   headers, depending on your choice as configured by include_mode entry in 
-  `helix.yaml`.
+  `knitpkg.yaml`.
 
 * Update a dependency: in the case you need to update a dependency, just
-  update the version in `helix.yaml` and run `helix-mt install` again to
-  re-run the resolver and update `helix/flat` or `helix/include`.
+  update the version in `knitpkg.yaml` and run `kp-mt install` again to
+  re-run the resolver and update `knitpkg/flat` or `knitpkg/include`.
 
-      helix-mt install 
+      kp-mt install 
 
 * Remove a dependency
 
-  Delete the entry from the `dependencies` map in `helix.yaml` and run
-  `helix-mt install` again.
+  Delete the entry from the `dependencies` map in `knitpkg.yaml` and run
+  `kp-mt install` again.
 
 ================================================================================
                          QUICK START - CREATE YOUR EA
@@ -1263,7 +1263,7 @@ under the `dependencies` section. For example:
 
    INCLUDE MODE: if you're using include_mode = include, edit your EA
    `src/<ProjectName>.mq5` at this point and add the required external headers 
-   Helix just installed in `helix/include`. Use the standard MQL #include 
+   KnitPkg just installed in `knitpkg/include`. Use the standard MQL #include 
    directive.
 
    FLAT MODE: if your're using include_mode = flat, you don't have to do anything
@@ -1276,8 +1276,8 @@ under the `dependencies` section. For example:
 
        #include <Trade/SymbolInfo.mqh>
 
-   NOTE: all the Helix includes, no matter if it is a regular MQL `#include` or 
-   `@helix:include`, must use double quotes as the delimiter to the header
+   NOTE: all the KnitPkg includes, no matter if it is a regular MQL `#include` or 
+   `@knitpkg:include`, must use double quotes as the delimiter to the header
    path. Angle brackets are used with the MQL Standard library only.
    
 4. **Write your trading logic**  
@@ -1293,10 +1293,10 @@ under the `dependencies` section. For example:
 
 1. Run the compiler:
 
-   helix-mt compile
+   kp-mt compile
 
    The compiler will compile, if applicable, all the generated flat files
-   helix/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
+   knitpkg/flat/<EntryPointN>_flat.mq5 just for syntax check, and then the 
    `compile` entries as defined in the manifest.
 
 2. Run the EA
@@ -1310,19 +1310,19 @@ under the `dependencies` section. For example:
 ================================================================================
 
 1. **Documentation** - update the `version` and `description` fields in 
-   `helix.yaml` and consider adding a `README.md` with usage instructions 
+   `knitpkg.yaml` and consider adding a `README.md` with usage instructions 
    for your EA.
 
 2. **Version control** - commit all the files respecting the default 
-   `.gitignore` (automatically generated by `helix-mt init`). If you prefer, 
-   delete the `GETTING_STARTED`. The `helix/flat` and `helix/include` 
+   `.gitignore` (automatically generated by `kp-mt init`). If you prefer, 
+   delete the `GETTING_STARTED`. The `knitpkg/flat` and `knitpkg/include` 
    directories are ignored from version control by default, because 
-   `helix-mt install` will add the resolved dependencies into one of 
+   `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
 4. **Publish** - when you are ready, push the repository to a Git host.
 
-For the full Helix documentation visit: https://helix.dev/docs
+For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
 ================================================================================
 """
@@ -1334,7 +1334,7 @@ class IndicatorInputType(str, Enum):
     SERIES = "Series"
 
 class ProjectInitializer:
-    """Encapsulates the logic for initializing a new Helix project."""
+    """Encapsulates the logic for initializing a new KnitPkg project."""
 
     def __init__(self, console: Console):
         """Initialize the ProjectInitializer with a Rich console instance."""
@@ -1387,7 +1387,7 @@ class ProjectInitializer:
         org_dir = self.organization if self.organization else "."
 
         # Create Header.mqh
-        header_dir = self.project_root / "helix" / "include" / org_dir / self.name
+        header_dir = self.project_root / "knitpkg" / "include" / org_dir / self.name
         header_dir.mkdir(parents=True, exist_ok=True)
         header_path = header_dir / "Header.mqh"
 
@@ -1470,10 +1470,10 @@ class ProjectInitializer:
                 (self.project_root / entrypoint_path).write_text(entrypoint_content.strip() + "\n", encoding="utf-8")
 
                 if entrypoint_file_name.lower().endswith(".mqh"):
-                    project_includes.append(f'#include "../helix/flat/{entrypoint_flattened_name}"')
+                    project_includes.append(f'#include "../knitpkg/flat/{entrypoint_flattened_name}"')
         else:
             project_includes = ['// Add here your includes to the resolved dependencies, something like:',
-                                '// #include "../helix/include/Path/to/header.mqh"']
+                                '// #include "../knitpkg/include/Path/to/header.mqh"']
 
         file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
         file_name = f"{self.name}{file_ext}"
@@ -1783,7 +1783,7 @@ class ProjectInitializer:
                 mqproj_files = list(self.project_root.glob("*.mqproj"))
                 if mqproj_files:
                     self.console.print(
-                        "[yellow]Found existing .mqproj files. It's recommended to remove them for Helix projects.[/yellow]"
+                        "[yellow]Found existing .mqproj files. It's recommended to remove them for KnitPkg projects.[/yellow]"
                     )
                     if Confirm.ask("Do you want to remove existing .mqproj files?", default=True):
                         for mqproj in mqproj_files:
@@ -1845,8 +1845,8 @@ class ProjectInitializer:
                 f.write(gitignore_content)
             self.console.print(f"[green]Created {self.project_root / '.gitignore'}[/green]")
 
-            # Create helix/ directories
-            helix_dir = self.project_root / "helix"
+            # Create knitpkg/ directories
+            helix_dir = self.project_root / "knitpkg"
             helix_dir.mkdir(exist_ok=True)
 
 
@@ -1860,7 +1860,7 @@ class ProjectInitializer:
                     (helix_dir / "include").mkdir(exist_ok=True)
 
 
-            self.console.print(f"[green]Created Helix internal directories under {helix_dir}[/green]")
+            self.console.print(f"[green]Created KnitPkg internal directories under {helix_dir}[/green]")
 
             # Create project-specific files based on type
             if self.project_type == MQLProjectType.PACKAGE:
@@ -1876,7 +1876,7 @@ class ProjectInitializer:
             elif self.project_type == MQLProjectType.SERVICE:
                 self.create_service_files()
 
-            # Create helix.yaml
+            # Create knitpkg.yaml
             manifest_data = {
                 "name": self.name,
                 "version": self.version,
@@ -1897,9 +1897,9 @@ class ProjectInitializer:
 
             manifest_data["dependencies"] = {}
 
-            with open(self.project_root / "helix.yaml", "w") as f:
+            with open(self.project_root / "knitpkg.yaml", "w") as f:
                 yaml.dump(manifest_data, f, sort_keys=False)
-            self.console.print(f"[green]Created {self.project_root / 'helix.yaml'}[/green]")
+            self.console.print(f"[green]Created {self.project_root / 'knitpkg.yaml'}[/green]")
 
             # Initialize Git repository using GitPython
             if self.git_init:
@@ -1947,7 +1947,7 @@ class ProjectInitializer:
     ) -> None:
         """Execute the project initialization workflow."""
         self.dry_run = dry_run
-        self.console.print(Text("\n🚀 Initializing a new Helix project...", style="bold blue"))
+        self.console.print(Text("\n🚀 Initializing a new KnitPkg project...", style="bold blue"))
 
         # Execute steps
         self.select_target(target)
@@ -1989,7 +1989,7 @@ class IndicatorInputType(str, Enum):
 def register(app):
     """Register the init command with the Typer app."""
 
-    @app.command(name="init", help="Initializes a new Helix project.")
+    @app.command(name="init", help="Initializes a new KnitPkg project.")
     def init_project(
         dry_run: bool = typer.Option(
             False, "--dry-run", "-d", help="Show what would be done without making actual changes."
@@ -2034,7 +2034,7 @@ def register(app):
             help="Show detailed output with file/line information"
         )
     ):
-        """Initializes a new Helix project interactively."""
+        """Initializes a new KnitPkg project interactively."""
         console = Console(log_path=verbose)
         initializer = ProjectInitializer(console)
         initializer.run(

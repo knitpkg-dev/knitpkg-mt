@@ -1,4 +1,4 @@
-# helix/mql/__init__.py
+# knitpkg/mql/__init__.py
 
 from .exceptions import (
     MQLCompilationError,

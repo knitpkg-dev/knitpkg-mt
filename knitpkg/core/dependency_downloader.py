@@ -1,4 +1,4 @@
-# helix/core/dependency_downloader.py
+# knitpkg/core/dependency_downloader.py
 
 """
 Platform-agnostic dependency downloader.
@@ -23,13 +23,13 @@ from packaging.version import Version, InvalidVersion
 import git
 from rich.console import Console
 
-from helix.core.lockfile import load_lockfile, save_lockfile, is_lock_change
-from helix.core.file_reading import load_helix_manifest
-from helix.core.utils import is_local_path
-from helix.core.constants import CACHE_DIR
+from knitpkg.core.lockfile import load_lockfile, save_lockfile, is_lock_change
+from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.core.utils import is_local_path
+from knitpkg.core.constants import CACHE_DIR
 
 # Import custom exceptions
-from helix.core.exceptions import (
+from knitpkg.core.exceptions import (
     LocalDependencyNotFoundError,
     LocalDependencyNotGitError,
     DependencyHasLocalChangesError,
@@ -151,7 +151,7 @@ class DependencyDownloader:
         Validate project structure.
 
         Override this method for platform-specific checks
-        (e.g., MQL requires helix/include/ for packages).
+        (e.g., MQL requires knitpkg/include/ for packages).
 
         Args:
             manifest: Loaded HelixManifest object

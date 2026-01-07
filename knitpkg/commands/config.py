@@ -1,9 +1,9 @@
-# helix/commands/config.py
+# knitpkg/commands/config.py
 
 """
-Helix for MetaTrader config command — manage Helix configuration settings.
+KnitPkg for MetaTrader config command — manage KnitPkg configuration settings.
 
-This module provides CLI commands to view and modify Helix's global
+This module provides CLI commands to view and modify KnitPkg's global
 configuration, such as MetaEditor compiler paths and MQL data folder paths.
 """
 from pathlib import Path
@@ -13,7 +13,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from helix.mql.settings import (
+from knitpkg.mql.settings import (
     get_mql5_compiler_path,
     set_mql5_compiler_path,
     get_mql4_compiler_path,
@@ -63,7 +63,7 @@ def register(app):
         )
     ):
         """
-        Manage Helix configuration settings.
+        Manage KnitPkg configuration settings.
         """
         console = Console(log_path=verbose)
 
@@ -101,7 +101,7 @@ def register(app):
             not mql5_data_folder_path and not mql4_data_folder_path
         ):
 
-            table = Table(title="Helix for MetaTrader Configuration", show_header=True, header_style="bold cyan") # Alterado
+            table = Table(title="KnitPkg for MetaTrader Configuration", show_header=True, header_style="bold cyan") # Alterado
             table.add_column("Setting", style="dim")
             table.add_column("Value")
 

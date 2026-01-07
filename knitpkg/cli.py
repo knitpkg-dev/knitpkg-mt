@@ -1,13 +1,13 @@
-# helix/cli.py
+# knitpkg/cli.py
 """
-Main CLI entry point for Helix for MetaTrader.
+Main CLI entry point for KnitPkg for MetaTrader.
 
 This module sets up the Typer application and registers all commands.
 """
 import typer
 from rich.console import Console
 
-from helix.commands import (
+from knitpkg.commands import (
     init,
     install,
     autocomplete,
@@ -20,8 +20,8 @@ from helix.commands import (
 )
 
 app = typer.Typer(
-    name="Helix for MetaTrader", 
-    help="Helix for MetaTrader - Professional package manager for MQL5/MQL4",
+    name="KnitPkg for MetaTrader", 
+    help="KnitPkg for MetaTrader - Professional package manager for MQL5/MQL4",
     add_completion=False,
     no_args_is_help=True,
 )
@@ -42,13 +42,13 @@ def main(
         False,
         "--version",
         "-v",
-        help="Show the version of Helix for MetaTrader and exit.",
+        help="Show the version of KnitPkg for MetaTrader and exit.",
         callback=lambda value: _version_callback(value),
         is_eager=True,
     )
 ):
     """
-    Helix for MetaTrader CLI.
+    KnitPkg for MetaTrader CLI.
     """
     pass
 
@@ -57,7 +57,7 @@ def _version_callback(value: bool):
     if value:
         console = Console(log_path=False)
         # TODO: Get version from pyproject.toml
-        console.print("[bold green]Helix for MetaTrader[/] version [cyan]0.1.0[/]")
+        console.print("[bold green]KnitPkg for MetaTrader[/] version [cyan]0.1.0[/]")
         raise typer.Exit()
 
 if __name__ == "__main__":

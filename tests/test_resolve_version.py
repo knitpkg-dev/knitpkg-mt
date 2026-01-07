@@ -7,7 +7,7 @@ import git
 from rich.console import Console
 
 # Import from new location
-from helix.core.dependency_downloader import DependencyDownloader
+from knitpkg.core.dependency_downloader import DependencyDownloader
 
 def resolve_version_from_spec(name, specifier, repo):
     """Helper function to test version resolution"""

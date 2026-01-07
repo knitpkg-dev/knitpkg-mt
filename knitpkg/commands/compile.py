@@ -1,7 +1,7 @@
-# helix/commands/compile.py
+# knitpkg/commands/compile.py
 
 """
-Helix for Metatrader compile command — compile MQL source files.
+KnitPkg for Metatrader compile command — compile MQL source files.
 
 This module handles compilation of MQL4/MQL5 source files using MetaEditor.
 The MQLCompiler class raises domain-specific exceptions instead of SystemExit,
@@ -18,16 +18,16 @@ from rich.console import Console
 from rich.table import Table
 import typer
 
-from helix.core.file_reading import load_helix_manifest
-from helix.mql.models import MQLHelixManifest, Target
-from helix.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
-from helix.mql.constants import FLAT_DIR
-from helix.mql.settings import get_mql4_data_folder_path, get_mql5_data_folder_path
-from helix.mql.constants import COMPILE_LOGS_DIR
-from helix.mql.mql_paths import find_mql_paths
+from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.mql.models import MQLHelixManifest, Target
+from knitpkg.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
+from knitpkg.mql.constants import FLAT_DIR
+from knitpkg.mql.settings import get_mql4_data_folder_path, get_mql5_data_folder_path
+from knitpkg.mql.constants import COMPILE_LOGS_DIR
+from knitpkg.mql.mql_paths import find_mql_paths
 
 # Import MQL-specific exceptions
-from helix.mql.exceptions import (
+from knitpkg.mql.exceptions import (
     CompilerNotFoundError,
     UnsupportedTargetError,
     NoFilesToCompileError,
@@ -133,7 +133,7 @@ class MQLCompiler:
     def _prepare_compile_logs_dir(self) -> None:
         """
         Prepare compile logs directory by removing old logs.
-        Creates fresh .helix/compile-logs directory.
+        Creates fresh .knitpkg/compile-logs directory.
         """
         if self.compile_logs_dir.exists():
             shutil.rmtree(self.compile_logs_dir)
@@ -147,10 +147,10 @@ class MQLCompiler:
             source_file: Absolute path to source file
 
         Returns:
-            Path to log file in .helix/compile-logs/relative/path/file.log
+            Path to log file in .knitpkg/compile-logs/relative/path/file.log
 
         Example:
-            helix/include/Arquivo.mqh -> .helix/compile-logs/helix/include/Arquivo.mqh.log
+            knitpkg/include/Arquivo.mqh -> .knitpkg/compile-logs/knitpkg/include/Arquivo.mqh.log
         """
         rel_path = source_file.relative_to(self.project_dir)
         log_file = self.compile_logs_dir / f"{rel_path}.log"
@@ -187,11 +187,11 @@ class MQLCompiler:
             )
             if self.manifest.target == Target.MQL5:
                 self.console.log(
-                    f"  helix-mt config --mql5-compiler-path <path-to-MetaEditor64.exe>"
+                    f"  kp-mt config --mql5-compiler-path <path-to-MetaEditor64.exe>"
                 )
             else:
                 self.console.log(
-                    f"  helix-mt config --mql4-compiler-path <path-to-MetaEditor.exe>"
+                    f"  kp-mt config --mql4-compiler-path <path-to-MetaEditor.exe>"
                 )
             raise CompilerNotFoundError(
                 str(compiler_path),
@@ -306,7 +306,7 @@ class MQLCompiler:
             self.console.log(
                 f"[red]Error:[/] Could not find MQL {target_folder_name} "
                 f"include path automatically. "
-                f"Please configure it manually using 'helix-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
+                f"Please configure it manually using 'kp-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
             )
             # Raise the new exception instead of SystemExit(1)
             raise IncludePathNotFoundError(target_folder_name)
@@ -319,7 +319,7 @@ class MQLCompiler:
             )
             self.console.log(
                 f"[yellow]Hint:[/] To specify a particular data folder, "
-                f"use 'helix-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
+                f"use 'kp-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
             )
 
         return found_mql_paths[0]
@@ -420,7 +420,7 @@ class MQLCompiler:
         Finds (line,col) pattern and extracts file path before it.
         Uses simple string search instead of regex for better reliability.
 
-        Input:  C:\...\helix-test\src\TestScript.mq5(20,16) : warning 44: message
+        Input:  C:\...\knitpkg-test\src\TestScript.mq5(20,16) : warning 44: message
         Output: src/TestScript.mq5(20,16) : warning 44: message
 
         Args:

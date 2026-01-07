@@ -1,7 +1,7 @@
-# helix/core/models.py
+# knitpkg/core/models.py
 
 """
-Core models for Helix package manager.
+Core models for KnitPkg package manager.
 
 This module contains generic manifest definitions.
 """
@@ -33,7 +33,7 @@ class ProjectType(str, Enum):
     PACKAGE = "package"  # Reusable library/components
 
 class OAuthProvider(str, Enum):
-    """OAuth providers for Helix Pro private repository access."""
+    """OAuth providers for KnitPkg Pro private repository access."""
     GITHUB = "github"
     GITLAB = "gitlab"
     AZURE = "azure"
@@ -75,7 +75,7 @@ class DistRelease(BaseModel):
     )
 
 class DistSection(BaseModel):
-    """Distribution package definitions (used by `helix package`)."""
+    """Distribution package definitions (used by `knitpkg package`)."""
     model_config = ConfigDict(extra="forbid")
 
     dist: List[DistRelease] = Field(
@@ -102,7 +102,7 @@ class DistSection(BaseModel):
 # ==============================================================
 
 class HelixProSection(BaseModel):
-    """Helix Pro configuration for private repositories."""
+    """KnitPkg Pro configuration for private repositories."""
     model_config = ConfigDict(extra="forbid")
 
     private: bool = Field(
@@ -115,7 +115,7 @@ class HelixProSection(BaseModel):
     )
 
 class HelixEnterpriseSection(BaseModel):
-    """Helix Enterprise configuration for corporate environments."""
+    """KnitPkg Enterprise configuration for corporate environments."""
     model_config = ConfigDict(extra="forbid")
 
     proxy_url: Optional[AnyUrl] = Field(
@@ -124,16 +124,16 @@ class HelixEnterpriseSection(BaseModel):
     )
 
 class HelixSection(BaseModel):
-    """Helix Pro and Enterprise settings."""
+    """KnitPkg Pro and Enterprise settings."""
     model_config = ConfigDict(extra="forbid")
 
     pro: Optional[HelixProSection] = Field(
         default=None,
-        description="Helix Pro configuration"
+        description="KnitPkg Pro configuration"
     )
     enterprise: Optional[HelixEnterpriseSection] = Field(
         default=None,
-        description="Helix Enterprise configuration"
+        description="KnitPkg Enterprise configuration"
     )
 
 # ==============================================================
@@ -190,7 +190,7 @@ def _is_valid_ref(ref: str) -> bool:
 
 class HelixManifest(BaseModel):
     """
-    Helix base manifest.
+    KnitPkg base manifest.
     """
 
     model_config = ConfigDict(extra="allow")
@@ -258,9 +258,9 @@ class HelixManifest(BaseModel):
         description="Distribution package configuration"
     )
 
-    helix: Optional[HelixSection] = Field(
+    knitpkg: Optional[HelixSection] = Field(
         default=None,
-        description="Helix Pro and Enterprise settings"
+        description="KnitPkg Pro and Enterprise settings"
     )
 
     @field_validator("version")

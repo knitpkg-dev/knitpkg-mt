@@ -1,21 +1,21 @@
-# helix/core/settings.py
+# knitpkg/core/settings.py
 
 """
-Settings management for Helix CLI.
+Settings management for KnitPkg CLI.
 
 This module handles reading and writing user configuration stored in
-.helix/settings.yaml
+.knitpkg/settings.yaml
 """
 
 from pathlib import Path
 from typing import Optional, Any, Dict
 import yaml
 
-SETTINGS_FILE = Path(".helix/settings.yaml")
+SETTINGS_FILE = Path(".knitpkg/settings.yaml")
 
 def load_settings() -> Dict[str, Any]:
     """
-    Load settings from .helix/settings.yaml.
+    Load settings from .knitpkg/settings.yaml.
 
     Returns empty dict if file doesn't exist or is corrupted.
     """
@@ -31,7 +31,7 @@ def load_settings() -> Dict[str, Any]:
 
 def save_settings(settings: Dict[str, Any]) -> None:
     """
-    Save settings to .helix/settings.yaml.
+    Save settings to .knitpkg/settings.yaml.
 
     Creates parent directories if needed.
     """
