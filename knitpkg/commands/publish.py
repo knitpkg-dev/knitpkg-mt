@@ -29,24 +29,29 @@ def get_current_commit_hash() -> str:
         raise typer.BadParameter("Não foi possível obter o commit hash. Certifique-se de estar em um repositório Git.")
 
 def register(app):
-    """Register the login command with the Typer app."""
+    """Register the publish command with the Typer app."""
 
     @app.command()
-    def publish(manifest_path: str = typer.Option("knitpkg.yaml", "--manifest", help="Caminho para o arquivo knitpkg.yaml")):
+    def publish(project_dir: Optional[Path] = typer.Option(
+                None,
+                "--project-dir",
+                "-d",
+                help="Project directory (default: current directory)"
+            ),
+        ):
         """Publish the current project into the registry."""
-        # Check if logged in
-        token = get_stored_token(DEFAULT_PROVIDER)
-        if not token:
-            typer.echo("You need to login to your git provider first. Run `kp-mt login`.")
+
+        project_path = Path(project_dir) if project_dir else Path.cwd()
+        if not project_path.is_dir():
+            typer.echo(f"Project dir {project_dir} not found.")
             raise typer.Exit(code=1)
 
-        # Load manifest
-        if not os.path.exists(manifest_path):
-            typer.echo(f"Manifest file {manifest_path} not found.")
+        try:
+            manifest = load_helix_manifest(project_path)
+        except FileNotFoundError:
+            typer.echo("Manifest file not found.")
             raise typer.Exit(code=1)
-
-        manifest = load_helix_manifest(Path.cwd())
-
+        
         repo = git.Repo(Path.cwd(), search_parent_directories=True)
         if repo.bare:
             typer.echo("Error: Not a git repository.")
@@ -56,6 +61,31 @@ def register(app):
         if not repo_url:
             typer.echo("Error: Remote origin URL not found.")
             raise typer.Exit(code=1)
+        
+        if repo.is_dirty():
+            typer.echo("Error: There are uncommitted changes in the repository.")
+            raise typer.Exit(code=1)
+        
+        if repo.untracked_files:
+            typer.echo("Error: There are untracked files in the repository.")
+            raise typer.Exit(code=1)
+        
+        if 'github.com/' in repo_url:
+            provider = 'github'
+        elif 'gitlab.com/' in repo_url:
+            provider = 'gitlab'
+        if 'forge.mql5.io/' in repo_url:
+            provider = 'mql5forge'
+        else:
+            typer.echo("Error: Unsupported git provider. Only GitHub, GitLab, and MQL5Forge are supported.")
+            raise typer.Exit(code=1)
+
+
+        # Check if logged in
+        token = get_stored_token(provider)
+        if not token:
+            typer.echo(f"You need to login to your git provider first. Run `kp-mt login {provider}`.")
+            raise typer.Exit(code=1)
 
         # Extract required fields (adjust keys if your manifest differs)
         org_name = manifest.organization
@@ -63,7 +93,7 @@ def register(app):
         description = manifest.description
 
         if not all([org_name, name, description]):
-            typer.echo("Incomplete manifest: organization and name are mandatory.")
+            typer.echo("Incomplete manifest: organization, name and description are mandatory.")
             raise typer.Exit(code=1)
 
         commit_hash = get_current_commit_hash()
@@ -85,7 +115,7 @@ def register(app):
                 response = await client.post(
                     f"{REGISTRY_URL}/packages",
                     json=payload,
-                    params={"provider": DEFAULT_PROVIDER},
+                    params={"provider": provider},
                     headers={"Authorization": f"Bearer {token}"}
                 )
                 return response

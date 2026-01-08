@@ -91,7 +91,7 @@ TEMPLATE_PACKAGE_UNITTESTS = """//+---------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 // Include the headers under test
 #include "{{header_path}}"
@@ -219,7 +219,7 @@ TEMPLATE_EXPERT = """//+--------------------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 {{project_includes}}
 
@@ -465,7 +465,7 @@ TEMPLATE_INDICATOR_BARS_MQL5 = """//+-------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 {{project_includes}}
 
@@ -520,7 +520,7 @@ TEMPLATE_INDICATOR_BARS_MQL4 = """//+-------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 {{project_includes}}
 
@@ -575,7 +575,7 @@ TEMPLATE_INDICATOR_SERIES = """//+----------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 {{project_includes}}
 
@@ -778,7 +778,7 @@ TEMPLATE_SCRIPT = """//+--------------------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 {{project_includes}}
 
@@ -967,7 +967,7 @@ TEMPLATE_LIBRARY = """//+-------------------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 {{project_includes}}
 
@@ -1156,7 +1156,7 @@ TEMPLATE_SERVICE = """//+-------------------------------------------------------
 #property description "License: {{license}}"
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
-#property description "http://knitpkg.dev"
+#property description "https://knitpkg.dev"
 
 {{project_includes}}
 
