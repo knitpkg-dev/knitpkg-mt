@@ -5,14 +5,11 @@ import keyring
 from typing import Optional
 import git
 from pathlib import Path
+from .login import REGISTRY_URL, CREDENTIALS_SERVICE
 
 from knitpkg.core.file_reading import load_helix_manifest
 
 app = typer.Typer()
-
-# Configurations (pull from .env or config; adjust for production)
-REGISTRY_URL = "http://localhost:8000"  # Registry base URL
-CREDENTIALS_SERVICE = "knitpkg-mt"  # Same as in login
 
 def register(app):
     """Register the publish command with the Typer app."""
