@@ -8,7 +8,6 @@ import urllib.parse
 import httpx
 import keyring  # Para armazenamento seguro de credenciais
 from typing import Optional
-import os
 
 # Configurations (pull from .env or config; adjust for production)
 REGISTRY_URL = "http://localhost:8000"  # Registry URL

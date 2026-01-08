@@ -1,8 +1,6 @@
 import typer
 import httpx
 import asyncio
-import subprocess
-import os
 import keyring
 from typing import Optional
 import git
@@ -15,18 +13,6 @@ app = typer.Typer()
 # Configurations (pull from .env or config; adjust for production)
 REGISTRY_URL = "http://localhost:8000"  # Registry base URL
 CREDENTIALS_SERVICE = "knitpkg-mt"  # Same as in login
-DEFAULT_PROVIDER = "github"  # Default provider
-
-def get_stored_token(provider: str) -> Optional[str]:
-    """Retrieve stored token from keyring."""
-    return keyring.get_password(CREDENTIALS_SERVICE, provider)
-
-def get_current_commit_hash() -> str:
-    """Get the current commit hash from the local Git repo."""
-    try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip()
-    except subprocess.CalledProcessError:
-        raise typer.BadParameter("Não foi possível obter o commit hash. Certifique-se de estar em um repositório Git.")
 
 def register(app):
     """Register the publish command with the Typer app."""
@@ -95,9 +81,8 @@ def register(app):
             typer.echo(f"Error: Unsupported git provider. Only GitHub, GitLab, and MQL5Forge are supported. Remote URL: {repo_url}")
             raise typer.Exit(code=1)
 
-
         # Check if logged in
-        token = get_stored_token(provider)
+        token = keyring.get_password(CREDENTIALS_SERVICE, provider)
         if not token:
             typer.echo(f"You need to login to your git provider first. Run `kp-mt login {provider}`.")
             raise typer.Exit(code=1)
@@ -111,7 +96,7 @@ def register(app):
             typer.echo("Incomplete manifest: organization, name and description are mandatory.")
             raise typer.Exit(code=1)
 
-        commit_hash = get_current_commit_hash()
+        commit_hash = repo.head.commit.hexsha
 
         # Prepare payload
         payload = {
