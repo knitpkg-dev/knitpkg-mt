@@ -13,10 +13,7 @@ import os
 # Configurations (pull from .env or config; adjust for production)
 REGISTRY_URL = "http://localhost:8000"  # Registry URL
 GITHUB_CLIENT_ID = "Iv23liRbPmtpNq5aJNXG"  # Pull from config or env
-REDIRECT_URI = "http://localhost:8080/callback"  # Local port for callback
 CREDENTIALS_SERVICE = "knitpkg-mt"  # Name for keyring
-GITLAB_CLIENT_ID = ""
-MQL5FORGE_CLIENT_ID = ""
 
 class CallbackHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):

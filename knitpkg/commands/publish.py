@@ -51,6 +51,9 @@ def register(app):
         except FileNotFoundError:
             typer.echo("Manifest file not found.")
             raise typer.Exit(code=1)
+        except ValueError as e: 
+            typer.echo(f"Error loading manifest: {e}")
+            raise typer.Exit(code=1)
         
         repo = git.Repo(Path.cwd(), search_parent_directories=True)
         if repo.bare:
@@ -70,14 +73,26 @@ def register(app):
             typer.echo("Error: There are untracked files in the repository.")
             raise typer.Exit(code=1)
         
+        # Check for pending changes with remote
+        try:
+            repo.remotes.origin.fetch()
+            local_commit = repo.head.commit
+            remote_commit = repo.remotes.origin.refs[repo.active_branch.name].commit
+            if local_commit != remote_commit:
+                typer.echo("Error: There are pending changes to sync with the remote repository.")
+                raise typer.Exit(code=1)
+        except Exception:
+            typer.echo("Error: Unable to verify sync status with remote repository.")
+            raise typer.Exit(code=1)
+        
         if 'github.com/' in repo_url:
             provider = 'github'
         elif 'gitlab.com/' in repo_url:
             provider = 'gitlab'
-        if 'forge.mql5.io/' in repo_url:
+        elif 'forge.mql5.io/' in repo_url:
             provider = 'mql5forge'
         else:
-            typer.echo("Error: Unsupported git provider. Only GitHub, GitLab, and MQL5Forge are supported.")
+            typer.echo(f"Error: Unsupported git provider. Only GitHub, GitLab, and MQL5Forge are supported. Remote URL: {repo_url}")
             raise typer.Exit(code=1)
 
 
@@ -113,7 +128,7 @@ def register(app):
         async def send_publish_request():
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{REGISTRY_URL}/packages",
+                    f"{REGISTRY_URL}/packages/",
                     json=payload,
                     params={"provider": provider},
                     headers={"Authorization": f"Bearer {token}"}
