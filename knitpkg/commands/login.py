@@ -22,7 +22,6 @@ import sys
 
 # Configurations (pull from .env or config; adjust for production)
 REGISTRY_URL = "http://localhost:8000"  # Registry URL
-GITHUB_CLIENT_ID = "Iv23liRbPmtpNq5aJNXG"  # Pull from config or env
 CREDENTIALS_SERVICE = "knitpkg-mt"  # Name for keyring
 
 class CallbackHandler(http.server.SimpleHTTPRequestHandler):
@@ -67,7 +66,7 @@ def register(app):
 
     @app.command()
     def login(
-        provider: str = typer.Option("github", "--provider", help="Provider: github, gitlab, mql5forge, or bitbucket"),
+        provider: str = typer.Option(None, "--provider", help="Provider: github, gitlab, mql5forge, or bitbucket"),
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
@@ -112,7 +111,7 @@ def register(app):
         sys.stderr = null_device
 
         try:
-            with Server(("localhost", 8080), CallbackHandler) as httpd:
+            with Server(("localhost", 8789), CallbackHandler) as httpd:
                 httpd.handle_request()  # Wait for one request (the callback)
         except Exception as e:
             console.log(f"[red]Error:[/] Failed to start local server or handle callback: {e}")

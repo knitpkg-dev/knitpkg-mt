@@ -15,6 +15,7 @@ from knitpkg.commands import (
     config,
     login,
     publish,
+    logout,
     # build, # Not yet implemented
     # deploy, # Not yet implemented
 )
@@ -35,6 +36,7 @@ config.register(app)
 
 login.register(app)
 publish.register(app)
+logout.register(app)
 
 @app.callback()
 def main(
