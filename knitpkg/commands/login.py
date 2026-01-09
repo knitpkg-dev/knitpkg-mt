@@ -26,7 +26,7 @@ class CallbackHandler(http.server.SimpleHTTPRequestHandler):
                 self.server.code = code  # Armazena o code no servidor
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(b"Login successful! Close this window and return to the CLI.")
+                self.wfile.write(b"Login successful! Close this window and return to the KnitPkg CLI.")
             else:
                 self.send_response(400)
                 self.end_headers()
@@ -44,16 +44,12 @@ def register(app):
     def login(provider: str = typer.Option("github", "--provider", help="Provider: github, gitlab or mql5forge")):
         """Logs in to the registry via OAuth and stores the token."""
 
-        # Build authorization URL (similar to /auth/{provider} in the registry)
-        if provider == "github":
-            auth_url = f"{REGISTRY_URL}/auth/github"  # Usa o endpoint do registry para iniciar
-        elif provider == "gitlab":
-            auth_url = f"{REGISTRY_URL}/auth/gitlab"  # Ajuste se adicionar endpoint no registry
-        elif provider == "mql5forge":
-            auth_url = f"{REGISTRY_URL}/auth/mql5forge"  # Ajuste se adicionar endpoint no registry
-        else:
-            typer.echo("Invalid provider. Use 'github', 'gitlab' or 'mql5forge'.")
+        if provider not in ['github','gitlab','mql5forge','bitbucket']:
+            typer.echo("Invalid provider. Use 'github', 'gitlab', 'mql5forge' or 'bitbucket'.")
             raise typer.Exit(code=1)
+
+        # Build authorization URL
+        auth_url = f"{REGISTRY_URL}/auth/{provider}"
 
         typer.echo(f"Opening browser for login via {provider.capitalize()}...")
         webbrowser.open(auth_url)
