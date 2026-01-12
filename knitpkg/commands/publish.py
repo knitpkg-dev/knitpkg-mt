@@ -166,7 +166,6 @@ def register(app):
                     response = await client.post(
                         f"{REGISTRY_URL}/packages/",
                         json=payload,
-                        params={"provider": provider},
                         headers={"Authorization": f"Bearer {token}"}
                     )
                     response.raise_for_status() # Raise an exception for bad status codes
