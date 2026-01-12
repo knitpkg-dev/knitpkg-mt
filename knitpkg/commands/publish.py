@@ -101,12 +101,7 @@ def register(app):
             typer.echo(f"You need to login to your git provider first. Run `kp-mt login {provider}`.")
             raise typer.Exit(code=1)
 
-        # Extract required fields
-        org_name = manifest.organization
-        name = manifest.name
-        description = manifest.description
-
-        if not all([org_name, name, description]):
+        if not all([manifest.organization, manifest.name, manifest.description]):
             typer.echo("Incomplete manifest: organization, name and description are mandatory.")
             raise typer.Exit(code=1)
 
@@ -114,14 +109,18 @@ def register(app):
 
         # Prepare payload
         payload = {
-            "org_name": org_name,
-            "name": name,
-            "description": description,
+            "organization": manifest.organization,
+            "name": manifest.name,
+            "target": manifest.target,
+            "description": manifest.description,
+            "version": manifest.version,
             "repo_url": repo_url,
-            "commit_hash": commit_hash
+            "commit_hash": commit_hash,
+            "is_private": False,
+            "dependencies": manifest.dependencies
         }
 
-        typer.echo(f"Publishing @{org_name}/{name} with commit {commit_hash}...")
+        typer.echo(f"Publishing {manifest.target} @{manifest.organization}/{manifest.name} with version {manifest.version} and commit {commit_hash}...")
 
         # Async POST to /packages
         async def send_publish_request():
@@ -129,14 +128,13 @@ def register(app):
                 response = await client.post(
                     f"{REGISTRY_URL}/packages/",
                     json=payload,
-                    params={"provider": provider},
                     headers={"Authorization": f"Bearer {token}"}
                 )
                 return response
 
         response = asyncio.run(send_publish_request())
 
-        if response.status_code == 200:
+        if response.status_code == 201:
             typer.echo("Package published successfully!")
             typer.echo(response.json())
         else:
