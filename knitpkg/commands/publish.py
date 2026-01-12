@@ -16,7 +16,7 @@ from typing import Optional
 import git
 from pathlib import Path
 
-from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.core.file_reading import load_knitpkg_manifest
 
 # Configurations
 REGISTRY_URL = "http://localhost:8000"
@@ -46,7 +46,7 @@ def register(app):
             raise typer.Exit(code=1)
 
         try:
-            manifest = load_helix_manifest(project_path)
+            manifest = load_knitpkg_manifest(project_path)
         except FileNotFoundError:
             typer.echo("Manifest file not found.")
             raise typer.Exit(code=1)

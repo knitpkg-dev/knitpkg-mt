@@ -7,10 +7,10 @@ These exceptions are raised by MQL compilation and processing subsystems.
 The CLI layer catches them and translates into appropriate exit codes.
 """
 
-from knitpkg.core.exceptions import HelixError
+from knitpkg.core.exceptions import KnitPkgError
 
 
-class MQLCompilationError(HelixError):
+class MQLCompilationError(KnitPkgError):
     """Base exception for all MQL compilation failures."""
     pass
 

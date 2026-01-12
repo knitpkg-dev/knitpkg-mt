@@ -24,7 +24,7 @@ import git
 from rich.console import Console
 
 from knitpkg.core.lockfile import load_lockfile, save_lockfile, is_lock_change
-from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.utils import is_local_path
 from knitpkg.core.constants import CACHE_DIR
 
@@ -132,7 +132,7 @@ class DependencyDownloader:
         platform-specific constraints (e.g., MQL can only depend on packages).
 
         Args:
-            manifest: Loaded HelixManifest object
+            manifest: Loaded KnitPkgManifest object
             dep_path: Path to the dependency
 
         Returns:
@@ -154,7 +154,7 @@ class DependencyDownloader:
         (e.g., MQL requires knitpkg/include/ for packages).
 
         Args:
-            manifest: Loaded HelixManifest object
+            manifest: Loaded KnitPkgManifest object
             project_dir: Path to the project/dependency
             is_dependency: True if validating a dependency, False for main project
         """
@@ -223,7 +223,7 @@ class DependencyDownloader:
 
         # Load manifest to get version
         try:
-            manifest = load_helix_manifest(dep_path)
+            manifest = load_knitpkg_manifest(dep_path)
             version = manifest.version
         except Exception:
             version = "unknown"
@@ -263,7 +263,7 @@ class DependencyDownloader:
 
         # Load manifest to get version
         try:
-            manifest = load_helix_manifest(dep_path)
+            manifest = load_knitpkg_manifest(dep_path)
             version = manifest.version
         except Exception:
             version = "unknown"
@@ -505,7 +505,7 @@ class DependencyDownloader:
         which can be overridden by platform-specific subclasses.
         """
         try:
-            sub_manifest: dict = load_helix_manifest(dep_path)
+            sub_manifest: dict = load_knitpkg_manifest(dep_path)
 
             # Platform-specific validation (overridable)
             if not self.validate_manifest(sub_manifest, dep_path):

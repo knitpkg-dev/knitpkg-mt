@@ -156,7 +156,7 @@ def get_field_info(model_class):
 
 
 def generate_fields_table():
-    fields = get_field_info(models.HelixManifest)
+    fields = get_field_info(models.KnitPkgManifest)
     rows = []
     for f in fields:
         req_class = "required" if "Yes" in f["required"] else "optional"

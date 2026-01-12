@@ -18,11 +18,11 @@ from rich.console import Console
 import typer
 
 from knitpkg.core.utils import navigate_path
-from knitpkg.core.file_reading import load_helix_manifest, read_file_smart
+from knitpkg.core.file_reading import load_knitpkg_manifest, read_file_smart
 
 # Import MQL-specific models and downloader
 from knitpkg.mql.constants import FLAT_DIR, INCLUDE_DIR
-from knitpkg.mql.models import MQLHelixManifest, MQLProjectType, IncludeMode
+from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType, IncludeMode
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from knitpkg.mql.validators import validate_mql_project_structure
 from knitpkg.mql.constants import INCLUDE_DIR
@@ -42,10 +42,10 @@ from knitpkg.core.exceptions import (
 )
 
 # ==============================================================
-# HELIX INCLUDE DIRECTIVES PATTERN CLASS
+# KNITPKG INCLUDE DIRECTIVES PATTERN CLASS
 # ==============================================================
 
-class ResolveHelixIncludePattern:
+class ResolveKnitPkgIncludePattern:
     """
     Parses KnitPkg include directives from MQL source code.
 
@@ -87,8 +87,8 @@ class IncludeModeProcessor:
     def __init__(self, console: Console, project_dir: Path):
         self.console = console
         self.project_dir = project_dir
-        self.resolve_include_pattern: ResolveHelixIncludePattern = (
-            ResolveHelixIncludePattern()
+        self.resolve_include_pattern: ResolveKnitPkgIncludePattern = (
+            ResolveKnitPkgIncludePattern()
         )
 
     def process(self, resolved_deps: ResolvedDeps) -> None:
@@ -209,11 +209,11 @@ class FlatModeProcessor:
     def __init__(self, console: Console, project_dir: Path):
         self.console = console
         self.project_dir = project_dir
-        self.resolve_include_pattern: ResolveHelixIncludePattern = (
-            ResolveHelixIncludePattern()
+        self.resolve_include_pattern: ResolveKnitPkgIncludePattern = (
+            ResolveKnitPkgIncludePattern()
         )
 
-    def process(self, manifest: MQLHelixManifest, resolved_deps: ResolvedDeps) -> None:
+    def process(self, manifest: MQLKnitPkgManifest, resolved_deps: ResolvedDeps) -> None:
         """Process entrypoints in flat mode."""
 
         self.console.log(f"[bold blue]Resolving dependencies... ('flat' mode)[/]")
@@ -229,7 +229,7 @@ class FlatModeProcessor:
             content = read_file_smart(src)
             header = (
                 f"// {'='*70}\n"
-                f"// HELIX FLAT — DO NOT EDIT\n"
+                f"// KNITPKG FLAT — DO NOT EDIT\n"
                 f"// Project: {manifest.name} v{manifest.version}\n"
                 f"// File: {entry}\n"
                 f"// {'='*70}\n\n"
@@ -350,10 +350,10 @@ class FlatModeProcessor:
         return self.resolve_include_pattern.pattern.sub(replace, content)
 
 # ==============================================================
-# HELIX INSTALLER CLASS
+# KNITPKG INSTALLER CLASS
 # ==============================================================
 
-class HelixInstaller:
+class KnitPkgInstaller:
     """
     Encapsulates KnitPkg install functionality for dependency resolution
     and output generation.
@@ -375,9 +375,9 @@ class HelixInstaller:
             SystemExit: On fatal errors (dependency not found, locked mode violations, etc.)
         """
         try:
-            manifest: MQLHelixManifest = load_helix_manifest(
+            manifest: MQLKnitPkgManifest = load_knitpkg_manifest(
                 self.project_dir,
-                manifest_class=MQLHelixManifest
+                manifest_class=MQLKnitPkgManifest
             )
 
             effective_mode = (
@@ -417,7 +417,7 @@ class HelixInstaller:
 
     def _log_install_start(
         self,
-        manifest: MQLHelixManifest,
+        manifest: MQLKnitPkgManifest,
         effective_mode: IncludeMode
     ) -> None:
         self.console.log(
@@ -430,7 +430,7 @@ class HelixInstaller:
                 f"[bold yellow]'{effective_mode.value}'[/] mode)"
             )
 
-    def _prepare_output_directories(self, manifest: MQLHelixManifest) -> None:
+    def _prepare_output_directories(self, manifest: MQLKnitPkgManifest) -> None:
         flat_dir = self.project_dir / FLAT_DIR
         include_dir = self.project_dir / INCLUDE_DIR
 
@@ -445,7 +445,7 @@ class HelixInstaller:
 
     def _resolve_dependencies(
         self,
-        manifest: MQLHelixManifest,
+        manifest: MQLKnitPkgManifest,
         locked_mode: bool,
         show_tree: bool
     ) -> ResolvedDeps:
@@ -508,9 +508,9 @@ class HelixInstaller:
 # ==============================================================
 
 def install_command(project_dir: Path, locked_mode: bool, show_tree: bool, verbose: bool):
-    """Command wrapper for HelixInstaller."""
+    """Command wrapper for KnitPkgInstaller."""
     console = Console(log_path=verbose)
-    installer = HelixInstaller(console, project_dir)
+    installer = KnitPkgInstaller(console, project_dir)
     installer.install(locked_mode, show_tree)
 
 # ==============================================================

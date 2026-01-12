@@ -3,8 +3,8 @@
 import pytest
 from pathlib import Path
 import json
-from knitpkg.core.file_reading import load_helix_manifest
-from knitpkg.mql.models import MQLHelixManifest
+from knitpkg.core.file_reading import load_knitpkg_manifest
+from knitpkg.mql.models import MQLKnitPkgManifest
 
 VALID_URLS = [
     # === SemVer clássico (com e sem v), versão exata ===
@@ -87,7 +87,7 @@ def test_valid_dependency_urls(tmp_path: Path, url: str):
     (d / "knitpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     # Should load without error using MQL manifest
-    manifest_obj = load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
+    manifest_obj = load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
     assert manifest_obj.dependencies["mylib"] == url
 
 @pytest.mark.parametrize("url", INVALID_URLS)
@@ -109,7 +109,7 @@ def test_invalid_dependency_urls(tmp_path: Path, url: str):
 
     # Should raise ValueError with clear message
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
+        load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
     error_msg = str(exc.value)
     assert "Invalid dependency 'mylib'" in error_msg or "Error reading knitpkg." in error_msg
@@ -129,5 +129,5 @@ def test_branch_main_is_accepted(tmp_path: Path):
         }
     }
     (d / "knitpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
-    obj = load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
+    obj = load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
     assert obj.dependencies["telegram"] == "git@github.com:fabiuz/telegram.mql.git#branch=main"

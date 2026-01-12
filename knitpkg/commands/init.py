@@ -151,7 +151,7 @@ void OnStart()
 """
 
 TEMPLATE_PACKAGE_GETTING_STARTED = """================================================================================
-                GETTING STARTED WITH HELIX PACKAGE DEVELOPMENT
+                GETTING STARTED WITH KNITPKG PACKAGE DEVELOPMENT
 ================================================================================
 
 This file should be deleted after reading. It is excluded from version control
@@ -295,7 +295,7 @@ TEMPLATE_ENTRYPOINT_MQL = """//+------------------------------------------------
 """
 
 TEMPLATE_EXPERT_GETTING_STARTED = """================================================================================
-                GETTING STARTED WITH HELIX EXPERT ADVISOR DEVELOPMENT
+                GETTING STARTED WITH KNITPKG EXPERT ADVISOR DEVELOPMENT
 ================================================================================
 
 This file is only a quick-start guide.  Delete it after you have read it - it
@@ -608,7 +608,7 @@ int OnCalculate(const int32_t rates_total,
 """
 
 TEMPLATE_INDICATOR_GETTING_STARTED = """================================================================================
-                GETTING STARTED WITH HELIX INDICATOR DEVELOPMENT
+                GETTING STARTED WITH KNITPKG INDICATOR DEVELOPMENT
 ================================================================================
 
 This file is only a quick-start guide.  Delete it after you have read it - it
@@ -796,7 +796,7 @@ void OnStart()
 """
 
 TEMPLATE_SCRIPT_GETTING_STARTED = """================================================================================
-                GETTING STARTED WITH HELIX SCRIPT DEVELOPMENT
+                GETTING STARTED WITH KNITPKG SCRIPT DEVELOPMENT
 ================================================================================
 
 This file is only a quick-start guide.  Delete it after you have read it - it
@@ -984,7 +984,7 @@ TEMPLATE_LIBRARY = """//+-------------------------------------------------------
 """
 
 TEMPLATE_LIBRARY_GETTING_STARTED = """================================================================================
-                GETTING STARTED WITH HELIX LIBRARY DEVELOPMENT
+                GETTING STARTED WITH KNITPKG LIBRARY DEVELOPMENT
 ================================================================================
 
 This file is only a quick-start guide.  Delete it after you have read it - it
@@ -1174,7 +1174,7 @@ void OnStart()
 """
 
 TEMPLATE_SERVICE_GETTING_STARTED = """================================================================================
-                GETTING STARTED WITH HELIX SERVICE DEVELOPMENT
+                GETTING STARTED WITH KNITPKG SERVICE DEVELOPMENT
 ================================================================================
 
 This file is only a quick-start guide.  Delete it after you have read it - it
@@ -1846,21 +1846,21 @@ class ProjectInitializer:
             self.console.print(f"[green]Created {self.project_root / '.gitignore'}[/green]")
 
             # Create knitpkg/ directories
-            helix_dir = self.project_root / "knitpkg"
-            helix_dir.mkdir(exist_ok=True)
+            knitpkg_dir = self.project_root / "knitpkg"
+            knitpkg_dir.mkdir(exist_ok=True)
 
 
             if self.project_type == MQLProjectType.PACKAGE:
-                (helix_dir / "autocomplete").mkdir(exist_ok=True)
-                (helix_dir / "include" / self.organization).mkdir(exist_ok=True, parents=True)
+                (knitpkg_dir / "autocomplete").mkdir(exist_ok=True)
+                (knitpkg_dir / "include" / self.organization).mkdir(exist_ok=True, parents=True)
             else:
                 if self.include_mode == IncludeMode.FLAT:
-                    (helix_dir / "flat").mkdir(exist_ok=True)
+                    (knitpkg_dir / "flat").mkdir(exist_ok=True)
                 else:
-                    (helix_dir / "include").mkdir(exist_ok=True)
+                    (knitpkg_dir / "include").mkdir(exist_ok=True)
 
 
-            self.console.print(f"[green]Created KnitPkg internal directories under {helix_dir}[/green]")
+            self.console.print(f"[green]Created KnitPkg internal directories under {knitpkg_dir}[/green]")
 
             # Create project-specific files based on type
             if self.project_type == MQLProjectType.PACKAGE:

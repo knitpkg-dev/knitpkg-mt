@@ -11,8 +11,8 @@ from knitpkg.core.exceptions import (
     LocalDependencyNotGitError,
     DependencyHasLocalChangesError,
 )
-from knitpkg.core.file_reading import load_helix_manifest
-from knitpkg.mql.models import MQLHelixManifest
+from knitpkg.core.file_reading import load_knitpkg_manifest
+from knitpkg.mql.models import MQLKnitPkgManifest
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from rich.console import Console
 
@@ -33,7 +33,7 @@ def test_local_dependency_not_found(tmp_path: Path):
     }
     (d / "knitpkg.json").write_text(json.dumps(manifest_data))
 
-    manifest = load_helix_manifest(d, manifest_class=MQLHelixManifest)
+    manifest = load_knitpkg_manifest(d, manifest_class=MQLKnitPkgManifest)
     downloader = MQLDependencyDownloader(Console(), Path.cwd())
 
     with pytest.raises(LocalDependencyNotFoundError) as exc:
@@ -72,7 +72,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     }
     (main_dir / "knitpkg.json").write_text(json.dumps(main_manifest))
 
-    manifest = load_helix_manifest(main_dir, manifest_class=MQLHelixManifest)
+    manifest = load_knitpkg_manifest(main_dir, manifest_class=MQLKnitPkgManifest)
     downloader = MQLDependencyDownloader(Console(), Path.cwd())
 
     with pytest.raises(LocalDependencyNotGitError) as exc:

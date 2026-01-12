@@ -18,8 +18,8 @@ from rich.console import Console
 from rich.table import Table
 import typer
 
-from knitpkg.core.file_reading import load_helix_manifest
-from knitpkg.mql.models import MQLHelixManifest, Target
+from knitpkg.core.file_reading import load_knitpkg_manifest
+from knitpkg.mql.models import MQLKnitPkgManifest, Target
 from knitpkg.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
 from knitpkg.mql.constants import FLAT_DIR
 from knitpkg.mql.settings import get_mql4_data_folder_path, get_mql5_data_folder_path
@@ -70,7 +70,7 @@ class MQLCompiler:
     def __init__(self, console: Console, project_dir: Path):
         self.console = console
         self.project_dir = project_dir
-        self.manifest: Optional[MQLHelixManifest] = None
+        self.manifest: Optional[MQLKnitPkgManifest] = None
         self.results: List[CompilationResult] = []
         self.compile_logs_dir = project_dir / COMPILE_LOGS_DIR
 
@@ -93,9 +93,9 @@ class MQLCompiler:
             CompilationFailedError: If one or more files fail to compile
         """
         # Load manifest
-        self.manifest = load_helix_manifest(
+        self.manifest = load_knitpkg_manifest(
             self.project_dir,
-            manifest_class=MQLHelixManifest
+            manifest_class=MQLKnitPkgManifest
         )
 
         # Determine compiler path based on target

@@ -30,7 +30,7 @@ def validate_mql_project_structure(
     Emits friendly warnings only (does not break the build).
 
     Args:
-        manifest: MQLHelixManifest object
+        manifest: MQLKnitPkgManifest object
         project_dir: Path to project root
         is_dependency: True if validating a dependency
         console: Rich console for logging
@@ -80,7 +80,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
     Validate MQL-specific manifest constraints for dependencies.
 
     Args:
-        manifest: MQLHelixManifest object
+        manifest: MQLKnitPkgManifest object
         console: Rich console for logging
 
     Returns:

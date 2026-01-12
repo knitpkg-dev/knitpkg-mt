@@ -1,5 +1,5 @@
 # No seu test_integration_deps.py
-from knitpkg.commands.install import HelixInstaller
+from knitpkg.commands.install import KnitPkgInstaller
 from knitpkg.commands.autocomplete import AutocompleteGenerator
 from pathlib import Path
 import pytest
@@ -471,9 +471,9 @@ def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_c
 def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str, expert_test_mq5_content: str, expert_test_mqh_content: str) -> str:
     """
     Tests the resolution of a complex dependency tree (4 levels with merge)
-    and the correct generation of the flat include file by instantiating HelixInstaller directly.
+    and the correct generation of the flat include file by instantiating KnitPkgInstaller directly.
     """
-    root_dir = tmp_path / "helix_test_root"
+    root_dir = tmp_path / "knitpkg_test_root"
     print('='*50)
     print(f"===========complex_dependency_tree_and_flat_include root dir: {root_dir}")
     print('='*50)
@@ -497,9 +497,9 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
 
     # Instantiate InstallCommand and call install directly
     # The InstallCommand expects a Console instance
-    installer = HelixInstaller(console=mock_console, project_dir=expert_test_path)
+    installer = KnitPkgInstaller(console=mock_console, project_dir=expert_test_path)
 
-    print(f"\nRunning HelixInstaller.install for {expert_test_path}")
+    print(f"\nRunning KnitPkgInstaller.install for {expert_test_path}")
     try:
         # The install method expects the path to the project root
         installer.install(locked_mode=False, show_tree=True)
@@ -518,8 +518,8 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
                 print(error)
 
     except Exception as e:
-        # If an exception occurs within HelixInstaller, print captured output
-        print(f"\n--- HelixInstaller FAILED with an exception: {e} ---")
+        # If an exception occurs within KnitPkgInstaller, print captured output
+        print(f"\n--- KnitPkgInstaller FAILED with an exception: {e} ---")
         print("\n--- Captured Console Logs (before exception) ---")
         for log in mock_console.logs:
             print(log)
@@ -531,7 +531,7 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
             print("\n--- Captured Console Errors (before exception) ---")
             for error in mock_console.errors:
                 print(error)
-        pytest.fail(f"HelixInstaller.install failed: {e}")
+        pytest.fail(f"KnitPkgInstaller.install failed: {e}")
 
     return root_dir
 
@@ -585,7 +585,7 @@ def test_complex_dependency_tree_and_flat_include_expert_yaml2(tmp_path: Path):
     check_flat_content(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_2, EXPERT_TEST_MQ5_CONTENT_FLAT_MODE, EXPERT_TEST_MQH_FLAT_CONTENT))
 
 def test_autocomplete(tmp_path: Path):
-    root_dir = tmp_path / "helix_test_root"
+    root_dir = tmp_path / "knitpkg_test_root"
     print('='*50)
     print(f"===========test_autocomplete root dir: {root_dir}")
     print('='*50)
@@ -623,7 +623,7 @@ def test_autocomplete(tmp_path: Path):
                 print(error)
 
     except Exception as e:
-        # If an exception occurs within HelixInstaller, print captured output
+        # If an exception occurs within KnitPkgInstaller, print captured output
         print(f"\n--- AutocompleteGenerator FAILED with an exception: {e} ---")
         print("\n--- Captured Console Logs (before exception) ---")
         for log in mock_console.logs:
@@ -706,5 +706,5 @@ def check_include_mode(root_dir: Path):
 
     assert depe_content == DEP_E_MQH_CONTENT
 
-def test_helix_directives_and_include_mode(tmp_path: Path):
+def test_knitpkg_directives_and_include_mode(tmp_path: Path):
     check_include_mode(create_test_dir_with_all_projects(tmp_path, EXPERT_TEST_YAML_CONTENT_3, EXPERT_TEST_MQ5_CONTENT_INCLUDE_MODE, EXPERT_TEST_MQH_INCMODE_CONTENT))

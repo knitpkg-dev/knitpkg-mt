@@ -98,10 +98,10 @@ class DistSection(BaseModel):
         return release.name.replace("${version}", version)
 
 # ==============================================================
-# HELIX PRO / ENTERPRISE SECTIONS
+# KNITPKG PRO / ENTERPRISE SECTIONS
 # ==============================================================
 
-class HelixProSection(BaseModel):
+class KnitPkgProSection(BaseModel):
     """KnitPkg Pro configuration for private repositories."""
     model_config = ConfigDict(extra="forbid")
 
@@ -114,7 +114,7 @@ class HelixProSection(BaseModel):
         description="OAuth provider for private repo access"
     )
 
-class HelixEnterpriseSection(BaseModel):
+class KnitPkgEnterpriseSection(BaseModel):
     """KnitPkg Enterprise configuration for corporate environments."""
     model_config = ConfigDict(extra="forbid")
 
@@ -123,15 +123,15 @@ class HelixEnterpriseSection(BaseModel):
         description="Proxy URL for enterprise environments"
     )
 
-class HelixSection(BaseModel):
+class KnitPkgSection(BaseModel):
     """KnitPkg Pro and Enterprise settings."""
     model_config = ConfigDict(extra="forbid")
 
-    pro: Optional[HelixProSection] = Field(
+    pro: Optional[KnitPkgProSection] = Field(
         default=None,
         description="KnitPkg Pro configuration"
     )
-    enterprise: Optional[HelixEnterpriseSection] = Field(
+    enterprise: Optional[KnitPkgEnterpriseSection] = Field(
         default=None,
         description="KnitPkg Enterprise configuration"
     )
@@ -185,10 +185,10 @@ def _is_valid_ref(ref: str) -> bool:
     return bool(SEMVER_PATTERN.match(cleaned))
 
 # ==============================================================
-# BASE HELIX MANIFEST
+# BASE KNITPKG MANIFEST
 # ==============================================================
 
-class HelixManifest(BaseModel):
+class KnitPkgManifest(BaseModel):
     """
     KnitPkg base manifest.
     """
@@ -258,7 +258,7 @@ class HelixManifest(BaseModel):
         description="Distribution package configuration"
     )
 
-    knitpkg: Optional[HelixSection] = Field(
+    knitpkg: Optional[KnitPkgSection] = Field(
         default=None,
         description="KnitPkg Pro and Enterprise settings"
     )

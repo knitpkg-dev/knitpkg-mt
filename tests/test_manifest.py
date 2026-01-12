@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from knitpkg.mql.models import MQLHelixManifest, MQLProjectType, Target
-from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType, Target
+from knitpkg.core.file_reading import load_knitpkg_manifest
 
 # --------------------------------------------------------------------------- #
 # Fixtures
@@ -68,9 +68,9 @@ def package_project(tmp_path: Path) -> Path:
 # --------------------------------------------------------------------------- #
 def test_load_valid_manifest(sample_dir: Path):
     """Test loading a complete valid manifest"""
-    manifest = load_helix_manifest(sample_dir / "knitpkg.json", manifest_class=MQLHelixManifest)
+    manifest = load_knitpkg_manifest(sample_dir / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
-    assert isinstance(manifest, MQLHelixManifest)
+    assert isinstance(manifest, MQLKnitPkgManifest)
     assert manifest.name == "super-rsi-alert"
     assert manifest.version == "2.4.1"
     assert manifest.description == "RSI with visual, sound and Telegram alerts"
@@ -97,7 +97,7 @@ def test_load_valid_manifest(sample_dir: Path):
 
 def test_package_has_no_entrypoint(package_project: Path):
     """Ensure package projects are accepted without entrypoints"""
-    manifest = load_helix_manifest(package_project / "knitpkg.json", manifest_class=MQLHelixManifest)
+    manifest = load_knitpkg_manifest(package_project / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
     assert manifest.target == Target.MQL5
     assert manifest.type == MQLProjectType.PACKAGE
@@ -117,7 +117,7 @@ def test_missing_entrypoint_for_flat_mode(tmp_path: Path):
     (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")
 
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
+        load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
     assert "Include mode 'flat' requires at least one entrypoint" in str(exc.value)
 
@@ -138,7 +138,7 @@ def test_invalid_git_url(tmp_path: Path):
     (d / "knitpkg.json").write_text(json.dumps(data))
 
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
+        load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
     error_msg = str(exc.value)
     assert "Invalid dependency 'badlib'" in error_msg or "Error reading knitpkg." in error_msg
@@ -157,11 +157,11 @@ def test_invalid_semver(tmp_path: Path):
     (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")
 
     with pytest.raises(ValueError) as exc:
-        load_helix_manifest(d / "knitpkg.json", manifest_class=MQLHelixManifest)
+        load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
     assert "version must follow SemVer format" in str(exc.value)
 
 def test_file_not_found():
     """knitpkg.json not found"""
     with pytest.raises(FileNotFoundError):
-        load_helix_manifest("/path/that/does/not/exist/knitpkg.json", manifest_class=MQLHelixManifest)
+        load_knitpkg_manifest("/path/that/does/not/exist/knitpkg.json", manifest_class=MQLKnitPkgManifest)

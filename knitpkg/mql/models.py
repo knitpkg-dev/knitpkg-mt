@@ -3,7 +3,7 @@
 """
 MQL-specific manifest extensions for MetaTrader 4/5.
 
-This module extends the base HelixManifest with MQL-specific fields
+This module extends the base KnitPkgManifest with MQL-specific fields
 and validation logic.
 """
 
@@ -12,7 +12,7 @@ from enum import Enum
 from pydantic import Field, field_validator, model_validator
 from typing_extensions import Self  # ← Add this import
 
-from knitpkg.core.models import HelixManifest, ProjectType
+from knitpkg.core.models import KnitPkgManifest, ProjectType
 
 # ==============================================================
 # MQL-SPECIFIC ENUMS
@@ -42,12 +42,12 @@ class IncludeMode(str, Enum):
     FLAT = "flat"        # Generate self-contained _flat files
 
 # ==============================================================
-# MQL HELIX MANIFEST
+# MQL KNITPKG MANIFEST
 # ==============================================================
 
-class MQLHelixManifest(HelixManifest):
+class MQLKnitPkgManifest(KnitPkgManifest):
     """
-    MQL-specific manifest extending the base HelixManifest.
+    MQL-specific manifest extending the base KnitPkgManifest.
 
     Adds MetaTrader-specific fields: target (MQL4/MQL5), type (project types),
     include_mode, and entrypoints.

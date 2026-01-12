@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional, Union, Type
 import chardet
 
-from .models import HelixManifest
+from .models import KnitPkgManifest
 
 def read_file_smart(path: Path) -> str:
     """
@@ -56,10 +56,10 @@ def read_file_smart(path: Path) -> str:
     text = text.replace("\x00", "")
     return text
 
-def load_helix_manifest(
+def load_knitpkg_manifest(
     path: Optional[Union[str, Path]] = None,
-    manifest_class: Optional[Type[HelixManifest]] = None
-) -> HelixManifest:
+    manifest_class: Optional[Type[KnitPkgManifest]] = None
+) -> KnitPkgManifest:
     """
     Load knitpkg.json OR knitpkg.yaml (YAML takes precedence if both exist).
 
@@ -68,23 +68,23 @@ def load_helix_manifest(
             - None: current directory
             - Path to file (knitpkg.yaml/knitpkg.json)
             - Directory (searches for manifest inside it)
-        manifest_class: Manifest class to use (defaults to HelixManifest).
-            Use MQLHelixManifest for MQL-specific validation.
+        manifest_class: Manifest class to use (defaults to KnitPkgManifest).
+            Use MQLKnitPkgManifest for MQL-specific validation.
 
     Returns:
-        HelixManifest or subclass instance (e.g., MQLHelixManifest)
+        KnitPkgManifest or subclass instance (e.g., MQLKnitPkgManifest)
 
     Raises:
         ValueError: Invalid filename
         FileNotFoundError: No manifest found
 
     Example:
-        >>> from knitpkg.mql.models import MQLHelixManifest
-        >>> manifest = load_helix_manifest("path/to/project", MQLHelixManifest)
+        >>> from knitpkg.mql.models import MQLKnitPkgManifest
+        >>> manifest = load_knitpkg_manifest("path/to/project", MQLKnitPkgManifest)
         >>> print(manifest.target)  # Target.MQL5
     """
     if manifest_class is None:
-        manifest_class = HelixManifest
+        manifest_class = KnitPkgManifest
 
     if path is None:
         path = Path.cwd()
@@ -114,7 +114,7 @@ def load_helix_manifest(
             f"No manifest file found in {path}: knitpkg.yaml or knitpkgkg.json"
         )
 
-def _load_from_yaml(path: Path, manifest_class: Type[HelixManifest]) -> HelixManifest:
+def _load_from_yaml(path: Path, manifest_class: Type[KnitPkgManifest]) -> KnitPkgManifest:
     """Load and parse a knitpkg.yaml manifest file."""
     try:
         raw = path.read_text(encoding="utf-8")
@@ -125,7 +125,7 @@ def _load_from_yaml(path: Path, manifest_class: Type[HelixManifest]) -> HelixMan
     except Exception as e:
         raise ValueError(f"Error reading knitpkg.yaml: {e}")
 
-def _load_from_json(path: Path, manifest_class: Type[HelixManifest]) -> HelixManifest:
+def _load_from_json(path: Path, manifest_class: Type[KnitPkgManifest]) -> KnitPkgManifest:
     """Load and parse a knitpkg.json manifest file."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))

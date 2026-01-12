@@ -8,7 +8,7 @@ providing clear error messages and separating concerns between library
 code (which raises exceptions) and CLI code (which handles them).
 """
 
-class HelixError(Exception):
+class KnitPkgError(Exception):
     """Base exception for all KnitPkg errors."""
     pass
 
@@ -16,7 +16,7 @@ class HelixError(Exception):
 # DEPENDENCY RESOLUTION ERRORS
 # ==============================================================
 
-class DependencyError(HelixError):
+class DependencyError(KnitPkgError):
     """Base exception for dependency-related errors."""
     pass
 
@@ -58,7 +58,7 @@ class DependencyHasLocalChangesError(DependencyError):
 # MANIFEST ERRORS
 # ==============================================================
 
-class ManifestError(HelixError):
+class ManifestError(KnitPkgError):
     """Base exception for manifest-related errors."""
     pass
 

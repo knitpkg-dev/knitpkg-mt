@@ -11,8 +11,8 @@ from typing import Optional
 from pathlib import Path
 from rich.console import Console
 
-from knitpkg.mql.models import ProjectType, MQLHelixManifest
-from knitpkg.core.file_reading import load_helix_manifest
+from knitpkg.mql.models import ProjectType, MQLKnitPkgManifest
+from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.utils import navigate_path
 from knitpkg.mql.constants import INCLUDE_DIR
 
@@ -47,9 +47,9 @@ class AutocompleteGenerator:
         dependencies, making them available for autocompletion
         in MetaEditor.
         """
-        manifest: MQLHelixManifest = load_helix_manifest(
+        manifest: MQLKnitPkgManifest = load_knitpkg_manifest(
             self.project_dir,
-            manifest_class=MQLHelixManifest
+            manifest_class=MQLKnitPkgManifest
         )
 
         if manifest.type != ProjectType.PACKAGE:

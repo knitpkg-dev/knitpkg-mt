@@ -8,7 +8,7 @@ import re
 # ----------------------------------------------------------------------
 
 # Pattern definition (copied from commands/install.py for testing)
-HELIX_PATTERN = re.compile(
+KNITPKG_PATTERN = re.compile(
     r'^\s*#\s*include\s+"(?P<include>[^"]+)"'
     r'(?:\s*/\*\s*@knitpkg:(?P<directive1>\w+(?:-\w+)*)\s+"(?P<path1>[^"]+)"\s*\*/)?\s*$'
     r'|'
@@ -16,7 +16,7 @@ HELIX_PATTERN = re.compile(
     re.MULTILINE
 )
 
-def parse_helix_line(line: str):
+def parse_knitpkg_line(line: str):
     """
     Parse a line containing a KnitPkg directive.
 
@@ -24,7 +24,7 @@ def parse_helix_line(line: str):
         dict with keys: "include", "directive", "replace"
         or None if the line does not match any supported KnitPkg pattern.
     """
-    m = HELIX_PATTERN.match(line)
+    m = KNITPKG_PATTERN.match(line)
     if not m:
         return None
 
@@ -82,7 +82,7 @@ def parse_helix_line(line: str):
 )
 def test_parse_individual_lines(line, expected):
     """Test parsing of individual lines with various formatting styles."""
-    assert parse_helix_line(line) == expected
+    assert parse_knitpkg_line(line) == expected
 
 # ----------------------------------------------------------------------
 # Full real-world file block test
@@ -122,9 +122,9 @@ def test_full_real_world_block():
     ]
 
     results = [
-        parse_helix_line(line)
+        parse_knitpkg_line(line)
         for line in texto.splitlines()
-        if parse_helix_line(line) is not None
+        if parse_knitpkg_line(line) is not None
     ]
 
     assert results == expected_results
