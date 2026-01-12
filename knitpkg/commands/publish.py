@@ -91,6 +91,8 @@ def register(app):
             provider = 'gitlab'
         elif 'forge.mql5.io/' in repo_url:
             provider = 'mql5forge'
+        elif 'bitbucket.org/' in repo_url:
+            provider = 'bitbucket'
         else:
             typer.echo(f"Error: Unsupported git provider. Only GitHub, GitLab, and MQL5Forge are supported. Remote URL: {repo_url}")
             raise typer.Exit(code=1)
