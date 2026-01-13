@@ -8,8 +8,7 @@ import json
 
 from knitpkg.core.exceptions import (
     LocalDependencyNotFoundError,
-    LocalDependencyNotGitError,
-    DependencyHasLocalChangesError,
+    LockedWithLocalDependencyError,
 )
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.mql.models import MQLKnitPkgManifest
@@ -75,7 +74,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     manifest = load_knitpkg_manifest(main_dir, manifest_class=MQLKnitPkgManifest)
     downloader = MQLDependencyDownloader(Console(), Path.cwd())
 
-    with pytest.raises(LocalDependencyNotGitError) as exc:
+    with pytest.raises(LockedWithLocalDependencyError) as exc:
         downloader.download_all(manifest.dependencies, locked_mode=True)
 
     assert exc.value.name == "local-dep"

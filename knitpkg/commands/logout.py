@@ -15,9 +15,7 @@ from rich.console import Console
 
 # Import the service name used for keyring from login command
 from .login import CREDENTIALS_SERVICE
-
-# List of supported providers (should be consistent across login/logout)
-SUPPORTED_PROVIDERS = ['github', 'gitlab', 'mql5forge', 'bitbucket']
+from .login import SUPPORTED_PROVIDERS
 
 def register(app):
     """Register the logout command with the main Typer app."""
@@ -61,9 +59,7 @@ def register(app):
                 # keyring.delete_password might raise an error if the password doesn't exist
                 # or if there's another issue with the keyring backend.
                 # We check if the password existed before attempting to delete for a cleaner message.
-                if keyring.get_password(CREDENTIALS_SERVICE, provider) is None:
-                    console.log(f"[yellow]Warning:[/] No active login found for [cyan]{provider.capitalize()}[/]. Nothing to remove.")
-                else:
+                if keyring.get_password(CREDENTIALS_SERVICE, provider) is not None:
                     console.log(f"[red]Error:[/] Failed to remove token for [cyan]{provider.capitalize()}[/]: {e}")
                 raise typer.Exit(code=1)
         else:

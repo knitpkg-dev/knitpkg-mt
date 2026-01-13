@@ -37,7 +37,7 @@ from knitpkg.core.dependency_downloader import (
 # Import custom exceptions
 from knitpkg.core.exceptions import (
     LocalDependencyNotFoundError,
-    LocalDependencyNotGitError,
+    LockedWithLocalDependencyError,
     DependencyHasLocalChangesError,
 )
 
@@ -407,7 +407,7 @@ class KnitPkgInstaller:
 
             self._log_completion(resolved_deps, effective_mode)
 
-        except (LocalDependencyNotFoundError, LocalDependencyNotGitError, DependencyHasLocalChangesError) as e:
+        except (LocalDependencyNotFoundError, LockedWithLocalDependencyError, DependencyHasLocalChangesError) as e:
             # Handle dependency errors with clear messages
             self.console.log(f"[red]Fatal error:[/] {e}")
             raise SystemExit(1)

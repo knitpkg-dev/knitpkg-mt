@@ -14,9 +14,11 @@ import httpx
 from pathlib import Path
 from typing import List, Tuple, Set, Optional, Any
 from dataclasses import dataclass
+import datetime as dt
 
 import shutil
 import git
+import datetime as dt
 
 from rich.console import Console
 
@@ -28,10 +30,8 @@ from knitpkg.core.constants import CACHE_DIR
 # Import custom exceptions
 from knitpkg.core.exceptions import (
     LocalDependencyNotFoundError,
-    LocalDependencyNotGitError,
+    LockedWithLocalDependencyError,
     DependencyHasLocalChangesError,
-    LocalDependencyNotInLockfileError,
-    LocalDependencyCommitMismatchError,
     LocalDependencyManifestError,
     RegistryRequestError,
     GitCloneError,
@@ -140,9 +140,15 @@ class DependencyDownloader:
         """
         org, pack_name = self._parse_package_name(name)
         url = f"{self.registry_base_url}/package/{self.target}/{org}/{pack_name}/{version_spec}"
+        from knitpkg.core.auth import session_access_token
+        _provider, access_token = session_access_token()
+        if access_token:
+            headers = {"Authorization": f"Bearer {access_token}"}
+        else:
+            headers = None
         
         try:
-            response = httpx.get(url, timeout=10.0)
+            response = httpx.get(url, headers=headers, timeout=10.0)
             if response.status_code != 200:
                 raise RegistryRequestError(url, response.status_code, response.text)
             return response.json()
@@ -276,34 +282,10 @@ class DependencyDownloader:
             self.console.log(f"[dim]Already resolved by path:[/] {name} → {resolved_path}")
             return None
 
-        repo_status, current_commit = self._check_local_repo_status(dep_path)
-
         if self.locked_mode:
-            if repo_status == 'not-git':
-                raise LocalDependencyNotGitError(name)
-            if repo_status == 'dirty':
-                raise DependencyHasLocalChangesError(name)
-            
-            lock_data = load_lockfile()
-            lock_data_dep = lock_data["dependencies"].get(name, {})
-            if not lock_data_dep:
-                raise LocalDependencyNotInLockfileError(name)
-            if lock_data_dep.get("commit") != current_commit:
-                raise LocalDependencyCommitMismatchError(name, current_commit or "unknown", lock_data_dep.get("commit", "unknown"))
+            raise LockedWithLocalDependencyError(name)
 
-        else:
-            if repo_status == 'clean' and current_commit:
-                self._update_lockfile_local(name, specifier, dep_path, current_commit)
-            elif repo_status == 'not-git':
-                self.console.log(
-                    f"[bold yellow]Warning:[/] Local dependency '{name}' has no Git history"
-                )
-            else:
-                self.console.log(
-                f"[bold yellow]Warning:[/] Local dependency '{name}' is a Git repository but it is not clean"
-            )
-
-        self.console.log(f"[bold magenta]Local{'-git' if repo_status != 'no-git' else ''}[/] {name}")
+        self.console.log(f"[bold magenta]Local[/] {name}")
 
         # Load manifest to get version
         try:
@@ -375,37 +357,16 @@ class DependencyDownloader:
 
         return resolved_path
 
-    def _update_lockfile_local(
-        self,
-        name: str,
-        specifier: str,
-        dep_path: Path,
-        commit: str
-    ) -> None:
-        """Update lockfile for local git dependency."""
-        lock_data = load_lockfile()
-        if is_lock_change(lock_data, name, str(dep_path.resolve()), specifier, f"commit:{commit}", commit):
-            lock_data["dependencies"][name] = {
-                "source": str(dep_path.resolve()),
-                "specifier": specifier,
-                "resolved": f"commit:{commit}",
-                "commit": commit,
-                "type": "local-git",
-            }
-            save_lockfile(lock_data)
-
     def _update_lockfile_remote(
-        self, name: str, base_url: str, ref_spec: str, final_ref: str, commit: str
+        self, name: str, ref_spec: str, final_ref: str
     ) -> None:
         """Update lockfile for local git dependency."""
         lock_data = load_lockfile()
-        if is_lock_change(lock_data, name, base_url, ref_spec, final_ref, commit):
+        if is_lock_change(lock_data, name, ref_spec, final_ref):
             lock_data["dependencies"][name] = {
-                "source": base_url,
                 "specifier": ref_spec,
                 "resolved": final_ref,
-                "commit": commit,
-                "type": "resolved-git",
+                "resolved_at": dt.datetime.now(dt.timezone.utc).isoformat()
             }
             save_lockfile(lock_data)
 
@@ -425,32 +386,18 @@ class DependencyDownloader:
         lock_data = load_lockfile()
         lock_data_dep = lock_data["dependencies"].get(name, {})
 
+        lock_data_dep_resolved = lock_data_dep.get('resolved', None)
+        if self.locked_mode and lock_data_dep_resolved:
+            dist_info = self._get_package_resolve_dist(name, lock_data_dep_resolved)
+        else:
+            dist_info = self._get_package_resolve_dist(name, specifier)
+
         if dep_path.exists():
             repo: git.Repo = git.Repo(dep_path, search_parent_directories=True)
 
-            status = self._check_repo_integrity(repo, lock_data_dep)
+            status = self._check_repo_integrity(repo, dist_info['repo_url'])
 
-            if status == "invalid_remote_url":
-                # Repository exists in cache but remote URL is invalid; clean and download again
-                shutil.rmtree(str(dep_path))
-                resolved_commit_hash = lock_data_dep.get("commit", None)
-                is_resolved_git = lock_data_dep.get("type", None) == "resolved-git"
-                if self.locked_mode and is_resolved_git and resolved_commit_hash:
-                    self._clone_shallow_to_commit(lock_data_dep['source'], lock_data_dep['commit'], dep_path)
-                else:
-                    dist_info = self._get_package_resolve_dist(name, specifier)
-
-                    git_url = dist_info["repo_url"]
-                    resolved_commit_hash = dist_info["commit_hash"]
-                    self._clone_shallow_to_commit(git_url, resolved_commit_hash, dep_path)
-                    self._update_lockfile_remote(name, git_url, specifier, dist_info["resolved_version"], resolved_commit_hash)
-
-            elif status == "clean" and self.locked_mode:
-                self.console.log(
-                    f"[dim]Cache hit[/] {name} → {lock_data_dep.get('resolved', 'HEAD')[:8]}"
-                )
-            
-            elif status == "dirty":
+            if status == "dirty":
                 if self.locked_mode:
                     raise DependencyHasLocalChangesError(name)
                 self.console.log(
@@ -458,52 +405,30 @@ class DependencyDownloader:
                     f"— using modified version"
                 )
             
+            elif status == "invalid_remote_url":
+                # Repository exists in cache but remote URL is invalid; clean and download again
+                shutil.rmtree(str(dep_path.resolve()))
+                self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_path)
+                if not self.locked_mode or not lock_data_dep_resolved:
+                    self._update_lockfile_remote(name, specifier, dist_info["resolved_version"])
+
             else:
-            
                 # Repository exists in cache and remote URL is correct
-                resolved_commit_hash = lock_data_dep.get("commit", None)
-                is_resolved_git = lock_data_dep.get("type", None) == "resolved-git"
-                if self.locked_mode and is_resolved_git and resolved_commit_hash:
-                    self._checkout_shallow_to_commit(lock_data_dep['commit'], dep_path)
-                else:
+                if not self.locked_mode:
                     self.console.log(
                         f"[dim]Cache drifted[/] {name} — re-resolving..."
                     )
-                    dist_info = self._get_package_resolve_dist(name, specifier)
-
-                    git_url = dist_info["repo_url"]
-                    resolved_commit_hash = dist_info["commit_hash"]
-                    self._checkout_shallow_to_commit(resolved_commit_hash, dep_path)
-                    self._update_lockfile_remote(name, git_url, specifier, dist_info["resolved_version"], resolved_commit_hash)
+                self._checkout_shallow_to_commit(dist_info["commit_hash"], dep_path)
+                if not self.locked_mode or not lock_data_dep_resolved:
+                    self._update_lockfile_remote(name, specifier, dist_info["resolved_version"])
                 
         else:
             # Repo cache directory does not exist
-            resolved_commit_hash = lock_data_dep.get("commit", None)
-            is_resolved_git = lock_data_dep.get("type", None) == "resolved-git"
-            if self.locked_mode and is_resolved_git and resolved_commit_hash:
-                self._clone_shallow_to_commit(lock_data_dep['source'], lock_data_dep['commit'], dep_path)
-            else:
-                dist_info = self._get_package_resolve_dist(name, specifier)
-
-                git_url = dist_info["repo_url"]
-                resolved_commit_hash = dist_info["commit_hash"]
-                self._clone_shallow_to_commit(git_url, resolved_commit_hash, dep_path)
-                self._update_lockfile_remote(name, git_url, specifier, dist_info["resolved_version"], resolved_commit_hash)
+            self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_path)
+            if not self.locked_mode or not lock_data_dep_resolved:
+                self._update_lockfile_remote(name, specifier, dist_info["resolved_version"])
         
         return dep_path
-
-
-    def _check_local_repo_status(self, dep_path: Path) -> tuple[str, str | None]:
-        """Check if path is a git repository and return commit hash."""
-        try:
-            repo = git.Repo(dep_path, search_parent_directories=True)
-            if not repo.bare:
-                if repo.is_dirty(untracked_files=True):
-                    return "dirty", None
-                return "clean", repo.head.commit.hexsha
-        except Exception:
-            pass
-        return "not-git", None
 
 
     def _parse_package_name(self, name: str) -> tuple[str, str]:
@@ -513,24 +438,18 @@ class DependencyDownloader:
             return parts[0], parts[1]
         return '', name
 
-    def _check_repo_integrity(self, repo: git.Repo, lock_data_dep: dict) -> str:
+    def _check_repo_integrity(self, repo: git.Repo, repo_url: str) -> str:
         """Check the state of a local repository dependency."""
         try:
             if repo.bare:
                 raise git.InvalidGitRepositoryError
 
-            if not repo.remotes.origin.url or repo.remotes.origin.url != lock_data_dep["source"]:
+            if not repo.remotes.origin.url or repo.remotes.origin.url != repo_url:
                 return "invalid_remote_url"
 
             if repo.is_dirty(untracked_files=True):
                 return "dirty"
             
-            if (
-                lock_data_dep.get("commit") and 
-                repo.head.commit.hexsha == lock_data_dep["commit"] 
-            ):
-                return "clean"
-
             return "drifted"
 
         except git.InvalidGitRepositoryError:

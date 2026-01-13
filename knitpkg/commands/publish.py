@@ -136,7 +136,7 @@ def register(app):
         token = keyring.get_password(CREDENTIALS_SERVICE, provider)
         if not token:
             console.print(f"[red]✗[/red] Not logged in to [cyan]{provider}[/cyan].", style="bold")
-            console.print(f"   Login first: [cyan]kp-mt login {provider}[/cyan]", style="dim")
+            console.print(f"   Login first: [cyan]kp-mt login --provider {provider}[/cyan]", style="dim")
             raise typer.Exit(code=1)
 
         # Validate manifest fields

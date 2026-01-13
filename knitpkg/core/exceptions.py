@@ -38,12 +38,12 @@ class LocalDependencyNotFoundError(DependencyError):
             f"Local dependency '{name}' points to missing path:\n    → {path}"
         )
 
-class LocalDependencyNotGitError(DependencyError):
-    """Raised when --locked is used with a non-git local dependency."""
+class LockedWithLocalDependencyError(DependencyError):
+    """Raised when --locked is used with a local dependency."""
     def __init__(self, name: str):
         self.name = name
         super().__init__(
-            f"Cannot use --locked with non-git local dependency '{name}'"
+            f"Cannot use --locked with local dependency '{name}'"
         )
 
 class DependencyHasLocalChangesError(DependencyError):
