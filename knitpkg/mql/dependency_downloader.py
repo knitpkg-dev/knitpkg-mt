@@ -7,7 +7,6 @@ Extends the core DependencyDownloader with MQL-specific validation logic.
 """
 
 from pathlib import Path
-from rich.console import Console
 
 from knitpkg.core.dependency_downloader import DependencyDownloader
 from knitpkg.mql.validators import (
@@ -28,9 +27,19 @@ class MQLDependencyDownloader(DependencyDownloader):
     are allowed as dependencies).
     """
 
-    def validate_manifest(self, manifest, dep_path: Path) -> bool:
+    def validate_manifest(self, manifest, dep_path: Path, target: str) -> bool:
         """Validate MQL-specific manifest constraints."""
-        return validate_mql_dependency_manifest(manifest, self.console)
+        validated = True
+        if not validate_mql_dependency_manifest(manifest, self.console):
+            validated = False
+        
+        if manifest.target != target:
+            self.console.print(
+                f"[red]✗[/red] Dependency target mismatch: [cyan]{manifest.target}[/cyan] != [cyan]{target}[/cyan]",
+                style="bold"
+            )
+            validated = False
+        return validated
 
     def validate_project_structure(
         self,

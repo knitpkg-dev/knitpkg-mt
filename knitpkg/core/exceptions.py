@@ -54,6 +54,66 @@ class DependencyHasLocalChangesError(DependencyError):
             f"Cannot proceed with --locked: dependency '{name}' has local changes"
         )
 
+class LocalDependencyNotInLockfileError(DependencyError):
+    """Raised when --locked is used but dependency is not in lockfile."""
+    def __init__(self, name: str):
+        self.name = name
+        super().__init__(
+            f"Cannot proceed with --locked: dependency '{name}' not found in lockfile"
+        )
+
+class LocalDependencyCommitMismatchError(DependencyError):
+    """Raised when --locked is used but local commit doesn't match lockfile."""
+    def __init__(self, name: str, current_commit: str, locked_commit: str):
+        self.name = name
+        self.current_commit = current_commit
+        self.locked_commit = locked_commit
+        super().__init__(
+            f"Cannot proceed with --locked: dependency '{name}' commit mismatch\n"
+            f"    Current: {current_commit[:8]}\n"
+            f"    Locked:  {locked_commit[:8]}"
+        )
+
+class LocalDependencyManifestError(DependencyError):
+    """Raised when a local dependency's manifest cannot be loaded."""
+    def __init__(self, name: str, path: str):
+        self.name = name
+        self.path = path
+        super().__init__(
+            f"Cannot load manifest for local dependency '{name}' at {path}"
+        )
+
+class RegistryRequestError(DependencyError):
+    """Raised when registry request fails."""
+    def __init__(self, url: str, status_code: int, response_text: str):
+        self.url = url
+        self.status_code = status_code
+        self.response_text = response_text
+        super().__init__(
+            f"Registry request failed: {status_code} - {url}\n{response_text}"
+        )
+
+class GitOperationError(DependencyError):
+    """Raised when git operations fail."""
+    def __init__(self, operation: str, details: str):
+        self.operation = operation
+        self.details = details
+        super().__init__(f"Git {operation} failed: {details}")
+
+class GitCloneError(DependencyError):
+    """Raised when git clone fails."""
+    def __init__(self, git_url: str, details: str):
+        self.git_url = git_url
+        self.details = details
+        super().__init__(f"Git clone failed for {git_url}: {details}")
+
+class GitCommitNotFoundError(DependencyError):
+    """Raised when commit hash doesn't exist or checkout fails."""
+    def __init__(self, commit_hash: str, details: str):
+        self.commit_hash = commit_hash
+        self.details = details
+        super().__init__(f"Commit {commit_hash[:8]} not found or checkout failed: {details}")
+
 # ==============================================================
 # MANIFEST ERRORS
 # ==============================================================

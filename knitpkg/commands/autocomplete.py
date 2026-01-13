@@ -70,7 +70,8 @@ class AutocompleteGenerator:
             downloader = MQLDependencyDownloader(self.console, self.project_dir)
             resolved_deps, _dependency_tree = downloader.download_all(
                 manifest.dependencies,
-                False
+                manifest.target.value,
+                locked_mode=False
             )
         else:
             self.console.log(

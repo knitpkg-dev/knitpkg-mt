@@ -110,9 +110,12 @@ def register(app):
                 console.print("[red]✗[/red] Local branch is not synced with remote.", style="bold")
                 console.print("   Push your changes: [cyan]git push[/cyan]", style="dim")
                 raise typer.Exit(code=1)
+        except typer.Exit as e:
+            raise e
         except Exception as e:
             console.print(f"[yellow]⚠[/yellow] Unable to verify sync status: [dim]{e}[/dim]", style="bold")
-            console.print("   Continuing anyway...", style="dim")
+            console.print("   Halting...", style="dim")
+            raise typer.Exit(code=1)
 
         # Detect Git provider
         if 'github.com/' in repo_url:
@@ -175,7 +178,7 @@ def register(app):
         async def send_publish_request():
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{REGISTRY_URL}/packages/",
+                    f"{REGISTRY_URL}/package/",
                     json=payload,
                     headers={"Authorization": f"Bearer {token}"}
                 )

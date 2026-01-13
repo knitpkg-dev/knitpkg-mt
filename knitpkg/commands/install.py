@@ -461,7 +461,8 @@ class KnitPkgInstaller:
 
         # This may raise custom exceptions - let them propagate
         resolved_deps, dependency_tree = self.downloader.download_all(
-            manifest.dependencies or {},
+            manifest.dependencies or {}, 
+            manifest.target.value,
             locked_mode
         )
 

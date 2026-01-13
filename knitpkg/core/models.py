@@ -153,8 +153,6 @@ REF_PATTERN = re.compile(
         r"(\+[A-Za-z0-9\.\-]+)?"        # optional build metadata
         r"(?:\s+(<|<=)\s*(v?)(\d+\.\d+\.\d+))?"  # second side of range (< or <=)
     r")"
-    r"|"
-    r"(branch|tag|commit)=[A-Za-z0-9._-]+$"  # prefixed references
     r"$",
     re.IGNORECASE
 )
@@ -163,18 +161,12 @@ REF_PATTERN = re.compile(
 SEMVER_PATTERN = re.compile(
     r"^(?P<major>0|[1-9]\d*)\."
     r"(?P<minor>0|[1-9]\d*)\."
-    r"(?P<patch>0|[1-9]\d*)"
-    r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-    r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+    r"(?P<patch>0|[1-9]\d*)$"
 )
 
 def _is_valid_ref(ref: str) -> bool:
     """Validate a dependency reference (version range or prefixed ref)."""
     ref = ref.strip()
-
-    # Prefixed refs: branch=, tag=, commit=
-    if "=" in ref and ref.split("=", 1)[0].lower() in ("branch", "tag", "commit"):
-        return bool(REF_PATTERN.match(ref))
 
     # NPM-style ranges: ^ ~ >= <= > < or intervals
     if any(op in ref for op in ("^", "~", ">=", "<=", ">", "<", " ")):
@@ -309,37 +301,12 @@ class KnitPkgManifest(BaseModel):
             if spec.startswith(("./", "../", "/", "~")):
                 continue
 
-            # Remote Git dependency
-            if not any(spec.startswith(proto) for proto in ("https://", "http://", "git@", "ssh://")):
-                raise ValueError(
-                    f"Invalid dependency '{dep_name}': must use https://, git@, "
-                    f"ssh://, file:// or local path"
-                )
-
-            if spec.count("#") != 1:
-                raise ValueError(
-                    f"Invalid dependency '{dep_name}': must contain exactly one '#' separator"
-                )
-
-            base_url, ref = spec.split("#", 1)
-
-            if not ref:
-                raise ValueError(
-                    f"Invalid dependency '{dep_name}': version/reference cannot be empty after '#'"
-                )
-
-            if not base_url.endswith(".git"):
-                raise ValueError(
-                    f"Invalid dependency '{dep_name}': Git URL must end with '.git'"
-                )
-
-            if not _is_valid_ref(ref):
+            if not _is_valid_ref(spec):
                 raise ValueError(
                     f"Invalid version/reference in dependency '{dep_name}': #{ref}\n"
                     "Valid formats:\n"
                     "  1.2.3           v1.2.3           ^1.2.0           ~1.2.3\n"
                     "  >=1.0.0 <2.0.0   >1.5.0           <=3.0.0\n"
-                    "  branch=main      tag=v2.0.0       commit=abc123"
                 )
 
         return v
