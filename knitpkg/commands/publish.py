@@ -2,9 +2,13 @@
 
 """
 KnitPkg for MetaTrader publish command — publishes a package to the registry.
+
 This module handles the process of validating a local KnitPkg project,
-checking its Git status, and submitting its metadata to the KnitPkg registry.
-It ensures that only clean, committed repositories can be published.
+checking its Git status, creating a tag for the commit hash, pushing the tag to remote,
+and submitting its metadata to the KnitPkg registry.
+
+It ensures that only clean, committed repositories can be published,
+and that the commit is tagged with 'knitpkg-registry/<commit_hash>' to prevent it from becoming orphaned.
 """
 
 import typer
@@ -30,6 +34,78 @@ console = Console()
 def get_current_commit_hash(repo: git.Repo) -> str:
     """Get the current commit hash from the Git repo."""
     return repo.head.commit.hexsha
+
+
+def create_and_push_tag(repo: git.Repo, commit_hash: str) -> None:
+    """
+    Create a tag 'knitpkg-registry/<commit_hash>' pointing to the current commit
+    and push it to the remote origin.
+
+    This tag acts as a safeguard to prevent the commit from becoming orphaned
+    if the user performs a force-push or rebase.
+
+    Args:
+        repo: Git repository object
+        commit_hash: The commit hash to tag
+
+    Raises:
+        git.GitCommandError: If tag creation or push fails
+    """
+    tag_name = f"knitpkg-registry/{commit_hash}"
+
+    # Check if tag already exists locally
+    try:
+        existing_tag = repo.git.tag("-l", tag_name).strip()
+        if existing_tag == tag_name:
+            console.print(f"[yellow]⚠[/yellow] Tag '{tag_name}' already exists locally.", style="dim")
+
+            # Verify it points to the correct commit
+            tag_commit = repo.git.rev_list("-n", "1", tag_name).strip()
+            if tag_commit != commit_hash:
+                console.print(f"[red]✗[/red] Local tag '{tag_name}' points to wrong commit: {tag_commit[:12]}", style="bold")
+                console.print(f"   Expected: {commit_hash[:12]}", style="dim")
+                raise git.GitCommandError(f"Tag '{tag_name}' is corrupted")
+
+            # Check if tag is already on remote
+            try:
+                repo.git.fetch("--tags")
+                remote_tags = repo.git.ls_remote("--tags", "origin", f"refs/tags/{tag_name}").strip()
+                if remote_tags:
+                    console.print(f"[green]✓[/green] Tag '{tag_name}' already exists on remote.", style="dim")
+                    return  # Tag already exists locally and remotely, we're good
+            except git.GitCommandError:
+                pass  # Tag not on remote, proceed to push
+        else:
+            # Tag name matches but content differs (shouldn't happen, but handle it)
+            console.print(f"[yellow]⚠[/yellow] Deleting corrupted local tag '{tag_name}'...", style="dim")
+            repo.git.tag("-d", tag_name)
+    except git.GitCommandError:
+        pass  # Tag doesn't exist, proceed to create
+
+    # Create the tag locally
+    try:
+        repo.create_tag(tag_name, ref=commit_hash)
+        console.print(f"[green]✓[/green] Created local tag: [cyan]'{tag_name}'[/cyan]", style="dim")
+    except git.GitCommandError as e:
+        console.print(f"[red]✗[/red] Failed to create tag '{tag_name}': {e}", style="bold")
+        raise git.GitCommandError(f"Cannot create tag: {e}")
+
+    # Push the tag to remote
+    try:
+        console.print(f"[cyan]→[/cyan] Pushing tag to remote origin...", style="dim")
+        repo.git.push("origin", tag_name)
+        console.print(f"[green]✓[/green] Tag [cyan]'{tag_name}'[/cyan] pushed to remote.", style="dim")
+    except git.GitCommandError as e:
+        # Clean up local tag if push fails
+        try:
+            repo.git.tag("-d", tag_name)
+            console.print(f"[yellow]⚠[/yellow] Cleaned up local tag after push failure.", style="dim")
+        except:
+            pass
+
+        console.print(f"[red]✗[/red] Failed to push tag to remote: {e}", style="bold")
+        console.print("   [dim]Cannot publish without remote tag (prevents orphaned commits)[/dim]")
+        raise git.GitCommandError(f"Tag push failed: {e}")
 
 
 def register(app):
@@ -66,7 +142,7 @@ def register(app):
 
         # Validate Git repository
         try:
-            repo = git.Repo(Path.cwd(), search_parent_directories=True)
+            repo = git.Repo(project_path, search_parent_directories=True)
         except git.InvalidGitRepositoryError:
             console.print("[red]✗[/red] Not a Git repository.", style="bold")
             console.print("   Initialize a Git repository first: [cyan]git init[/cyan]", style="dim")
@@ -117,6 +193,21 @@ def register(app):
             console.print("   Halting...", style="dim")
             raise typer.Exit(code=1)
 
+        # Get commit hash
+        commit_hash = get_current_commit_hash(repo)
+
+        # ============================================================================
+        # CREATE AND PUSH TAG (NEW SAFETY LAYER)
+        # ============================================================================
+        try:
+            console.print(f"\n[cyan]→[/cyan] Creating registry tag for commit [yellow]{commit_hash[:12]}[/yellow]...", style="dim")
+            create_and_push_tag(repo, commit_hash)
+        except git.GitCommandError as e:
+            console.print(f"\n[red]✗[/red] [bold]Failed to create/push tag[/bold]", style="bold")
+            console.print(f"   {e}", style="dim")
+            console.print("\n   [yellow]Cannot publish without remote tag (prevents orphaned commits)[/yellow]")
+            raise typer.Exit(code=1)
+
         # Detect Git provider
         if 'github.com/' in repo_url:
             provider = 'github'
@@ -135,7 +226,7 @@ def register(app):
         # Check if logged in
         token = keyring.get_password(CREDENTIALS_SERVICE, provider)
         if not token:
-            console.print(f"[red]✗[/red] Not logged in to [cyan]{provider}[/cyan].", style="bold")
+            console.print(f"\n[red]✗[/red] Not logged in to [cyan]{provider}[/cyan].", style="bold")
             console.print(f"   Login first: [cyan]kp-mt login --provider {provider}[/cyan]", style="dim")
             raise typer.Exit(code=1)
 
@@ -144,9 +235,6 @@ def register(app):
             console.print("[red]✗[/red] Incomplete manifest.", style="bold")
             console.print("   Required fields: [yellow]organization[/yellow], [yellow]name[/yellow], [yellow]description[/yellow]", style="dim")
             raise typer.Exit(code=1)
-
-        # Get commit hash
-        commit_hash = get_current_commit_hash(repo)
 
         # Prepare payload
         payload = {
@@ -166,18 +254,19 @@ def register(app):
         info_table.add_column(style="cyan bold", justify="right")
         info_table.add_column(style="white")
 
-        info_table.add_row("Package:", f"[green bold]{manifest.target}[/green bold] @{manifest.organization}/{manifest.name}")
+        info_table.add_row("Package:", f"[green bold]{manifest.target}[/green bold]:@{manifest.organization}/{manifest.name}")
         info_table.add_row("Version:", f"[yellow]{manifest.version}[/yellow]")
         info_table.add_row("Commit:", f"[dim]{commit_hash[:12]}[/dim]")
         info_table.add_row("Repository:", f"[dim]{repo_url}[/dim]")
+        info_table.add_row("Provider:", f"[dim]{provider}[/dim]")
 
         console.print(Panel(info_table, title="[bold]📦 Publishing Package[/bold]", border_style="cyan"))
 
         # Send publish request
         async def send_publish_request():
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{REGISTRY_URL}/package/",
+                    f"{REGISTRY_URL}/package/publish",
                     json=payload,
                     headers={"Authorization": f"Bearer {token}"}
                 )
@@ -204,18 +293,29 @@ def register(app):
                 error_data = response.json()
 
                 # Handle validation errors (422)
-                if response.status_code == 422 and isinstance(error_data, list):
-                    console.print("[red]✗[/red] [bold]Validation errors:[/bold]")
-                    for error in error_data:
-                        field = " → ".join(str(x) for x in error.get("loc", []))
-                        msg = error.get("msg", "Unknown error")
-                        console.print(f"   [yellow]{field}[/yellow]: {msg}")
+                if response.status_code == 422:
+                    if isinstance(error_data, dict) and "detail" in error_data:
+                        # FastAPI validation error format
+                        detail = error_data["detail"]
+                        if isinstance(detail, list):
+                            console.print("[red]✗[/red] [bold]Validation errors:[/bold]")
+                            for error in detail:
+                                field = " → ".join(str(x) for x in error.get("loc", []))
+                                msg = error.get("msg", "Unknown error")
+                                console.print(f"   [yellow]{field}[/yellow]: {msg}")
+                        else:
+                            console.print(f"[red]✗[/red] [bold]Validation error:[/bold] {detail}")
+                    else:
+                        console.print(f"[red]✗[/red] [bold]Validation error[/bold]")
+                        console.print(f"   {error_data}")
                 else:
+                    # Other errors
                     error_detail = error_data.get("detail", "Unknown error")
                     console.print(f"[red]✗[/red] [bold]Failed to publish package[/bold]")
                     console.print(f"   {error_detail}")
             except:
                 console.print(f"[red]✗[/red] [bold]HTTP {response.status_code}[/bold]: Failed to publish package")
+                console.print(f"   {response.text[:200]}")
 
             console.print()
             raise typer.Exit(code=1)
