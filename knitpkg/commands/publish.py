@@ -157,7 +157,6 @@ def register(app):
             "version": manifest.version,
             "repo_url": repo_url,
             "commit_hash": commit_hash,
-            "is_private": False,
             "dependencies": manifest.dependencies
         }
 

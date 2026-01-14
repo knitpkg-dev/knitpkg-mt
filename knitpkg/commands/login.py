@@ -21,10 +21,7 @@ import os
 import sys
 import asyncio
 
-from knitpkg.core.auth import CREDENTIALS_SERVICE, SUPPORTED_PROVIDERS
-
-# Configurations (pull from .env or config; adjust for production)
-REGISTRY_URL = "http://localhost:8000"  # Registry URL
+from knitpkg.core.auth import register_device_with_registry, CREDENTIALS_SERVICE, SUPPORTED_PROVIDERS, REGISTRY_URL
 
 class CallbackHandler(http.server.SimpleHTTPRequestHandler):
     """
@@ -157,22 +154,23 @@ def register(app):
             console.log("[red]Error:[/] Access token not found in the registry response.")
             raise typer.Exit(code=1)
 
+        asyncio.run(register_device_with_registry(access_token, console))
+
+        for p in SUPPORTED_PROVIDERS:
+            if p == provider:
+                continue
+            try:
+                if keyring.get_password(CREDENTIALS_SERVICE, p): # Check if token exists before trying to delete
+                    keyring.delete_password(CREDENTIALS_SERVICE, p)
+            except Exception as e:
+                if keyring.get_password(CREDENTIALS_SERVICE, p) is not None:
+                    console.log(f"[red]Error:[/] Failed to remove token for [cyan]{p.capitalize()}[/]: {e}")
+                    raise typer.Exit(code=1)
+
         # Store the token securely with keyring and delete others
         try:
             keyring.set_password(CREDENTIALS_SERVICE, provider, access_token)
             console.log(f"[bold green]Login successful![/] Token stored for [cyan]{provider}[/cyan].")
-
-            for p in SUPPORTED_PROVIDERS:
-                if p == provider:
-                    continue
-                try:
-                    if keyring.get_password(CREDENTIALS_SERVICE, p): # Check if token exists before trying to delete
-                        keyring.delete_password(CREDENTIALS_SERVICE, p)
-                except Exception as e:
-                    if keyring.get_password(CREDENTIALS_SERVICE, p) is not None:
-                        console.log(f"[red]Error:[/] Failed to remove token for [cyan]{p.capitalize()}[/]: {e}")
-                        raise typer.Exit(code=1)
-
         except Exception as e:
             console.log(f"[red]Error:[/] Failed to securely store token with keyring: {e}")
             raise typer.Exit(code=1)
