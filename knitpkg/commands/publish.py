@@ -23,9 +23,9 @@ from rich.panel import Panel
 from rich.table import Table
 
 from knitpkg.core.file_reading import load_knitpkg_manifest
+from knitpkg.core.global_config import get_registry_url
 
 # Configurations
-REGISTRY_URL = "http://localhost:8000"
 CREDENTIALS_SERVICE = "knitpkg-mt"
 
 console = Console()
@@ -262,11 +262,12 @@ def register(app):
 
         console.print(Panel(info_table, title="[bold]📦 Publishing Package[/bold]", border_style="cyan"))
 
+        registry_url = get_registry_url()
         # Send publish request
         async def send_publish_request():
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{REGISTRY_URL}/package/publish",
+                    f"{registry_url}/package/publish",
                     json=payload,
                     headers={"Authorization": f"Bearer {token}"}
                 )

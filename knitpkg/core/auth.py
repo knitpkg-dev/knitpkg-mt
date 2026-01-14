@@ -6,8 +6,7 @@ import uuid
 import os
 import httpx
 import typer
-
-REGISTRY_URL = "http://localhost:8000"  # Registry URL
+from knitpkg.core.global_config import get_registry_url
 
 CREDENTIALS_SERVICE = "knitpkg-mt"  # Name for keyring
 SUPPORTED_PROVIDERS = ['github', 'gitlab', 'mql5forge', 'bitbucket']
@@ -56,9 +55,10 @@ async def register_device_with_registry(token: str, console):
     device_id = generate_device_fingerprint()
     device_name = f"{platform.node()} ({platform.system()})"
 
+    registry_url = get_registry_url()
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{REGISTRY_URL}/auth/register-device",
+            f"{registry_url}/auth/register-device",
             json={
                 "device_id": device_id,
                 "device_name": device_name,

@@ -21,7 +21,8 @@ import os
 import sys
 import asyncio
 
-from knitpkg.core.auth import register_device_with_registry, CREDENTIALS_SERVICE, SUPPORTED_PROVIDERS, REGISTRY_URL
+from knitpkg.core.auth import register_device_with_registry, CREDENTIALS_SERVICE, SUPPORTED_PROVIDERS
+from knitpkg.core.global_config import get_registry_url
 
 class CallbackHandler(http.server.SimpleHTTPRequestHandler):
     """
@@ -81,12 +82,43 @@ def register(app):
         """
         console = Console(log_path=verbose)
 
-        if provider not in ['github', 'gitlab', 'mql5forge', 'bitbucket']:
-            console.log("[red]Error:[/] Invalid provider. Use 'github', 'gitlab', 'mql5forge', or 'bitbucket'.")
-            raise typer.Exit(code=1)
+        registry_url = get_registry_url()
+
+        # Descobrir configuração de autenticação do registry
+        with console.status("[cyan]Connecting to registry..."):
+            response = httpx.get(f"{registry_url}/auth/config", timeout=10.0)
+
+        if response.status_code != 200:
+            console.print(f"[red]✗[/red] Failed to connect to registry: {registry_url}")
+            raise typer.Exit(1)
+
+        auth_config = response.json()
+
+        # Registry privado: ignorar --provider
+        if auth_config["type"] == "private":
+            if provider:
+                console.print(f"[yellow]⚠ Warning:[/yellow] --provider ignored (private registry uses SSO)")
+
+            provider = auth_config["provider"]
+            console.print(f"\n[cyan]→[/cyan] Authenticating with {provider.upper()}...")
+
+        # Registry público: exigir --provider
+        else:
+            if not provider:
+                console.print("[red]✗[/red] Please specify --provider:")
+                for p in auth_config["providers"]:
+                    console.print(f"   [dim]kp-mt login --provider {p}[/dim]")
+                raise typer.Exit(1)
+
+            # Validar provider disponível
+            available = [p for p in auth_config["providers"]]
+            if provider not in available:
+                console.print(f"[red]✗[/red] Unknown provider: {provider}")
+                console.print(f"   Available: {', '.join(available)}")
+                raise typer.Exit(1)
 
         # Build authorization URL
-        auth_url = f"{REGISTRY_URL}/auth/{provider}"
+        auth_url = f"{registry_url}/auth/{provider}"
 
         console.log(f"[bold magenta]login[/] → Opening browser for login via [cyan]{provider.capitalize()}[/]...")
         webbrowser.open(auth_url)
@@ -132,7 +164,7 @@ def register(app):
             async with httpx.AsyncClient() as client:
                 try:
                     response = await client.post(
-                        f"{REGISTRY_URL}/auth/{provider}/exchange-token",
+                        f"{registry_url}/auth/{provider}/exchange-token",
                         params={"code": code}
                     )
                     response.raise_for_status() # Raise an exception for bad status codes
