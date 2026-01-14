@@ -26,6 +26,7 @@ from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType, IncludeMode
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from knitpkg.mql.validators import validate_mql_project_structure
 from knitpkg.mql.constants import INCLUDE_DIR
+from knitpkg.core.global_config import get_registry_url
 
 # Import shared types from core
 from knitpkg.core.dependency_downloader import (
@@ -362,8 +363,10 @@ class KnitPkgInstaller:
     def __init__(self, console: Console, project_dir: Path):
         self.console = console
         self.project_dir = project_dir
+        
+        registry_url = get_registry_url()
         # Use MQL-specific downloader
-        self.downloader = MQLDependencyDownloader(console, project_dir)
+        self.downloader = MQLDependencyDownloader(console, project_dir, registry_url)
         self.include_processor = IncludeModeProcessor(console, project_dir)
         self.flat_processor = FlatModeProcessor(console, project_dir)
 

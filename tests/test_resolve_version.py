@@ -11,7 +11,7 @@ from knitpkg.core.dependency_downloader import DependencyDownloader
 
 def resolve_version_from_spec(name, specifier, repo):
     """Helper function to test version resolution"""
-    downloader = DependencyDownloader(Console(), Path.cwd())
+    downloader = DependencyDownloader(Console(), Path.cwd(), "http://localhost:8000")
     return downloader._resolve_version_from_spec(name, specifier, repo)
 
 @pytest.fixture

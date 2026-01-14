@@ -18,6 +18,7 @@ from knitpkg.mql.constants import INCLUDE_DIR
 
 # Import MQL-specific downloader
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
+from knitpkg.core.global_config import get_registry_url
 
 import typer
 
@@ -67,7 +68,8 @@ class AutocompleteGenerator:
         # Resolve dependencies (reuse same logic as install)
         resolved_deps = []
         if manifest.dependencies:
-            downloader = MQLDependencyDownloader(self.console, self.project_dir)
+            registry_url = get_registry_url()
+            downloader = MQLDependencyDownloader(self.console, self.project_dir, registry_url)
             resolved_deps, _dependency_tree = downloader.download_all(
                 manifest.dependencies,
                 manifest.target.value,

@@ -82,7 +82,7 @@ class DependencyDownloader:
         locked_mode: Whether to enforce strict lockfile mode
     """
 
-    def __init__(self, console: Console, project_dir: Path, registry_base_url: str = "http://localhost:8000"):
+    def __init__(self, console: Console, project_dir: Path, registry_base_url: str):
         self.console = console
         self.project_dir = project_dir
         self.registry_base_url = registry_base_url.rstrip('/')
@@ -366,7 +366,8 @@ class DependencyDownloader:
             lock_data["dependencies"][name] = {
                 "specifier": ref_spec,
                 "resolved": final_ref,
-                "resolved_at": dt.datetime.now(dt.timezone.utc).isoformat()
+                "resolved_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                "registry_url": self.registry_base_url
             }
             save_lockfile(lock_data)
 

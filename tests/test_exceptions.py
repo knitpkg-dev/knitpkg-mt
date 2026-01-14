@@ -33,10 +33,10 @@ def test_local_dependency_not_found(tmp_path: Path):
     (d / "knitpkg.json").write_text(json.dumps(manifest_data))
 
     manifest = load_knitpkg_manifest(d, manifest_class=MQLKnitPkgManifest)
-    downloader = MQLDependencyDownloader(Console(), Path.cwd())
+    downloader = MQLDependencyDownloader(Console(), Path.cwd(), "http://localhost:8000")
 
     with pytest.raises(LocalDependencyNotFoundError) as exc:
-        downloader.download_all(manifest.dependencies, locked_mode=False)
+        downloader.download_all(manifest.dependencies, "MQL5", locked_mode=False)
 
     assert exc.value.name == "missing"
     assert "nonexistent" in str(exc.value)
@@ -72,10 +72,10 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     (main_dir / "knitpkg.json").write_text(json.dumps(main_manifest))
 
     manifest = load_knitpkg_manifest(main_dir, manifest_class=MQLKnitPkgManifest)
-    downloader = MQLDependencyDownloader(Console(), Path.cwd())
+    downloader = MQLDependencyDownloader(Console(), Path.cwd(), "http://localhost:8000")
 
     with pytest.raises(LockedWithLocalDependencyError) as exc:
-        downloader.download_all(manifest.dependencies, locked_mode=True)
+        downloader.download_all(manifest.dependencies, "MQL5", locked_mode=True)
 
     assert exc.value.name == "local-dep"
     assert "--locked" in str(exc.value)
