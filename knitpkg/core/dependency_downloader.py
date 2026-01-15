@@ -125,7 +125,7 @@ class DependencyDownloader:
 
         return self.resolved_deps, self.dependency_tree
 
-    def _get_package_resolve_dist(self, name: str, version_spec: str) -> dict:
+    def _get_package_resolve_dist(self, registry_base_url: str, name: str, version_spec: str) -> dict:
         """Resolve package distribution info from registry.
         
         Args:
@@ -139,7 +139,7 @@ class DependencyDownloader:
             RegistryRequestError: If registry request fails
         """
         org, pack_name = self._parse_package_name(name)
-        url = f"{self.registry_base_url}/package/{self.target}/{org}/{pack_name}/{version_spec}"
+        url = f"{registry_base_url}/package/{self.target}/{org}/{pack_name}/{version_spec}"
         from knitpkg.core.auth import session_access_token
         _provider, access_token = session_access_token()
         if access_token:
@@ -362,7 +362,7 @@ class DependencyDownloader:
     ) -> None:
         """Update lockfile for local git dependency."""
         lock_data = load_lockfile()
-        if is_lock_change(lock_data, name, ref_spec, final_ref):
+        if is_lock_change(lock_data, name, ref_spec, final_ref, self.registry_base_url):
             lock_data["dependencies"][name] = {
                 "specifier": ref_spec,
                 "resolved": final_ref,
@@ -387,11 +387,11 @@ class DependencyDownloader:
         lock_data = load_lockfile()
         lock_data_dep = lock_data["dependencies"].get(name, {})
 
-        lock_data_dep_resolved = lock_data_dep.get('resolved', None)
+        lock_data_dep_resolved = lock_data_dep.get("resolved", None)
         if self.locked_mode and lock_data_dep_resolved:
-            dist_info = self._get_package_resolve_dist(name, lock_data_dep_resolved)
+            dist_info = self._get_package_resolve_dist(lock_data_dep.get("registry_url"), name, lock_data_dep_resolved)
         else:
-            dist_info = self._get_package_resolve_dist(name, specifier)
+            dist_info = self._get_package_resolve_dist(self.registry_base_url, name, specifier)
 
         if dep_path.exists():
             repo: git.Repo = git.Repo(dep_path, search_parent_directories=True)
