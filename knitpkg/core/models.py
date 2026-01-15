@@ -32,13 +32,6 @@ class ProjectType(str, Enum):
     """
     PACKAGE = "package"  # Reusable library/components
 
-class OAuthProvider(str, Enum):
-    """OAuth providers for KnitPkg Pro private repository access."""
-    GITHUB = "github"
-    GITLAB = "gitlab"
-    AZURE = "azure"
-    GOOGLE = "google"
-
 # ==============================================================
 # DISTRIBUTION SECTION 
 # ==============================================================
@@ -75,7 +68,7 @@ class DistRelease(BaseModel):
     )
 
 class DistSection(BaseModel):
-    """Distribution package definitions (used by `knitpkg package`)."""
+    """Distribution package definitions."""
     model_config = ConfigDict(extra="forbid")
 
     dist: List[DistRelease] = Field(
@@ -98,52 +91,13 @@ class DistSection(BaseModel):
         return release.name.replace("${version}", version)
 
 # ==============================================================
-# KNITPKG PRO / ENTERPRISE SECTIONS
-# ==============================================================
-
-class KnitPkgProSection(BaseModel):
-    """KnitPkg Pro configuration for private repositories."""
-    model_config = ConfigDict(extra="forbid")
-
-    private: bool = Field(
-        default=False,
-        description="Set to true for private repositories"
-    )
-    oauth_provider: Optional[OAuthProvider] = Field(
-        default=None,
-        description="OAuth provider for private repo access"
-    )
-
-class KnitPkgEnterpriseSection(BaseModel):
-    """KnitPkg Enterprise configuration for corporate environments."""
-    model_config = ConfigDict(extra="forbid")
-
-    proxy_url: Optional[AnyUrl] = Field(
-        default=None,
-        description="Proxy URL for enterprise environments"
-    )
-
-class KnitPkgSection(BaseModel):
-    """KnitPkg Pro and Enterprise settings."""
-    model_config = ConfigDict(extra="forbid")
-
-    pro: Optional[KnitPkgProSection] = Field(
-        default=None,
-        description="KnitPkg Pro configuration"
-    )
-    enterprise: Optional[KnitPkgEnterpriseSection] = Field(
-        default=None,
-        description="KnitPkg Enterprise configuration"
-    )
-
-# ==============================================================
 # VERSION REFERENCE VALIDATION
 # ==============================================================
 
 # Validation for dependencies names
 NAME_PATTERN = re.compile(r"^(@[\w\-\.]+/)?[\w\-\.]+$")
 
-# Main regex: covers all SemVer + NPM-style ranges + prefixed refs (branch=, tag=, commit=)
+# Main regex: covers all SemVer + NPM-style ranges
 REF_PATTERN = re.compile(
     r"^"
     r"(?:"
@@ -248,11 +202,6 @@ class KnitPkgManifest(BaseModel):
     dist: Optional[DistSection] = Field(
         default=None,
         description="Distribution package configuration"
-    )
-
-    knitpkg: Optional[KnitPkgSection] = Field(
-        default=None,
-        description="KnitPkg Pro and Enterprise settings"
     )
 
     @field_validator("version")
