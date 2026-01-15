@@ -169,9 +169,9 @@ class MQLCompiler:
             CompilerNotFoundError: If the compiler executable does not exist
         """
         if self.manifest.target == Target.MQL5:
-            compiler_path = Path(get_mql5_compiler_path())
+            compiler_path = Path(get_mql5_compiler_path(str(self.project_dir)))
         elif self.manifest.target == Target.MQL4:
-            compiler_path = Path(get_mql4_compiler_path())
+            compiler_path = Path(get_mql4_compiler_path(str(self.project_dir)))
         else:
             self.console.log(
                 f"[red]Error:[/] Unsupported target: {self.manifest.target}"
@@ -281,9 +281,9 @@ class MQLCompiler:
         """
         mql_data_folder_path_str: Optional[str] = None
         if self.manifest.target == Target.MQL5:
-            mql_data_folder_path_str = get_mql5_data_folder_path()
+            mql_data_folder_path_str = get_mql5_data_folder_path(str(self.project_dir))
         elif self.manifest.target == Target.MQL4:
-            mql_data_folder_path_str = get_mql4_data_folder_path()
+            mql_data_folder_path_str = get_mql4_data_folder_path(str(self.project_dir))
 
         # 1. Check for configured data folder path
         if mql_data_folder_path_str:

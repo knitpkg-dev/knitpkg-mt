@@ -37,7 +37,7 @@ class ProjectType(str, Enum):
 # ==============================================================
 
 class DistItem(BaseModel):
-    """Individual file to include in a distribution package."""
+    """Individual file to include in a distribution project."""
     model_config = ConfigDict(extra="forbid")
 
     dependency_id: Optional[str] = Field(
@@ -46,7 +46,7 @@ class DistItem(BaseModel):
         description="Dependency name or 'this' (current project). Can be omitted if source is local."
     )
     src: str = Field(..., description="Source path relative to dependency root")
-    dst: str = Field(..., description="Destination path in the final package")
+    dst: str = Field(..., description="Destination path in the final project")
 
 class DistRelease(BaseModel):
     """Distribution release configuration."""
@@ -59,7 +59,7 @@ class DistRelease(BaseModel):
     )
     name: str = Field(
         ...,
-        description="Final package filename. Supports ${version} placeholder"
+        description="Final project filename. Supports ${version} placeholder"
     )
     items: List[DistItem] = Field(
         ...,
@@ -68,12 +68,12 @@ class DistRelease(BaseModel):
     )
 
 class DistSection(BaseModel):
-    """Distribution package definitions."""
+    """Distribution project definitions."""
     model_config = ConfigDict(extra="forbid")
 
     dist: List[DistRelease] = Field(
         default_factory=list,
-        description="Distribution package definitions"
+        description="Distribution project definitions"
     )
 
     def get_release_by_id(self, release_id: str) -> Optional[DistRelease]:
@@ -84,7 +84,7 @@ class DistSection(BaseModel):
         return None
 
     def render_name(self, release_id: str, version: str) -> str:
-        """Render the final package filename, replacing ${version} placeholder."""
+        """Render the final project filename, replacing ${version} placeholder."""
         release = self.get_release_by_id(release_id)
         if not release:
             return f"{release_id}-{version}.zip"
@@ -201,7 +201,7 @@ class KnitPkgManifest(BaseModel):
 
     dist: Optional[DistSection] = Field(
         default=None,
-        description="Distribution package configuration"
+        description="Distribution project configuration"
     )
 
     @field_validator("version")
@@ -239,7 +239,7 @@ class KnitPkgManifest(BaseModel):
             
             if not NAME_PATTERN.fullmatch(dep_name):
                 raise ValueError(
-                    f"Dependency name '{dep_name}' must follow 'package-name' or '@organization/package-name' format"
+                    f"Dependency name '{dep_name}' must follow '@organization/package-name' format"
                 )   
 
             # Local file:// protocol (path existence checked at install time)
@@ -260,8 +260,8 @@ class KnitPkgManifest(BaseModel):
 
         return v
 
-    def get_package_name(self, release_id: str = "release") -> str:
-        """Return the final package name for a given release configuration."""
+    def get_project_name(self, release_id: str = "release") -> str:
+        """Return the final project name for a given release configuration."""
         if not self.dist or not self.dist.dist:
             return f"{self.name}-{self.version}.zip"
         return self.dist.render_name(release_id, self.version)

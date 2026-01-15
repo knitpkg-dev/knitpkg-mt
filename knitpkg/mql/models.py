@@ -67,7 +67,7 @@ class MQLKnitPkgManifest(KnitPkgManifest):
     # MQL-specific fields
     include_mode: IncludeMode = Field(
         default=IncludeMode.INCLUDE,
-        description="Include processing mode. Use 'include' (copy .mqh) or 'flat' (generate _flat files). Forced to 'flat' for type='package'."
+        description="Include processing mode. Use 'include' (copy .mqh) or 'flat' (generate _flat files)."
     )
 
     entrypoints: Optional[List[str]] = Field(

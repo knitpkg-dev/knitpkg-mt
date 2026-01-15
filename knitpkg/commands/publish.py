@@ -1,7 +1,7 @@
 # knitpkg/commands/publish.py
 
 """
-KnitPkg for MetaTrader publish command — publishes a package to the registry.
+KnitPkg for MetaTrader publish command — publishes a project to the registry.
 
 This module handles the process of validating a local KnitPkg project,
 checking its Git status, creating a tag for the commit hash, pushing the tag to remote,
@@ -24,6 +24,7 @@ from rich.table import Table
 
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.global_config import get_registry_url
+from knitpkg.mql.models import MQLKnitPkgManifest
 
 # Configurations
 CREDENTIALS_SERVICE = "knitpkg-mt"
@@ -131,7 +132,7 @@ def register(app):
 
         # Load manifest
         try:
-            manifest = load_knitpkg_manifest(project_path)
+            manifest = load_knitpkg_manifest(project_path, manifest_class=MQLKnitPkgManifest)
         except FileNotFoundError:
             console.print("[red]✗[/red] [bold]knitpkg.yaml[/bold] not found in project directory.", style="bold")
             console.print("   Run [cyan]kp-mt init[/cyan] to create a new project.", style="dim")
@@ -241,33 +242,36 @@ def register(app):
             "organization": manifest.organization,
             "name": manifest.name,
             "target": manifest.target,
+            "type": manifest.type,
             "description": manifest.description,
             "version": manifest.version,
             "repo_url": repo_url,
             "commit_hash": commit_hash,
-            "dependencies": manifest.dependencies
+            "dependencies": manifest.dependencies,
+            "is_private": False
         }
 
-        # Display package info
+        # Display project info
         console.print()
         info_table = Table.grid(padding=(0, 2))
         info_table.add_column(style="cyan bold", justify="right")
         info_table.add_column(style="white")
 
-        info_table.add_row("Package:", f"[green bold]{manifest.target}[/green bold]:@{manifest.organization}/{manifest.name}")
+        info_table.add_row("Project:", f"[green bold]{manifest.target.value}[/green bold]:@{manifest.organization}/{manifest.name}")
+        info_table.add_row("Type:", f"[yellow]{manifest.type.value}[/yellow]")
         info_table.add_row("Version:", f"[yellow]{manifest.version}[/yellow]")
         info_table.add_row("Commit:", f"[dim]{commit_hash[:12]}[/dim]")
         info_table.add_row("Repository:", f"[dim]{repo_url}[/dim]")
         info_table.add_row("Provider:", f"[dim]{provider}[/dim]")
 
-        console.print(Panel(info_table, title="[bold]📦 Publishing Package[/bold]", border_style="cyan"))
+        console.print(Panel(info_table, title="[bold]📦 Publishing Project[/bold]", border_style="cyan"))
 
         registry_url = get_registry_url()
         # Send publish request
         async def send_publish_request():
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{registry_url}/package/publish",
+                    f"{registry_url}/project/publish",
                     json=payload,
                     headers={"Authorization": f"Bearer {token}"}
                 )
@@ -279,12 +283,13 @@ def register(app):
         # Handle response
         if response.status_code == 201:
             console.print()
-            console.print("[green]✓[/green] [bold green]Package published successfully![/bold green]")
+            console.print("[green]✓[/green] [bold green]Project published successfully![/bold green]")
 
             response_data = response.json()
-            if "package" in response_data:
-                pkg = response_data["package"]
+            if "project" in response_data:
+                pkg = response_data["project"]
                 console.print()
+                # TODO resolver mensagem abaixo
                 console.print(f"   [cyan]→[/cyan] View at: [link]https://registry.knitpkg.dev/packages/{pkg['target']}/@{pkg['organization']}/{pkg['name']}[/link]")
 
             console.print()
@@ -312,10 +317,10 @@ def register(app):
                 else:
                     # Other errors
                     error_detail = error_data.get("detail", "Unknown error")
-                    console.print(f"[red]✗[/red] [bold]Failed to publish package[/bold]")
+                    console.print(f"[red]✗[/red] [bold]Failed to publish project[/bold]")
                     console.print(f"   {error_detail}")
             except:
-                console.print(f"[red]✗[/red] [bold]HTTP {response.status_code}[/bold]: Failed to publish package")
+                console.print(f"[red]✗[/red] [bold]HTTP {response.status_code}[/bold]: Failed to publish project")
                 console.print(f"   {response.text[:200]}")
 
             console.print()

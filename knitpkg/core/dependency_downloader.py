@@ -26,6 +26,8 @@ from knitpkg.core.lockfile import load_lockfile, save_lockfile, is_lock_change
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.utils import is_local_path
 from knitpkg.core.constants import CACHE_DIR
+from knitpkg.core.auth import session_access_token
+from knitpkg.core.models import ProjectType
 
 # Import custom exceptions
 from knitpkg.core.exceptions import (
@@ -126,21 +128,21 @@ class DependencyDownloader:
         return self.resolved_deps, self.dependency_tree
 
     def _get_package_resolve_dist(self, registry_base_url: str, name: str, version_spec: str) -> dict:
-        """Resolve package distribution info from registry.
+        """Resolve project distribution info from registry.
         
         Args:
-            name: Package name (may include @org/package format)
+            name: Package name (may include @org/project format)
             version_spec: Version specifier
             
         Returns:
-            Dict containing package distribution info
+            Dict containing project distribution info
             
         Raises:
             RegistryRequestError: If registry request fails
         """
-        org, pack_name = self._parse_package_name(name)
-        url = f"{registry_base_url}/package/{self.target}/{org}/{pack_name}/{version_spec}"
-        from knitpkg.core.auth import session_access_token
+        org, pack_name = self._parse_project_name(name)
+        url = f"{registry_base_url}/project/resolve/{self.target}/{org}/{pack_name}/{version_spec}"
+        
         _provider, access_token = session_access_token()
         if access_token:
             headers = {"Authorization": f"Bearer {access_token}"}
@@ -151,7 +153,20 @@ class DependencyDownloader:
             response = httpx.get(url, headers=headers, timeout=10.0)
             if response.status_code != 200:
                 raise RegistryRequestError(url, response.status_code, response.text)
-            return response.json()
+            
+            response_json = response.json()
+            project_type = response_json.get('type', None)
+            
+            if not project_type:
+                raise ValueError(f"Project type not found in registry response for dependency '{name}'.")
+
+            if project_type != ProjectType.PACKAGE.value:
+                raise ValueError(
+                    f"Unsupported project type '{project_type}' for dependency '{name}'. "
+                    f"Only 'package' type is supported."
+                )
+            
+            return response_json
         except httpx.RequestError as e:
             raise RegistryRequestError(url, 0, str(e))
 
@@ -205,7 +220,7 @@ class DependencyDownloader:
         Validate a dependency manifest.
 
         Override this method in platform-specific downloaders to enforce
-        platform-specific constraints (e.g., MQL can only depend on packages).
+        platform-specific constraints (e.g., MQL5 can only depend on MQL5 packages).
 
         Args:
             manifest: Loaded KnitPkgManifest object
@@ -432,7 +447,7 @@ class DependencyDownloader:
         return dep_path
 
 
-    def _parse_package_name(self, name: str) -> tuple[str, str]:
+    def _parse_project_name(self, name: str) -> tuple[str, str]:
         """Parse package name format @org/package-name into (org, pack_name) tuple."""
         if name.startswith('@') and '/' in name:
             parts = name[1:].split('/', 1)

@@ -96,7 +96,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )
         console.log(
-            f"    → target is '{manifest.target.value}', but `knitpkg install` only "
+            f"    → target is '{manifest.target.value}', but `kp-mt install` only "
             f"supports '{Target.MQL4.value}' or '{Target.MQL5.value}' projects."
         )
 
@@ -108,7 +108,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )
         console.log(
-            f"    → type is '{manifest.type.value}', but `knitpkg install` only "
+            f"    → type is '{manifest.type.value}', but `kp-mt install` only "
             f"supports 'package' projects."
         )
 

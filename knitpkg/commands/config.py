@@ -30,6 +30,12 @@ def register(app):
 
     @app.command()
     def config(
+        project_dir: Optional[Path] = typer.Option(
+            None,
+            "--project-dir",
+            "-d",
+            help="Project directory (default: current directory)"
+        ),
         mql5_compiler_path: Optional[Path] = typer.Option(
             None,
             "--mql5-compiler-path",
@@ -67,15 +73,20 @@ def register(app):
         """
         console = Console(log_path=verbose)
 
+        if project_dir is None:
+            project_path = str(Path.cwd())
+        else:
+            project_path = str(Path(project_dir).resolve())
+
         # Set compiler paths
         if mql5_compiler_path:
-            set_mql5_compiler_path(str(mql5_compiler_path.resolve()))
+            set_mql5_compiler_path(project_path, str(mql5_compiler_path.resolve()))
             console.log(
                 f"[green]MQL5 compiler path set to:[/]"
                 f" {mql5_compiler_path.resolve()}"
             )
         if mql4_compiler_path:
-            set_mql4_compiler_path(str(mql4_compiler_path.resolve()))
+            set_mql4_compiler_path(project_path, str(mql4_compiler_path.resolve()))
             console.log(
                 f"[green]MQL4 compiler path set to:[/]"
                 f" {mql4_compiler_path.resolve()}"
@@ -83,13 +94,13 @@ def register(app):
 
         # Set MQL data folder paths
         if mql5_data_folder_path:
-            set_mql5_data_folder_path(str(mql5_data_folder_path.resolve()))
+            set_mql5_data_folder_path(project_path, str(mql5_data_folder_path.resolve()))
             console.log(
                 f"[green]MQL5 data folder path set to:[/]"
                 f" {mql5_data_folder_path.resolve()}"
             )
         if mql4_data_folder_path:
-            set_mql4_data_folder_path(str(mql4_data_folder_path.resolve()))
+            set_mql4_data_folder_path(project_path, str(mql4_data_folder_path.resolve()))
             console.log(
                 f"[green]MQL4 data folder path set to:[/]"
                 f" {mql4_data_folder_path.resolve()}"
@@ -106,11 +117,11 @@ def register(app):
             table.add_column("Value")
 
             # Display compiler paths
-            table.add_row("mql5-compiler-path", get_mql5_compiler_path() or "[dim]Not set[/]")
-            table.add_row("mql4-compiler-path", get_mql4_compiler_path() or "[dim]Not set[/]")
+            table.add_row("mql5-compiler-path", get_mql5_compiler_path(project_path) or "[dim]Not set[/]")
+            table.add_row("mql4-compiler-path", get_mql4_compiler_path(project_path) or "[dim]Not set[/]")
 
             # Display data folder paths
-            table.add_row("mql5-data-folder-path", get_mql5_data_folder_path() or "[dim]Not set[/]")
-            table.add_row("mql4-data-folder-path", get_mql4_data_folder_path() or "[dim]Not set[/]")
+            table.add_row("mql5-data-folder-path", get_mql5_data_folder_path(project_path) or "[dim]Not set[/]")
+            table.add_row("mql4-data-folder-path", get_mql4_data_folder_path(project_path) or "[dim]Not set[/]")
 
             console.print(table)
