@@ -602,6 +602,33 @@ class MQLCompiler:
 
 
 # ==============================================================
+# COMMAND WRAPPER
+# ==============================================================
+
+def compile_command(project_dir: Path, entrypoints_only: bool, compile_only: bool, verbose: bool):
+    """Command wrapper"""
+    console = Console(log_path=verbose)
+
+    if entrypoints_only and compile_only:
+        console.log(
+            "[red]Error:[/] --entrypoints-only and --compile-only "
+            "are mutually exclusive"
+        )
+        raise SystemExit(1)
+
+    compiler = MQLCompiler(console, project_dir)
+
+    try:
+        compiler.compile(entrypoints_only, compile_only)
+    except (CompilerNotFoundError, 
+            UnsupportedTargetError, 
+            NoFilesToCompileError,
+            CompilationFailedError):
+        # All errors already logged by MQLCompiler
+        # Just exit with error code
+        raise SystemExit(1)
+
+# ==============================================================
 # CLI REGISTRATION
 # ==============================================================
 
@@ -631,28 +658,14 @@ def register(app):
         )
     ):
         """Compile MQL source files via CLI."""
-        console = Console(log_path=verbose)
 
         if project_dir is None:
             project_dir = Path.cwd()
         else:
             project_dir = Path(project_dir).resolve()
 
-        if entrypoints_only and compile_only:
-            console.log(
-                "[red]Error:[/] --entrypoints-only and --compile-only "
-                "are mutually exclusive"
-            )
-            raise SystemExit(1)
-
-        compiler = MQLCompiler(console, project_dir)
-
-        try:
-            compiler.compile(entrypoints_only, compile_only)
-        except (CompilerNotFoundError, 
-                UnsupportedTargetError, 
-                NoFilesToCompileError,
-                CompilationFailedError):
-            # All errors already logged by MQLCompiler
-            # Just exit with error code
-            raise SystemExit(1)
+        compile_command(project_dir, \
+                        True if entrypoints_only else False, \
+                        True if compile_only else False, \
+                        True if verbose else False)
+        

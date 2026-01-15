@@ -12,12 +12,12 @@ from knitpkg.commands import (
     install,
     autocomplete,
     compile,
+    build,
     config,
     login,
     publish,
     logout,
     global_config
-    # build, # Not yet implemented
     # deploy, # Not yet implemented
 )
 
@@ -33,6 +33,7 @@ init.register(app)
 install.register(app)
 autocomplete.register(app)
 compile.register(app)
+build.register(app)
 config.register(app)
 global_config.register(app)
 

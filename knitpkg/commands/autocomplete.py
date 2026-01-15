@@ -113,6 +113,16 @@ class AutocompleteGenerator:
         )
 
 # ==============================================================
+# COMMAND WRAPPER
+# ==============================================================
+
+def autocomplete_command(project_dir: Path, verbose: bool):
+    """Command wrapper"""
+    console = Console(log_path=verbose)
+    generator = AutocompleteGenerator(console, project_dir)
+    generator.generate()
+
+# ==============================================================
 # CLI REGISTRATION
 # ==============================================================
 
@@ -134,12 +144,9 @@ def register(app):
         )
     ):
         """Generate autocomplete.mqh for MetaEditor for package development."""
-        console = Console(log_path=verbose)
-
         if project_dir is None:
             project_dir = Path.cwd()
         else:
             project_dir = Path(project_dir).resolve()
 
-        generator = AutocompleteGenerator(console, project_dir)
-        generator.generate()
+        autocomplete_command(project_dir, True if verbose else False)
