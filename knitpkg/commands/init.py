@@ -2007,7 +2007,7 @@ def register(app):
             None,
             "--organization",
             "-o",
-            help="Organization name (optional; alphanumeric, hyphen, underscore, dot).",
+            help="Organization name (alphanumeric, hyphen, underscore, dot).",
         ),
         version: str = typer.Option(
             None, "--version", "-v", help="Project version (SemVer, e.g., 1.0.0)."

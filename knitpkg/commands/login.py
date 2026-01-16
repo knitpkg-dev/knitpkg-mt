@@ -21,52 +21,15 @@ import os
 import sys
 import asyncio
 
-from knitpkg.core.auth import register_device_with_registry, CREDENTIALS_SERVICE, SUPPORTED_PROVIDERS
-from knitpkg.core.global_config import get_registry_url
-
-class CallbackHandler(http.server.SimpleHTTPRequestHandler):
-    """
-    Handles the OAuth callback from the browser.
-
-    This custom handler captures the authorization code from the redirect URL
-    and stores it for the main login process.
-    """
-    def do_GET(self):
-        """
-        Processes GET requests, specifically looking for the OAuth callback.
-        """
-        # Extract the path and check if it matches the expected one based on the provider
-        expected_path = f"/auth/{self.server.provider}/callback"
-        if self.path.startswith(expected_path):
-            query = urllib.parse.urlparse(self.path).query
-            params = urllib.parse.parse_qs(query)
-            code = params.get("code", [None])[0]
-            if code:
-                self.server.code = code  # Store the code in the server
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b"Login successful! Close this window and return to the KnitPkg CLI.")
-            else:
-                self.send_response(400)
-                self.end_headers()
-                self.wfile.write(b"Failed to obtain authorization code.")
-        else:
-            # If the path doesn't match, return 404 or ignore
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Endpoint not found.")
-
-    # Override log_message to suppress default logging
-    def log_message(self, format, *args):
-        """Suppress default HTTP server logging."""
-        pass
+from knitpkg.core.registry import Registry
+from knitpkg.core.global_config import get_registry_url, get_auth_callback_port
 
 def register(app):
     """Register the login command with the Typer app."""
 
     @app.command()
     def login(
-        provider: str = typer.Option(None, "--provider", help="Provider: github, gitlab, mql5forge, or bitbucket"),
+        provider: str = typer.Option(None, "--provider", help="Authentication provider"),
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
@@ -80,9 +43,11 @@ def register(app):
         and stores the resulting access token securely using the system keyring.
         The token enables subsequent operations like publishing packages.
         """
-        console = Console(log_path=verbose)
+        console = Console(log_path=verbose) # type: ignore
 
         registry_url = get_registry_url()
+
+        registry: Registry = Registry(registry_url, callback_port=get_auth_callback_port(), console=console, verbose=verbose) # type: ignore
 
         # Descobrir configuração de autenticação do registry
         with console.status("[cyan]Connecting to registry..."):

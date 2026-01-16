@@ -11,15 +11,6 @@ from knitpkg.core.global_config import get_registry_url
 CREDENTIALS_SERVICE = "knitpkg-mt"  # Name for keyring
 SUPPORTED_PROVIDERS = ['github', 'gitlab', 'mql5forge', 'bitbucket']
 
-def session_provider():
-    for p in SUPPORTED_PROVIDERS:
-        try:
-            if keyring.get_password(CREDENTIALS_SERVICE, p): # Check if token exists
-                return p
-        except Exception:
-            ...
-    return None
-
 def session_access_token():
     for p in SUPPORTED_PROVIDERS:
         try:

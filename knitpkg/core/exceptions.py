@@ -93,6 +93,63 @@ class RegistryRequestError(DependencyError):
             f"Registry request failed: {status_code} - {url}\n{response_text}"
         )
 
+class ProviderNotFoundError(DependencyError):
+    """Raised when provider is not found in registry config."""
+    def __init__(self, provider: str, available_providers: list[str] = None):
+        self.provider = provider
+        self.available_providers = available_providers
+        if available_providers:
+            super().__init__(
+                f"Provider '{provider}' not found in registry configuration. "
+                f"Available providers: {', '.join(available_providers)}"
+            )
+        else:
+            super().__init__(f"Provider '{provider}' not found in registry configuration")
+
+class CallbackServerError(KnitPkgError):
+    """Raised when callback server fails to start or handle request."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Callback server error: {details}")
+
+class AuthorizationCodeError(KnitPkgError):
+    """Raised when authorization code is not received from callback."""
+    def __init__(self):
+        super().__init__("Failed to obtain authorization code from OAuth callback")
+
+class TokenExchangeError(KnitPkgError):
+    """Raised when token exchange fails."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Token exchange failed: {details}")
+
+class AccessTokenError(KnitPkgError):
+    """Raised when access token is missing from response."""
+    def __init__(self):
+        super().__init__("Access token not found in registry response")
+
+class InvalidRegistryError(KnitPkgError):
+    """Raised when registry configuration is invalid."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Invalid registry configuration: {details}")
+
+class TokenStorageError(KnitPkgError):
+    """Raised when token storage fails."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Failed to store token securely: {details}")
+
+class TokenRemovalError(KnitPkgError):
+    """Raised when token removal fails."""
+    def __init__(self):
+        super().__init__(f"Failed to remove token")
+
+class TokenNotFoundError(KnitPkgError):
+    """Raised when access token is not found in keyring."""
+    def __init__(self):
+        super().__init__(f"No access token found")
+
 class GitOperationError(DependencyError):
     """Raised when git operations fail."""
     def __init__(self, operation: str, details: str):
