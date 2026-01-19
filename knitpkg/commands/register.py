@@ -1,7 +1,7 @@
-# knitpkg/commands/publish.py
+# knitpkg/commands/register.py
 
 """
-KnitPkg for MetaTrader publish command — publishes a project to the registry.
+KnitPkg for MetaTrader register command — publishes a project to the registry.
 
 This module handles the process of validating a local KnitPkg project,
 checking its Git status, creating a tag for the commit hash, pushing the tag to remote,
@@ -13,8 +13,7 @@ and that the commit is tagged with 'knitpkg-registry/<commit_hash>' to prevent i
 
 import typer
 import httpx
-import asyncio
-import keyring
+import json
 from typing import Optional
 import git
 from pathlib import Path
@@ -25,6 +24,7 @@ from rich.table import Table
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.mql.models import MQLKnitPkgManifest
+from knitpkg.core.registry import Registry
 
 # Configurations
 CREDENTIALS_SERVICE = "knitpkg-mt"
@@ -105,23 +105,28 @@ def create_and_push_tag(repo: git.Repo, commit_hash: str) -> None:
             pass
 
         console.print(f"[red]✗[/red] Failed to push tag to remote: {e}", style="bold")
-        console.print("   [dim]Cannot publish without remote tag (prevents orphaned commits)[/dim]")
+        console.print("   [dim]Cannot register without remote tag (prevents orphaned commits)[/dim]")
         raise git.GitCommandError(f"Tag push failed: {e}")
 
 
 def register(app):
-    """Register the publish command with the main Typer app."""
+    """Register the register command with the main Typer app."""
 
     @app.command()
-    def publish(
+    def register(
         project_dir: Optional[Path] = typer.Option(
             None,
             "--project-dir",
             "-d",
             help="Project directory (default: current directory)"
+        ),
+        verbose: Optional[bool] = typer.Option(
+            False,
+            "--verbose",
+            help="Show detailed output"
         )
     ):
-        """Publish the current project to the KnitPkg registry."""
+        """Register the current project to the KnitPkg registry."""
 
         project_path = Path(project_dir) if project_dir else Path.cwd()
 
@@ -206,7 +211,7 @@ def register(app):
         except git.GitCommandError as e:
             console.print(f"\n[red]✗[/red] [bold]Failed to create/push tag[/bold]", style="bold")
             console.print(f"   {e}", style="dim")
-            console.print("\n   [yellow]Cannot publish without remote tag (prevents orphaned commits)[/yellow]")
+            console.print("\n   [yellow]Cannot register without remote tag (prevents orphaned commits)[/yellow]")
             raise typer.Exit(code=1)
 
         # Detect Git provider
@@ -222,13 +227,6 @@ def register(app):
             console.print(f"[red]✗[/red] Unsupported Git provider.", style="bold")
             console.print(f"   Repository URL: [cyan]{repo_url}[/cyan]", style="dim")
             console.print("   Supported providers: GitHub, GitLab, MQL5 Forge, Bitbucket", style="dim")
-            raise typer.Exit(code=1)
-
-        # Check if logged in
-        token = keyring.get_password(CREDENTIALS_SERVICE, provider)
-        if not token:
-            console.print(f"\n[red]✗[/red] Not logged in to [cyan]{provider}[/cyan].", style="bold")
-            console.print(f"   Login first: [cyan]kp-mt login --provider {provider}[/cyan]", style="dim")
             raise typer.Exit(code=1)
 
         # Validate manifest fields
@@ -257,71 +255,40 @@ def register(app):
         info_table.add_column(style="cyan bold", justify="right")
         info_table.add_column(style="white")
 
-        info_table.add_row("Project:", f"[green bold]{manifest.target.value}[/green bold]:@{manifest.organization}/{manifest.name}")
+        info_table.add_row("Project:", f"[green bold]{manifest.target.value}[/green bold]:@{manifest.organization}/{manifest.name}") # type: ignore
         info_table.add_row("Type:", f"[yellow]{manifest.type.value}[/yellow]")
         info_table.add_row("Version:", f"[yellow]{manifest.version}[/yellow]")
         info_table.add_row("Commit:", f"[dim]{commit_hash[:12]}[/dim]")
         info_table.add_row("Repository:", f"[dim]{repo_url}[/dim]")
         info_table.add_row("Provider:", f"[dim]{provider}[/dim]")
 
-        console.print(Panel(info_table, title="[bold]📦 Publishing Project[/bold]", border_style="cyan"))
+        console.print(Panel(info_table, title="[bold]📦 Registering Project[/bold]", border_style="cyan"))
 
         registry_url = get_registry_url()
-        # Send publish request
-        async def send_publish_request():
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    f"{registry_url}/project/publish",
-                    json=payload,
-                    headers={"Authorization": f"Bearer {token}"}
-                )
-                return response
+        registry: Registry = Registry(registry_url, console=console, verbose=verbose) # type: ignore
 
-        with console.status("[cyan]Uploading to registry...", spinner="dots"):
-            response = asyncio.run(send_publish_request())
-
-        # Handle response
-        if response.status_code == 201:
+        try:
             console.print()
-            console.print("[green]✓[/green] [bold green]Project published successfully![/bold green]")
-
-            response_data = response.json()
+            response_data = registry.register(payload)
+            
+            if "message" in response_data:
+                console.print(f"[green]✓[/green] [bold green]{response_data['message']}[/bold green]")
+            else:
+                console.print("[green]✓[/green] [bold green]Project registered successfully![/bold green]")
             if "project" in response_data:
                 pkg = response_data["project"]
-                console.print()
-                # TODO resolver mensagem abaixo
-                console.print(f"   [cyan]→[/cyan] View at: [link]https://registry.knitpkg.dev/packages/{pkg['target']}/@{pkg['organization']}/{pkg['name']}[/link]")
-
-            console.print()
-        else:
-            console.print()
+                console.print(pkg)
+        except httpx.HTTPStatusError as e:
             try:
-                error_data = response.json()
-
-                # Handle validation errors (422)
-                if response.status_code == 422:
-                    if isinstance(error_data, dict) and "detail" in error_data:
-                        # FastAPI validation error format
-                        detail = error_data["detail"]
-                        if isinstance(detail, list):
-                            console.print("[red]✗[/red] [bold]Validation errors:[/bold]")
-                            for error in detail:
-                                field = " → ".join(str(x) for x in error.get("loc", []))
-                                msg = error.get("msg", "Unknown error")
-                                console.print(f"   [yellow]{field}[/yellow]: {msg}")
-                        else:
-                            console.print(f"[red]✗[/red] [bold]Validation error:[/bold] {detail}")
-                    else:
-                        console.print(f"[red]✗[/red] [bold]Validation error[/bold]")
-                        console.print(f"   {error_data}")
-                else:
-                    # Other errors
-                    error_detail = error_data.get("detail", "Unknown error")
-                    console.print(f"[red]✗[/red] [bold]Failed to publish project[/bold]")
-                    console.print(f"   {error_detail}")
-            except:
-                console.print(f"[red]✗[/red] [bold]HTTP {response.status_code}[/bold]: Failed to publish project")
-                console.print(f"   {response.text[:200]}")
-
-            console.print()
+                error_data = json.loads(e.response.text)
+                detail = error_data.get("detail", str(e))
+                console.print(f"[red]✗[/red] Failed to register project: {detail}")
+            except (json.JSONDecodeError, AttributeError):
+                console.print(f"[red]✗[/red] Failed to register project: {e}")
             raise typer.Exit(code=1)
+        except Exception as e:
+            console.print(f"[red]✗[/red] Failed to register project: {e}")
+            raise typer.Exit(code=1)
+
+
+

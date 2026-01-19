@@ -441,7 +441,7 @@ under the `dependencies` section. For example:
    `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
-4. **Publish** - when you are ready, push the repository to a Git host.
+4. **Register** - when you are ready, push the repository to a Git host.
 
 For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
@@ -754,7 +754,7 @@ under the `dependencies` section. For example:
    `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
-4. **Publish** - when you are ready, push the repository to a Git host.
+4. **Register** - when you are ready, push the repository to a Git host.
 
 For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
@@ -942,7 +942,7 @@ under the `dependencies` section. For example:
    `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
-4. **Publish** - when you are ready, push the repository to a Git host.
+4. **Register** - when you are ready, push the repository to a Git host.
 
 For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
@@ -1130,7 +1130,7 @@ under the `dependencies` section. For example:
    `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
-4. **Publish** - when you are ready, push the repository to a Git host.
+4. **Register** - when you are ready, push the repository to a Git host.
 
 For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 
@@ -1320,7 +1320,7 @@ under the `dependencies` section. For example:
    `kp-mt install` will add the resolved dependencies into one of 
    those directories.
 
-4. **Publish** - when you are ready, push the repository to a Git host.
+4. **Register** - when you are ready, push the repository to a Git host.
 
 For the full KnitPkg documentation visit: https://knitpkg.dev/docs
 

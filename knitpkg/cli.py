@@ -15,9 +15,9 @@ from knitpkg.commands import (
     build,
     config,
     login,
-    publish,
     logout,
-    global_config
+    global_config,
+    register
     # deploy, # Not yet implemented
 )
 
@@ -38,7 +38,7 @@ config.register(app)
 global_config.register(app)
 
 login.register(app)
-publish.register(app)
+register.register(app)
 logout.register(app)
 
 @app.callback()

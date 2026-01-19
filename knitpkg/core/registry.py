@@ -7,10 +7,6 @@ import httpx
 import keyring
 import os
 import sys
-import hashlib
-import platform
-import socket
-import uuid
 from typing import Optional, Tuple
 
 from knitpkg.core.exceptions import (
@@ -25,7 +21,7 @@ from knitpkg.core.exceptions import (
     TokenNotFoundError
 )
 
-from console import ConsoleAware, Console
+from knitpkg.core.console import ConsoleAware, Console
 
 CREDENTIALS_SERVICE = "knitpkg-mt"
 
@@ -83,7 +79,7 @@ class Registry(ConsoleAware):
 
     def login(self, provider: Optional[str] = None):
         """Perform login using the fetched auth URL."""
-        auth_url, provider, local_redirect_uri = self._fetch_registry_config(provider)
+        provider, auth_url, local_redirect_uri = self._fetch_registry_config(provider)
         
         # Parse local_redirect_uri to extract port and endpoint path
         parsed_uri = urllib.parse.urlparse(local_redirect_uri)
@@ -159,12 +155,12 @@ class Registry(ConsoleAware):
                 keyring.get_password(CREDENTIALS_SERVICE, "token") is not None:
                 raise TokenRemovalError()
 
-    def publish(self, payload: dict) -> dict:
-        """Send publish request to registry."""
+    def register(self, payload: dict) -> dict:
+        """Send register request to registry."""
         provider, token = self._get_credentials()
         
         response = httpx.post(
-            f"{self.base_url}/project/publish",
+            f"{self.base_url}/project/register",
             json=payload,
             headers={"Authorization": f"Bearer {token}",
                      "X-Provider": provider},
@@ -222,8 +218,8 @@ class Registry(ConsoleAware):
 
             provider = p["name"]
             local_redirect_uri: str = p["local_redirect_uri"]
-            auth_url: str = p["auth_url"].format(local_redirect_uri=local_redirect_uri)
-            return auth_url, provider, local_redirect_uri # type: ignore
+            auth_url: str = p["auth_url"]
+            return provider, auth_url, local_redirect_uri # type: ignore
         
         if provider:
             raise ProviderNotFoundError(provider, providers)
@@ -250,54 +246,20 @@ class Registry(ConsoleAware):
         )
         response.raise_for_status()
         return response.json()
-
-    def _register_device_with_registry(self, token: str, provider: str) -> None:
-        """Register current device with registry after successful login."""
-        device_id = self._generate_device_fingerprint()
-        device_name = f"{platform.node()} ({platform.system()})"
-        
-        response = httpx.post(
-            f"{self.base_url}/auth/register-device",
-            json={
-                "device_id": device_id,
-                "device_name": device_name,
-                "device_type": self._detect_device_type()
-            },
-            headers={"Authorization": f"Bearer {token}",
-                     "X-Provider": provider}
-        )
-        
-        if response.status_code == 201:
-            self.print(f"[green]✓[/green] Device registered: [dim]{device_name}[/dim]")
-
-    def _generate_device_fingerprint(self) -> str:
-        """Generate unique device fingerprint."""
-        hostname = socket.gethostname()
-        mac = ':'.join(['{:02x}'.format((uuid.getnode() >> i) & 0xff) for i in range(0, 8*6, 8)][::-1])
-        username = os.getlogin()
-        system = platform.system()
-        fingerprint = f"{hostname}:{mac}:{username}:{system}"
-        return hashlib.sha256(fingerprint.encode()).hexdigest()
-
-    def _detect_device_type(self) -> str:
-        """Detect if running in CI/CD or personal machine."""
-        ci_indicators = ["CI", "CONTINUOUS_INTEGRATION", "GITHUB_ACTIONS", "GITLAB_CI"]
-        if any(os.getenv(var) for var in ci_indicators):
-            return "ci"
-        if platform.system() == "Darwin":
-            return "laptop" if "MacBook" in platform.node() else "desktop"
-        return "desktop"
+    
+    def _register_device_with_registry(self, access_token: str, provider: str):
+        ...
 
 if __name__ == "__main__":
     from rich.console import Console as RichConsole
     r: Registry = Registry(base_url="http://localhost:8000", console=RichConsole())
 
-    #r.login("mql5forge")
+    r.login("mql5forge")
     #print(r.resolve_package('MQL5','douglasrechia','knitpkg-mt-bar','^1.0.0'))
 
     #r.login("github")
     #print(r.resolve_package('MQL5','dougrechia','knitpkg-mt-showcase2','^1.0.0'))
 
-    r.login("gitlab")
+    #r.login("gitlab")
     
-    r.login("bitbucket")
+    #r.login("bitbucket")
