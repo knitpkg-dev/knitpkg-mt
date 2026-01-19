@@ -1,112 +1,291 @@
 # knitpkg/commands/register.py
-
-"""
-KnitPkg for MetaTrader register command — publishes a project to the registry.
-
-This module handles the process of validating a local KnitPkg project,
-checking its Git status, creating a tag for the commit hash, pushing the tag to remote,
-and submitting its metadata to the KnitPkg registry.
-
-It ensures that only clean, committed repositories can be published,
-and that the commit is tagged with 'knitpkg-registry/<commit_hash>' to prevent it from becoming orphaned.
-"""
-
+from typing import Optional
 import typer
+from pathlib import Path
+import git
 import httpx
 import json
-from typing import Optional
-import git
-from pathlib import Path
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
-from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.core.global_config import get_registry_url
-from knitpkg.mql.models import MQLKnitPkgManifest
+from knitpkg.core.console import ConsoleAware
 from knitpkg.core.registry import Registry
+from knitpkg.core.file_reading import load_knitpkg_manifest
+from knitpkg.core.exceptions import KnitPkgError
+from knitpkg.core.models import KnitPkgManifest
+from knitpkg.mql.models import MQLKnitPkgManifest
+from knitpkg.core.global_config import get_registry_url
+from knitpkg.core.utils import is_local_path
 
-# Configurations
-CREDENTIALS_SERVICE = "knitpkg-mt"
-
-console = Console()
-
-
-def get_current_commit_hash(repo: git.Repo) -> str:
-    """Get the current commit hash from the Git repo."""
-    return repo.head.commit.hexsha
-
-
-def create_and_push_tag(repo: git.Repo, commit_hash: str) -> None:
+class RegisterProject(ConsoleAware):
     """
-    Create a tag 'knitpkg-registry/<commit_hash>' pointing to the current commit
-    and push it to the remote origin.
+    Encapsulates the comprehensive steps required to register a project in the registry.
+    This class handles local Git repository validations, manifest loading, tag creation,
+    and delegates the final registration to the `Registry` service. It ensures that
+    projects meet pre-registration criteria before attempting to publish.
 
-    This tag acts as a safeguard to prevent the commit from becoming orphaned
-    if the user performs a force-push or rebase.
-
-    Args:
-        repo: Git repository object
-        commit_hash: The commit hash to tag
-
-    Raises:
-        git.GitCommandError: If tag creation or push fails
+    It inherits from `ConsoleAware` to provide consistent console output.
     """
-    tag_name = f"knitpkg-registry/{commit_hash}"
 
-    # Check if tag already exists locally
-    try:
-        existing_tag = repo.git.tag("-l", tag_name).strip()
-        if existing_tag == tag_name:
-            console.print(f"[yellow]⚠[/yellow] Tag '{tag_name}' already exists locally.", style="dim")
+    def __init__(self, project_path: Path, registry_service: Registry, console=None, verbose:bool=False):
+        """
+        Initializes the RegisterProject command with an optional Rich Console instance.
+        """
+        super().__init__(console, verbose)
+        self.registry_service: Registry = registry_service
+        self.project_root: str = str(project_path.resolve())
+        self.project_path: Path = project_path
+        self.repo: git.Repo = git.Repo(self.project_root)
+        self.manifest: Optional[KnitPkgManifest] = None
+        self.current_commit_hash: Optional[str] = None
+        self.remote_url: Optional[str] = None
 
-            # Verify it points to the correct commit
-            tag_commit = repo.git.rev_list("-n", "1", tag_name).strip()
-            if tag_commit != commit_hash:
-                console.print(f"[red]✗[/red] Local tag '{tag_name}' points to wrong commit: {tag_commit[:12]}", style="bold")
-                console.print(f"   Expected: {commit_hash[:12]}", style="dim")
-                raise git.GitCommandError(f"Tag '{tag_name}' is corrupted")
-
-            # Check if tag is already on remote
-            try:
-                repo.git.fetch("--tags")
-                remote_tags = repo.git.ls_remote("--tags", "origin", f"refs/tags/{tag_name}").strip()
-                if remote_tags:
-                    console.print(f"[green]✓[/green] Tag '{tag_name}' already exists on remote.", style="dim")
-                    return  # Tag already exists locally and remotely, we're good
-            except git.GitCommandError:
-                pass  # Tag not on remote, proceed to push
-        else:
-            # Tag name matches but content differs (shouldn't happen, but handle it)
-            console.print(f"[yellow]⚠[/yellow] Deleting corrupted local tag '{tag_name}'...", style="dim")
-            repo.git.tag("-d", tag_name)
-    except git.GitCommandError:
-        pass  # Tag doesn't exist, proceed to create
-
-    # Create the tag locally
-    try:
-        repo.create_tag(tag_name, ref=commit_hash)
-        console.print(f"[green]✓[/green] Created local tag: [cyan]'{tag_name}'[/cyan]", style="dim")
-    except git.GitCommandError as e:
-        console.print(f"[red]✗[/red] Failed to create tag '{tag_name}': {e}", style="bold")
-        raise git.GitCommandError(f"Cannot create tag: {e}")
-
-    # Push the tag to remote
-    try:
-        console.print(f"[cyan]→[/cyan] Pushing tag to remote origin...", style="dim")
-        repo.git.push("origin", tag_name)
-        console.print(f"[green]✓[/green] Tag [cyan]'{tag_name}'[/cyan] pushed to remote.", style="dim")
-    except git.GitCommandError as e:
-        # Clean up local tag if push fails
+    def _load_manifest_and_initialize_repo(self):
+        """
+        Loads and validates the manifest file. Initializes Git repository.
+        """
+        self.log(f"📦 Loading manifest...")
         try:
-            repo.git.tag("-d", tag_name)
-            console.print(f"[yellow]⚠[/yellow] Cleaned up local tag after push failure.", style="dim")
-        except:
-            pass
+            self.manifest = load_knitpkg_manifest(self.project_path, manifest_class=MQLKnitPkgManifest)
+            self.log("✔ Manifest loaded successfully.")
+        except Exception as e:
+            self.print(f"[bold red]✖ Error loading manifest:[/bold red] {e}")
+            raise KnitPkgError(f"Failed to load manifest: {e}")
 
-        console.print(f"[red]✗[/red] Failed to push tag to remote: {e}", style="bold")
-        console.print("   [dim]Cannot register without remote tag (prevents orphaned commits)[/dim]")
-        raise git.GitCommandError(f"Tag push failed: {e}")
+        try:
+            self.repo = git.Repo(self.project_root)
+            self.log("✔ Directory is a Git repository.")
+        except git.InvalidGitRepositoryError:
+            raise KnitPkgError(f"The directory '{self.project_root}' is not a Git repository. "
+                               "KnitPkg requires projects to be managed by Git for registration.")
+        except Exception as e:
+            raise KnitPkgError(f"Failed to initialize Git repository: {e}")
+
+    def _validate_manifest_fields(self):
+        """
+        Validates specific fields within the loaded manifest.
+        """
+        if not self.manifest:
+            raise KnitPkgError("Manifest not loaded. Cannot validate fields.")
+
+        self.log("🔍 Validating manifest fields...")
+        # Normalizar nomes de pacotes para minúsculas e impedir publicação se dependências usarem caminhos locais
+        if self.manifest.name != self.manifest.name.lower():
+            raise KnitPkgError(f"Package name '{self.manifest.name}' must be lowercase. Please update your manifest.")
+        
+        if not self.manifest.organization:
+            raise KnitPkgError("Manifest must specify an 'organization' field.")
+        
+        if self.manifest.organization != self.manifest.organization.lower():
+            raise KnitPkgError(f"Organization name '{self.manifest.organization}' must be lowercase. Please update your manifest.")
+
+        for dep_name, dep_spec in self.manifest.dependencies.items():
+            if is_local_path(dep_spec):
+                raise KnitPkgError(f"Dependency '{dep_name}' uses a local path. Local path dependencies are not allowed for registration. Please specify a registered version.")
+        self.log("✔ Manifest name and dependencies validated.")
+
+    def _check_for_remote_origin(self):
+        """
+        Checks if the Git repository has a remote named 'origin'.
+        """
+        if not self.repo:
+            raise KnitPkgError("Git repository not initialized.")
+
+        self.log("🔍 Checking for remote 'origin'...")
+        try:
+            self.remote_url = self.repo.remotes.origin.url
+            self.log(f"✔ Remote 'origin' found: [bold blue]{self.remote_url}[/bold blue]")
+        except AttributeError:
+            raise KnitPkgError("No remote 'origin' found for this Git repository. "
+                               "A remote 'origin' is required to link your project to a source control host.")
+
+    def _check_for_uncommitted_changes(self):
+        """
+        Checks if there are any uncommitted changes in the Git repository.
+        """
+        if not self.repo:
+            raise KnitPkgError("Git repository not initialized.")
+
+        self.log("🔍 Checking for uncommitted changes...")
+        if self.repo.is_dirty(untracked_files=True):
+            raise KnitPkgError("You have uncommitted changes or untracked files in your Git repository. "
+                               "Please commit or stash your changes before registering your project.")
+        self.log("✔ No uncommitted changes or untracked files detected.")
+
+    def _check_sync_status_with_remote(self):
+        """
+        Checks if the local branch is in sync with its remote tracking branch.
+        """
+        if not self.repo:
+            raise KnitPkgError("Git repository not initialized.")
+
+        self.log("🔍 Checking sync status with remote...")
+        try:
+            # Fetch to ensure local remote-tracking branches are up-to-date
+            self.repo.remotes.origin.fetch()
+
+            active_branch = self.repo.active_branch
+            if not active_branch.tracking_branch():
+                raise KnitPkgError(f"Local branch '{active_branch.name}' is not tracking a remote branch. "
+                                   "Please set an upstream branch (e.g., 'git push -u origin {active_branch.name}') "
+                                   "before registering your project.")
+
+            local_commit = active_branch.commit
+            remote_commit = self.repo.remotes.origin.refs[self.repo.active_branch.name].commit
+
+            if local_commit != remote_commit:
+                raise KnitPkgError(f"Local branch '{active_branch.name}' is not in sync with its remote tracking branch. "
+                                   "Please push your local commits or pull remote changes before registering.")
+            self.log("✔ Local branch is in sync with remote.")
+        except Exception as e:
+            raise KnitPkgError(f"Failed to check sync status with remote: {e}")
+
+    def get_current_commit_hash(self) -> str:
+        """
+        Gets the current commit hash of the Git repository.
+        This method is now part of RegisterProject.
+        """
+        if not self.repo:
+            raise KnitPkgError("Git repository not initialized.")
+        self.current_commit_hash = self.repo.head.commit.hexsha
+        self.log(f"✔ Current commit hash: [bold cyan]{self.current_commit_hash}[/bold cyan]")
+        return self.current_commit_hash
+
+    def create_and_push_tag(self, tag_name: str):
+        """
+        Creates a new Git tag and pushes it to the remote origin.
+        This method is now part of RegisterProject.
+        """
+        if not self.repo:
+            raise KnitPkgError("Git repository not initialized.")
+        if not self.manifest:
+            raise KnitPkgError("Manifest not loaded. Cannot create tag.")
+
+        self.log(f"🏷️ Creating and pushing Git tag '[bold magenta]{tag_name}[/bold magenta]'...")
+        try:
+            # Check if tag already exists locally or remotely
+            if tag_name in self.repo.tags:
+                self.log(f"ℹ️ Tag '{tag_name}' already exists locally. Skipping creation.")
+            else:
+                self.repo.create_tag(tag_name, message=f"Reserved for KnitPkg Registry use")
+                self.log(f"✔ Tag '{tag_name}' created locally.")
+
+            # Push the tag
+            self.repo.remotes.origin.push(tag_name)
+            self.log(f"✔ Tag '[bold magenta]{tag_name}[/bold magenta]' pushed to remote origin.")
+        except git.GitCommandError as e:
+            raise KnitPkgError(f"Failed to create or push Git tag: {e.stderr.strip()}")
+        except Exception as e:
+            raise KnitPkgError(f"An unexpected error occurred during tag operation: {e}")
+
+    def _display_project_info(self):
+        """
+        Displays key project information before final registration.
+        """
+        if not self.manifest:
+            raise KnitPkgError("Manifest not loaded. Cannot display project info.")
+
+        self.print("\n--- Project Information for Registration ---")
+        self.print(f"  [bold]Name:[/bold] {self.manifest.name}")
+        self.print(f"  [bold]Version:[/bold] {self.manifest.version}")
+        self.print(f"  [bold]Description:[/bold] {self.manifest.description or 'N/A'}")
+        self.print(f"  [bold]Author:[/bold] {self.manifest.author or 'N/A'}")
+        self.print(f"  [bold]License:[/bold] {self.manifest.license or 'N/A'}")
+        self.print(f"  [bold]Target:[/bold] {self.manifest.target or 'N/A'}")
+        self.print(f"  [bold]Git Remote:[/bold] {self.remote_url}")
+        self.print(f"  [bold]Commit Hash:[/bold] {self.current_commit_hash}")
+        self.print("------------------------------------------\n")
+
+
+    def run(self, is_private: bool):
+        """
+        Main entry point for the project registration process.
+
+        This method orchestrates all steps:
+        1. Validates the project directory and initializes Git.
+        2. Loads the manifest.
+        3. Validates Git repository state (remote, uncommitted changes, sync status).
+        4. Gets the current commit hash.
+        5. Creates and pushes a Git tag.
+        6. Validates manifest fields.
+        7. Displays project information.
+        8. Delegates the final registration to the `Registry` service.
+
+        Args:
+            manifest_path (str): The file path to the knitpkg.json/yaml manifest.
+            user (User): The authenticated user attempting to register the project.
+            is_private (bool): Flag indicating if the project should be registered as private.
+            organization_name (Optional[str]): The name of the organization if registering a private project.
+
+        Returns:
+            Project: The newly registered project object.
+
+        Raises:
+            KnitPkgError: If any step in the registration process fails.
+        """
+        try:
+            self.log(f"Starting registration process for project at '{self.project_root}'...")
+
+
+            # Step 1: Validate project directory and initialize Git
+            self._load_manifest_and_initialize_repo()
+            if not self.manifest: # Should not happen if _load_manifest raises on error
+                raise KnitPkgError("Manifest could not be loaded.")
+
+            # Step 2: Validate Git repository (remote origin, uncommitted changes, sync status)
+            self._check_for_remote_origin()
+            self._check_for_uncommitted_changes()
+            self._check_sync_status_with_remote()
+
+            # Step 3: Create and push tag (NEW SAFETY LAYER)
+            commit_hash = self.get_current_commit_hash()
+            self.create_and_push_tag(f'knitpkg-registry/{commit_hash[:16]}')
+
+            # Step 4: Validate manifest fields (e.g., lowercase name, no local path dependencies)
+            self._validate_manifest_fields()
+
+            # Step 5: Display project info
+            self._display_project_info()
+
+            # Step 6: Delegate registration to the registry service
+            self.log("🚀 Initiating project registration with the registry service...")
+            payload = {
+                "organization": self.manifest.organization,
+                "name": self.manifest.name,
+                "target": self.manifest.target,
+                "type": self.manifest.type,
+                "description": self.manifest.description,
+                "version": self.manifest.version,
+                "repo_url": self.remote_url,
+                "commit_hash": commit_hash,
+                "dependencies": self.manifest.dependencies,
+                "is_private": is_private
+            }
+
+            
+            response_data = self.registry_service.register(payload)
+            if "message" in response_data:
+                self.print(f"✅  [bold green]{response_data['message']}[/bold green]")
+            else:
+                self.print("✅  [bold green]Project registered successfully![/bold green]")
+            if "project" in response_data:
+                pkg = response_data["project"]
+                self.print(pkg)
+
+            return response_data
+        except httpx.HTTPStatusError as e:
+            try:
+                error_data = json.loads(e.response.text)
+                detail = error_data.get("detail", str(e))
+                self.print(f"[red]✗[/red] Failed to register project: {detail}")
+            except (json.JSONDecodeError, AttributeError):
+                self.print(f"[red]✗[/red] Failed to register project: {e}")
+            raise typer.Exit(code=1)
+        except KnitPkgError as e:
+            self.print(f"[bold red]✖ Registration failed:[/bold red] {e}")
+            raise
+        except Exception as e:
+            self.print(f"[bold red]✖ An unexpected error occurred during registration:[/bold red] {e}")
+            raise
 
 
 def register(app):
@@ -128,167 +307,12 @@ def register(app):
     ):
         """Register the current project to the KnitPkg registry."""
 
-        project_path = Path(project_dir) if project_dir else Path.cwd()
+        project_path = Path(project_dir).resolve() if project_dir else Path.cwd()
 
-        # Validate project directory
-        if not project_path.is_dir():
-            console.print(f"[red]✗[/red] Project directory [cyan]{project_dir}[/cyan] not found.", style="bold")
-            raise typer.Exit(code=1)
-
-        # Load manifest
-        try:
-            manifest = load_knitpkg_manifest(project_path, manifest_class=MQLKnitPkgManifest)
-        except FileNotFoundError:
-            console.print("[red]✗[/red] [bold]knitpkg.yaml[/bold] not found in project directory.", style="bold")
-            console.print("   Run [cyan]kp-mt init[/cyan] to create a new project.", style="dim")
-            raise typer.Exit(code=1)
-        except ValueError as e:
-            console.print(f"[red]✗[/red] Error loading manifest: [yellow]{e}[/yellow]", style="bold")
-            raise typer.Exit(code=1)
-
-        # Validate Git repository
-        try:
-            repo = git.Repo(project_path, search_parent_directories=True)
-        except git.InvalidGitRepositoryError:
-            console.print("[red]✗[/red] Not a Git repository.", style="bold")
-            console.print("   Initialize a Git repository first: [cyan]git init[/cyan]", style="dim")
-            raise typer.Exit(code=1)
-
-        if repo.bare:
-            console.print("[red]✗[/red] Git repository is bare.", style="bold")
-            raise typer.Exit(code=1)
-
-        # Check for remote origin
-        if not repo.remotes:
-            console.print("[red]✗[/red] No remote repository configured.", style="bold")
-            console.print("   Add a remote: [cyan]git remote add origin <URL>[/cyan]", style="dim")
-            raise typer.Exit(code=1)
-
-        repo_url = repo.remotes.origin.url
-        if not repo_url:
-            console.print("[red]✗[/red] Remote origin URL not found.", style="bold")
-            raise typer.Exit(code=1)
-
-        # Check for uncommitted changes
-        if repo.is_dirty():
-            console.print("[red]✗[/red] Repository has uncommitted changes.", style="bold")
-            console.print("   Commit your changes first: [cyan]git add . && git commit -m 'message'[/cyan]", style="dim")
-            raise typer.Exit(code=1)
-
-        # Check for untracked files
-        if repo.untracked_files:
-            console.print("[red]✗[/red] Repository has untracked files.", style="bold")
-            console.print("   Add them to git: [cyan]git add .[/cyan] or add to [cyan].gitignore[/cyan]", style="dim")
-            raise typer.Exit(code=1)
-
-        # Check sync status with remote
-        try:
-            console.print("[cyan]→[/cyan] Checking sync status with remote...", style="dim")
-            repo.remotes.origin.fetch()
-            local_commit = repo.head.commit
-            remote_commit = repo.remotes.origin.refs[repo.active_branch.name].commit
-
-            if local_commit != remote_commit:
-                console.print("[red]✗[/red] Local branch is not synced with remote.", style="bold")
-                console.print("   Push your changes: [cyan]git push[/cyan]", style="dim")
-                raise typer.Exit(code=1)
-        except typer.Exit as e:
-            raise e
-        except Exception as e:
-            console.print(f"[yellow]⚠[/yellow] Unable to verify sync status: [dim]{e}[/dim]", style="bold")
-            console.print("   Halting...", style="dim")
-            raise typer.Exit(code=1)
-
-        # Get commit hash
-        commit_hash = get_current_commit_hash(repo)
-
-        # ============================================================================
-        # CREATE AND PUSH TAG (NEW SAFETY LAYER)
-        # ============================================================================
-        try:
-            console.print(f"\n[cyan]→[/cyan] Creating registry tag for commit [yellow]{commit_hash[:12]}[/yellow]...", style="dim")
-            create_and_push_tag(repo, commit_hash)
-        except git.GitCommandError as e:
-            console.print(f"\n[red]✗[/red] [bold]Failed to create/push tag[/bold]", style="bold")
-            console.print(f"   {e}", style="dim")
-            console.print("\n   [yellow]Cannot register without remote tag (prevents orphaned commits)[/yellow]")
-            raise typer.Exit(code=1)
-
-        # Detect Git provider
-        if 'github.com/' in repo_url:
-            provider = 'github'
-        elif 'gitlab.com/' in repo_url:
-            provider = 'gitlab'
-        elif 'forge.mql5.io/' in repo_url:
-            provider = 'mql5forge'
-        elif 'bitbucket.org/' in repo_url:
-            provider = 'bitbucket'
-        else:
-            console.print(f"[red]✗[/red] Unsupported Git provider.", style="bold")
-            console.print(f"   Repository URL: [cyan]{repo_url}[/cyan]", style="dim")
-            console.print("   Supported providers: GitHub, GitLab, MQL5 Forge, Bitbucket", style="dim")
-            raise typer.Exit(code=1)
-
-        # Validate manifest fields
-        if not all([manifest.organization, manifest.name, manifest.description]):
-            console.print("[red]✗[/red] Incomplete manifest.", style="bold")
-            console.print("   Required fields: [yellow]organization[/yellow], [yellow]name[/yellow], [yellow]description[/yellow]", style="dim")
-            raise typer.Exit(code=1)
-
-        # Prepare payload
-        payload = {
-            "organization": manifest.organization,
-            "name": manifest.name,
-            "target": manifest.target,
-            "type": manifest.type,
-            "description": manifest.description,
-            "version": manifest.version,
-            "repo_url": repo_url,
-            "commit_hash": commit_hash,
-            "dependencies": manifest.dependencies,
-            "is_private": False
-        }
-
-        # Display project info
-        console.print()
-        info_table = Table.grid(padding=(0, 2))
-        info_table.add_column(style="cyan bold", justify="right")
-        info_table.add_column(style="white")
-
-        info_table.add_row("Project:", f"[green bold]{manifest.target.value}[/green bold]:@{manifest.organization}/{manifest.name}") # type: ignore
-        info_table.add_row("Type:", f"[yellow]{manifest.type.value}[/yellow]")
-        info_table.add_row("Version:", f"[yellow]{manifest.version}[/yellow]")
-        info_table.add_row("Commit:", f"[dim]{commit_hash[:12]}[/dim]")
-        info_table.add_row("Repository:", f"[dim]{repo_url}[/dim]")
-        info_table.add_row("Provider:", f"[dim]{provider}[/dim]")
-
-        console.print(Panel(info_table, title="[bold]📦 Registering Project[/bold]", border_style="cyan"))
+        console: Console = Console(log_path=verbose) # type: ignore
 
         registry_url = get_registry_url()
         registry: Registry = Registry(registry_url, console=console, verbose=verbose) # type: ignore
 
-        try:
-            console.print()
-            response_data = registry.register(payload)
-            
-            if "message" in response_data:
-                console.print(f"[green]✓[/green] [bold green]{response_data['message']}[/bold green]")
-            else:
-                console.print("[green]✓[/green] [bold green]Project registered successfully![/bold green]")
-            if "project" in response_data:
-                pkg = response_data["project"]
-                console.print(pkg)
-        except httpx.HTTPStatusError as e:
-            try:
-                error_data = json.loads(e.response.text)
-                detail = error_data.get("detail", str(e))
-                console.print(f"[red]✗[/red] Failed to register project: {detail}")
-            except (json.JSONDecodeError, AttributeError):
-                console.print(f"[red]✗[/red] Failed to register project: {e}")
-            raise typer.Exit(code=1)
-        except Exception as e:
-            console.print(f"[red]✗[/red] Failed to register project: {e}")
-            raise typer.Exit(code=1)
-
-
-
+        register: RegisterProject = RegisterProject(project_path, registry, console, True if verbose else False)
+        register.run(is_private=False)
