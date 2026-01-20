@@ -54,7 +54,7 @@ class CompilationResult:
     status: CompilationStatus
     error_count: int = 0
     warning_count: int = 0
-    messages: List[str] = None
+    messages: Optional[List[str]] = None
 
     def __post_init__(self):
         if self.messages is None:

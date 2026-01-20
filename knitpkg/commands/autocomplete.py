@@ -9,12 +9,12 @@ autocomplete functionality for KnitPkg-managed packages within MetaEditor.
 
 from typing import Optional
 from pathlib import Path
-from rich.console import Console
 
 from knitpkg.mql.models import ProjectType, MQLKnitPkgManifest
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.utils import navigate_path
 from knitpkg.mql.constants import INCLUDE_DIR
+from knitpkg.core.console import Console, ConsoleAware
 
 # Import MQL-specific downloader
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
@@ -26,10 +26,10 @@ import typer
 # AUTOCOMPLETE GENERATOR CLASS
 # ==============================================================
 
-class AutocompleteGenerator:
+class AutocompleteGenerator(ConsoleAware):
     """Generates autocomplete files for MQL package projects."""
 
-    def __init__(self, console: Console, project_dir: Path):
+    def __init__(self, project_dir: Path, console: Optional[Console] = None, verbose: bool = False):
         """
         Initialize the AutocompleteGenerator.
 
@@ -37,7 +37,7 @@ class AutocompleteGenerator:
             console: Rich console for output
             project_dir: Root directory of the KnitPkg project
         """
-        self.console = console
+        super().__init__(console, verbose)
         self.project_dir = project_dir
 
     def generate(self) -> None:
@@ -54,13 +54,13 @@ class AutocompleteGenerator:
         )
 
         if manifest.type != ProjectType.PACKAGE:
-            self.console.log(
+            self.log(
                 "[red]Error:[/] Command `kp-mt autocomplete` only works on projects "
                 "with type: package"
             )
             raise SystemExit(1)
 
-        self.console.log(
+        self.log(
             f"[bold magenta]autocomplete[/] → generating autocomplete file for " # Alterado
             f"[cyan]{manifest.name}[/]"
         )
@@ -69,14 +69,11 @@ class AutocompleteGenerator:
         resolved_deps = []
         if manifest.dependencies:
             registry_url = get_registry_url()
-            downloader = MQLDependencyDownloader(self.console, self.project_dir, registry_url)
-            resolved_deps, _dependency_tree = downloader.download_all(
-                manifest.dependencies,
-                manifest.target.value,
-                locked_mode=False
-            )
+            downloader = MQLDependencyDownloader(self.project_dir, registry_url, True, MQLKnitPkgManifest, console=self.console, verbose=self.verbose)
+            project_root = downloader.download_all()
+            resolved_deps = project_root.resolved_dependencies()
         else:
-            self.console.log(
+            self.log(
                 "[yellow]Warning:[/] No dependencies found in manifest. "
                 "Autocomplete file will be empty."
             )
@@ -108,7 +105,7 @@ class AutocompleteGenerator:
                         seen_paths.add(str(rel_path))
 
         output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        self.console.log(
+        self.log(
             f"[bold green]Check[/] Autocomplete file generated → [bold]{output_file}[/]"
         )
 
@@ -118,8 +115,9 @@ class AutocompleteGenerator:
 
 def autocomplete_command(project_dir: Path, verbose: bool):
     """Command wrapper"""
-    console = Console(log_path=False)
-    generator = AutocompleteGenerator(console, project_dir)
+    from rich.console import Console as RichConsole
+    console = RichConsole(log_path=False)
+    generator = AutocompleteGenerator(project_dir, console, verbose)
     generator.generate()
 
 # ==============================================================
