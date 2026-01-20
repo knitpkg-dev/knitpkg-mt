@@ -8,8 +8,9 @@ project structure validation and manifest constraints.
 """
 
 from pathlib import Path
-from rich.console import Console
+from knitpkg.core.console import Console
 
+from typing import Optional
 from knitpkg.mql.models import MQLProjectType, Target
 from knitpkg.mql.constants import INCLUDE_DIR
 
@@ -21,7 +22,7 @@ def validate_mql_project_structure(
     manifest,
     project_dir: Path,
     is_dependency: bool = False,
-    console: Console = None
+    console: Optional[Console] = None
 ) -> None:
     """
     Ensure include-type projects have their .mqh files inside knitpkg/include/.
@@ -36,6 +37,8 @@ def validate_mql_project_structure(
         console: Rich console for logging
     """
     if manifest.type != MQLProjectType.PACKAGE:
+        return
+    if not console:
         return
 
     include_dir = project_dir / INCLUDE_DIR
@@ -75,7 +78,7 @@ def validate_mql_project_structure(
 # MQL MANIFEST VALIDATION
 # ==============================================================
 
-def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
+def validate_mql_dependency_manifest(manifest, console: Optional[Console] = None) -> bool:
     """
     Validate MQL-specific manifest constraints for dependencies.
 
@@ -91,7 +94,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
     # Check target
     accept_target = manifest.target in (Target.MQL4, Target.MQL5)
     accept = accept and accept_target
-    if not accept_target:
+    if not accept_target and console:
         console.log(
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )
@@ -103,7 +106,7 @@ def validate_mql_dependency_manifest(manifest, console: Console) -> bool:
     # Check type
     accept_project_type = manifest.type == MQLProjectType.PACKAGE
     accept = accept and accept_project_type
-    if not accept_project_type:
+    if not accept_project_type and console:
         console.log(
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )

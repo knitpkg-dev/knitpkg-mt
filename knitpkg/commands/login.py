@@ -35,7 +35,7 @@ def register(app):
         and stores the resulting access token securely using the system keyring.
         The token enables subsequent operations like publishing packages.
         """
-        console = Console(log_path=verbose) # type: ignore
+        console = Console(log_path=False)
 
         registry_url = get_registry_url()
 

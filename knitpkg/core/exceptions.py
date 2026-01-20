@@ -87,16 +87,6 @@ class LocalDependencyManifestError(DependencyError):
             f"Cannot load manifest for local dependency '{name}' at {path}"
         )
 
-class RegistryRequestError(DependencyError):
-    """Raised when registry request fails."""
-    def __init__(self, url: str, status_code: int, response_text: str):
-        self.url = url
-        self.status_code = status_code
-        self.response_text = response_text
-        super().__init__(
-            f"Registry request failed: {status_code} - {url}\n{response_text}"
-        )
-
 class ProviderNotFoundError(DependencyError):
     """Raised when provider is not found in registry config."""
     def __init__(self, provider: str, available_providers: Optional[list[str]] = None):
@@ -225,3 +215,10 @@ class ManifestNotFoundError(ManifestError):
     def __init__(self, path: str):
         self.path = path
         super().__init__(f"No manifest file found in {path}")
+
+class ManifestLoadError(ManifestError):
+    """Raised when manifest file cannot be loaded or parsed."""
+    def __init__(self, file_path: str, details: str):
+        self.file_path = file_path
+        self.details = details
+        super().__init__(f"Error loading {file_path}: {details}")

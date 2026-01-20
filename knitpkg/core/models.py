@@ -17,7 +17,6 @@ from pydantic import (
     Field,
     field_validator,
     ConfigDict,
-    AnyUrl,
 )
 
 # ==============================================================
@@ -141,6 +140,18 @@ class KnitPkgManifest(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    target: str = Field(
+        ...,
+        description="Target platform/version"
+    )
+
+    organization: str = Field(
+        ...,
+        max_length=100,
+        pattern=r"^[\w\-\.]+$",
+        description="Organization name (alphanumeric, hyphens, underscores, dots only), should match Git repository organization name"
+    )
+
     name: str = Field(
         ...,
         min_length=1,
@@ -154,8 +165,19 @@ class KnitPkgManifest(BaseModel):
         description="Semantic Versioning string (e.g. 1.0.0)"
     )
 
-    description: Optional[str] = Field(
+    # Base project type (only 'package' at this level)
+    type: str = Field(
+        ...,
+        description="Project type"
+    )
+
+    keywords: Optional[List[str]] = Field(
         default=None,
+        description="List of keywords for package discovery"
+    )
+
+    description: str = Field(
+        ...,
         max_length=500,
         description="Short project description"
     )
@@ -170,25 +192,6 @@ class KnitPkgManifest(BaseModel):
         description="License identifier"
     )
 
-    organization: Optional[str] = Field(
-        default=None,
-        max_length=100,
-        pattern=r"^[\w\-\.]+$",
-        description="Organization or company ID (alphanumeric, hyphens, underscores, dots only)"
-    )
-
-    # Generic target (string - platform-specific subclasses will use enums)
-    target: str = Field(
-        ...,
-        description="Target platform/version"
-    )
-
-    # Base project type (only PACKAGE at this level)
-    type: ProjectType = Field(
-        ...,
-        description="Project type"
-    )
-
     compile: Optional[List[str]] = Field(
         default=None,
         description="List of source files to compile (relative to project root)"
@@ -199,10 +202,24 @@ class KnitPkgManifest(BaseModel):
         description="Dependencies with Git URLs or local paths and version constraints"
     )
 
+    overrides: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Dependency version overrides"
+    )
+
     dist: Optional[DistSection] = Field(
         default=None,
-        description="Distribution project configuration"
+        description="Distribution project configuration (PRO only)"
     )
+
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, v: str) -> str:
+        """Validate that type is a valid ProjectType value."""
+        if v not in [t.value for t in ProjectType]:
+            valid_types = ", ".join([t.value for t in ProjectType])
+            raise ValueError(f"type must be one of: {valid_types}")
+        return v
 
     @field_validator("version")
     @classmethod
@@ -258,6 +275,34 @@ class KnitPkgManifest(BaseModel):
                     "  >=1.0.0 <2.0.0   >1.5.0           <=3.0.0\n"
                 )
 
+        return v
+
+    @field_validator("overrides", mode="before")
+    @classmethod
+    def validate_overrides(cls, v: Any) -> Dict[str, str]:
+        """Validate overrides field with NAME_PATTERN for keys and SEMVER_PATTERN for values."""
+        if v is None:
+            return {}
+        if not isinstance(v, dict):
+            raise ValueError("overrides must be a dictionary")
+        
+        for dep_name, spec in v.items():
+            if not isinstance(spec, str):
+                raise ValueError(f"Override '{dep_name}' must be a string")
+            spec = spec.strip()
+            if not spec:
+                raise ValueError(f"Override '{dep_name}' is empty")
+            
+            if not NAME_PATTERN.fullmatch(dep_name):
+                raise ValueError(
+                    f"Override name '{dep_name}' must follow '@organization/package-name' format"
+                )
+            
+            if not SEMVER_PATTERN.match(spec):
+                raise ValueError(
+                    f"Override '{dep_name}' must use SemVer format (e.g. 1.2.3)"
+                )
+        
         return v
 
     def get_project_name(self, release_id: str = "release") -> str:

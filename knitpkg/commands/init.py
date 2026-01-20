@@ -2035,7 +2035,7 @@ def register(app):
         )
     ):
         """Initializes a new KnitPkg project interactively."""
-        console = Console(log_path=verbose)
+        console = Console(log_path=False)
         initializer = ProjectInitializer(console)
         initializer.run(
             dry_run=dry_run,

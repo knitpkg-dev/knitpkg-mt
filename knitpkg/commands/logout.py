@@ -39,7 +39,7 @@ def register(app):
         If no provider is specified, all stored tokens for all known providers
         are removed from the system keyring.
         """
-        console = Console(log_path=verbose) # type: ignore
+        console = Console(log_path=False)
 
         registry_url = get_registry_url()
 

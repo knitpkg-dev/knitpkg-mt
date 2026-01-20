@@ -118,7 +118,7 @@ class AutocompleteGenerator:
 
 def autocomplete_command(project_dir: Path, verbose: bool):
     """Command wrapper"""
-    console = Console(log_path=verbose)
+    console = Console(log_path=False)
     generator = AutocompleteGenerator(console, project_dir)
     generator.generate()
 

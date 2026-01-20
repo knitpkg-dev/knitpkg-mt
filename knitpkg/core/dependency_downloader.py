@@ -10,9 +10,8 @@ overridden by subclasses.
 
 from __future__ import annotations
 
-import httpx
 from pathlib import Path
-from typing import List, Tuple, Set, Optional, Any
+from typing import List, Optional, Any
 from dataclasses import dataclass
 import datetime as dt
 
@@ -20,24 +19,24 @@ import shutil
 import git
 import datetime as dt
 
-from rich.console import Console
-
+from knitpkg.core.registry import Registry
 from knitpkg.core.lockfile import load_lockfile, save_lockfile, is_lock_change
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.utils import is_local_path
 from knitpkg.core.constants import CACHE_DIR
-from knitpkg.core.auth import session_access_token
-from knitpkg.core.models import ProjectType
+from knitpkg.core.models import ProjectType, KnitPkgManifest
+from knitpkg.core.console import ConsoleAware, Console
 
 # Import custom exceptions
 from knitpkg.core.exceptions import (
+    DependencyError,
     LocalDependencyNotFoundError,
     LockedWithLocalDependencyError,
     DependencyHasLocalChangesError,
     LocalDependencyManifestError,
-    RegistryRequestError,
     GitCloneError,
     GitCommitNotFoundError,
+    KnitPkgError
 )
 
 # ==============================================================
@@ -45,28 +44,53 @@ from knitpkg.core.exceptions import (
 # ==============================================================
 
 @dataclass
-class DependencyNode:
+class ProjectNode:
     """Represents a resolved dependency with hierarchy information."""
     name: str
     path: Path
     resolved_path: Path  # Canonical path for deduplication
     version: str
-    children: List['DependencyNode']
-    parent: Optional['DependencyNode'] = None
+    is_root: bool
+    dependencies: List['ProjectNode']
+    parent: Optional['ProjectNode'] = None
 
     def __post_init__(self):
-        for child in self.children:
+        for child in self.dependencies:
             child.parent = self
 
-ResolvedDep = Tuple[str, Path]  # (name, path)
-ResolvedDeps = List[ResolvedDep]
-DependencyTree = List[DependencyNode]
+    def add_dependency(self, dependency: 'ProjectNode' ):
+        """Add a child node and set parent reference."""
+        dependency.parent = self
+        self.dependencies.append(dependency)
+
+    def is_resolved(self, name: str) -> bool:
+        """Check if name is resolved in this node or any children recursively."""
+        if name == self.name:
+            return True
+        return any(child.is_resolved(name) for child in self.dependencies)
+
+    def _collect_post_order(self, add_root: bool, collector_func) -> List[Any]:
+        """Visit all children recursively and return objects collected by function, ordered from leafs to root."""
+        result = []
+        for child in self.dependencies:
+            result.extend(child._collect_post_order(add_root, collector_func))
+        if not self.is_root or add_root:
+            result.append(collector_func(self))
+        return result
+    
+    def resolved_names(self, add_root: bool = False) -> List[str]:
+        """Get all resolved dependency names in tree (including self)."""
+        return self._collect_post_order(add_root, lambda x: x.name)
+    
+    def resolved_dependencies(self, add_root: bool = False) -> List[tuple[str, Path]]:
+        """Get all resolved canonical paths in tree (including self)."""
+        return self._collect_post_order(add_root, lambda x: (x.name, x.resolved_path))
 
 # ==============================================================
 # DEPENDENCY DOWNLOADER CLASS
 # ==============================================================
 
-class DependencyDownloader:
+class DependencyDownloader(ConsoleAware):
     """
     Platform-agnostic dependency resolver.
 
@@ -84,22 +108,18 @@ class DependencyDownloader:
         locked_mode: Whether to enforce strict lockfile mode
     """
 
-    def __init__(self, console: Console, project_dir: Path, registry_base_url: str):
-        self.console = console
-        self.project_dir = project_dir
-        self.registry_base_url = registry_base_url.rstrip('/')
-        self.resolved_deps: ResolvedDeps = []
-        self.dependency_tree: DependencyTree = []
-        self.resolved_paths: Set[Path] = set()
-        self.locked_mode: bool = False
-        self._current_parent: Optional[DependencyNode] = None
+    def __init__(self, project_dir: Path, registry_base_url: str, 
+                 locked_mode: bool = False, manifest_type: type[KnitPkgManifest] = KnitPkgManifest,
+                 console: Optional[Console] = None, verbose: bool = False):
+        super().__init__(console=console, verbose=verbose)
+        self.project_dir: Path = project_dir
+        self.default_registry_base_url: str = registry_base_url.rstrip('/')
+        self.locked_mode: bool = locked_mode
+        self.manifest_type: type[KnitPkgManifest] = manifest_type
 
     def download_all(
-        self,
-        dependencies: dict,
-        target: str,
-        locked_mode: bool = False
-    ) -> tuple[ResolvedDeps, DependencyTree]:
+        self
+    ) -> ProjectNode:
         """
         Download all dependencies and return resolved list and dependency tree.
 
@@ -115,19 +135,38 @@ class DependencyDownloader:
             LocalDependencyNotGitError: --locked used with non-git local dep
             DependencyHasLocalChangesError: --locked used but dep has changes
         """
-        self.target: str = target
-        self.resolved_deps = []
-        self.dependency_tree = []
-        self.resolved_paths = set()
-        self.locked_mode = locked_mode
-        self._current_parent = None
+
+        try:
+            manifest = load_knitpkg_manifest(self.project_dir, self.manifest_type)
+        except Exception as e:
+            raise KnitPkgError(f"Failed to load manifest: {e}. Location: {self.project_dir}")
+
+        self._target: str = manifest.target
+        dependencies = manifest.dependencies or {}
+
+        root: ProjectNode = ProjectNode(
+            name=manifest.name,
+            path=self.project_dir,
+            resolved_path=self.project_dir.resolve(),
+            version=manifest.version,
+            is_root=True,
+            dependencies=[]
+        )
+        self._root_node: ProjectNode = root
+        self._overrides: dict = manifest.overrides
 
         for name, spec in dependencies.items():
-            self._download_dependency(name, spec)
+            self._download_dependency(name, spec, root)
 
-        return self.resolved_deps, self.dependency_tree
+        if self.verbose:
+            resolved_names: List[str] = root.resolved_names(add_root=False)
+            for ovrd in self._overrides.keys():
+                if ovrd not in resolved_names:
+                    self.print(f"[bold][yellow]Warning:[/] Override for missing dependency '{ovrd}'[/bold]")
 
-    def _get_package_resolve_dist(self, registry_base_url: str, name: str, version_spec: str) -> dict:
+        return root
+
+    def _get_package_resolve_dist(self, registry_base_url: str, dep_name: str, version_spec: str) -> dict:
         """Resolve project distribution info from registry.
         
         Args:
@@ -140,35 +179,22 @@ class DependencyDownloader:
         Raises:
             RegistryRequestError: If registry request fails
         """
-        org, pack_name = self._parse_project_name(name)
-        url = f"{registry_base_url}/project/resolve/{self.target}/{org}/{pack_name}/{version_spec}"
-        
-        _provider, access_token = session_access_token()
-        if access_token:
-            headers = {"Authorization": f"Bearer {access_token}"}
-        else:
-            headers = None
-        
-        try:
-            response = httpx.get(url, headers=headers, timeout=10.0)
-            if response.status_code != 200:
-                raise RegistryRequestError(url, response.status_code, response.text)
-            
-            response_json = response.json()
-            project_type = response_json.get('type', None)
-            
-            if not project_type:
-                raise ValueError(f"Project type not found in registry response for dependency '{name}'.")
+        org, pack_name = self._parse_project_name(dep_name)
 
-            if project_type != ProjectType.PACKAGE.value:
-                raise ValueError(
-                    f"Unsupported project type '{project_type}' for dependency '{name}'. "
-                    f"Only 'package' type is supported."
-                )
-            
-            return response_json
-        except httpx.RequestError as e:
-            raise RegistryRequestError(url, 0, str(e))
+        registry: Registry = Registry(registry_base_url, self.console, self.verbose)
+        response_json = registry.resolve_package(self._target, org, pack_name, version_spec)
+        project_type = response_json.get('type', None)
+        
+        if not project_type:
+            raise DependencyError(f"Project type not found in registry response for dependency '{dep_name}'.")
+
+        if project_type != ProjectType.PACKAGE.value:
+            raise DependencyError(
+                f"Unsupported project type '{project_type}' for dependency '{dep_name}'. "
+                f"Only 'package' type is supported."
+            )
+        
+        return response_json
 
     def _clone_shallow_to_commit(self, git_url: str, commit_hash: str, cache_path: Path) -> None:
         """Clone repository shallow to specific commit.
@@ -215,7 +241,7 @@ class DependencyDownloader:
     # EXTENSIBILITY POINTS — Override in platform-specific subclasses
     # ==============================================================
 
-    def validate_manifest(self, manifest: Any, dep_path: Path, target: str) -> bool:
+    def validate_manifest(self, manifest: Any) -> bool:
         """
         Validate a dependency manifest.
 
@@ -256,7 +282,7 @@ class DependencyDownloader:
     # CORE RESOLUTION LOGIC (Platform-agnostic)
     # ==============================================================
 
-    def _download_dependency(self, name: str, specifier: str) -> Optional[Path]:
+    def _download_dependency(self, dep_name: str, specifier: str, parent: ProjectNode):
         """
         Resolve and download a dependency (local or remote).
 
@@ -267,14 +293,18 @@ class DependencyDownloader:
         Returns:
             Resolved path or None if already resolved
         """
-        name = name.lower()
+        dep_name = dep_name.lower()
+
+        if self._root_node.is_resolved(dep_name):
+            self.log(f"[dim]Skip[/] {dep_name} (already resolved)")
+            return
 
         if is_local_path(specifier):
-            return self._handle_local_dependency(name, specifier)
+            self._handle_local_dependency(dep_name, specifier, parent)
         else:
-            return self._handle_remote_dependency(name, specifier)
+            self._handle_remote_dependency(dep_name, specifier, parent)
 
-    def _handle_local_dependency(self, name: str, specifier: str) -> Optional[Path]:
+    def _handle_local_dependency(self, dep_name: str, specifier: str, parent: ProjectNode):
         """
         Handle local dependency resolution.
 
@@ -282,93 +312,74 @@ class DependencyDownloader:
             LocalDependencyNotFoundError: If path doesn't exist
             LocalDependencyNotGitError: If --locked with non-git dependency
         """
+        if dep_name in self._overrides:
+            raise DependencyError("Overrides cannot be local dependencies: {dep_name}")
+        if self.locked_mode:
+            raise LockedWithLocalDependencyError(dep_name)
+
         if specifier.startswith("file://"):
             dep_path = Path(specifier[7:])
         else:
-            dep_path = (self.project_dir / specifier).resolve()
+            dep_path = Path(specifier)
 
         if not dep_path.exists():
-            raise LocalDependencyNotFoundError(name, str(dep_path))
-
+            raise LocalDependencyNotFoundError(dep_name, str(dep_path))
+        
         resolved_path = dep_path.resolve()
 
-        # Check if already resolved by path
-        if resolved_path in self.resolved_paths:
-            self.console.log(f"[dim]Already resolved by path:[/] {name} → {resolved_path}")
-            return None
-
-        if self.locked_mode:
-            raise LockedWithLocalDependencyError(name)
-
-        self.console.log(f"[bold magenta]Local[/] {name}")
+        self.log(f"[bold magenta]Local[/] {dep_name}")
 
         # Load manifest to get version
         try:
-            manifest = load_knitpkg_manifest(dep_path)
+            manifest = load_knitpkg_manifest(dep_path, self.manifest_type)
             version = manifest.version
         except Exception:
-            raise LocalDependencyManifestError(name, str(dep_path))
+            raise LocalDependencyManifestError(dep_name, str(dep_path))
 
         # Create dependency node
-        dep_node = DependencyNode(
-            name=name,
+        dep_node = ProjectNode(
+            name=dep_name,
             path=dep_path,
             resolved_path=resolved_path,
             version=version,
-            children=[]
+            is_root=False,
+            dependencies=[]
         )
 
-        if self._process_recursive_dependencies(dep_path, name, dep_node):
-            self.resolved_paths.add(resolved_path)
-            self.resolved_deps.append((name, dep_path))
-
-            if self._current_parent is None:
-                self.dependency_tree.append(dep_node)
-            else:
-                self._current_parent.children.append(dep_node)
-                dep_node.parent = self._current_parent
-
-            self.console.log(f"[green]Check[/] {name}")
+        if self._process_recursive_dependencies(resolved_path, dep_name, dep_node):
+            parent.add_dependency(dep_node)
+            self.log(f"[green]Check[/] {dep_name}")
 
         return resolved_path
 
-    def _handle_remote_dependency(self, name: str, specifier: str) -> Optional[Path]:
+    def _handle_remote_dependency(self, dep_name: str, specifier: str, parent: ProjectNode):
         """Handle remote dependency resolution."""
-        dep_path = self._download_from_git_remote(name, specifier)
-        resolved_path = dep_path.resolve()
-
-        # Check if already resolved by path
-        if resolved_path in self.resolved_paths:
-            self.console.log(f"[dim]Already resolved by path:[/] {name} → {resolved_path}")
-            return None
+        if dep_name in self._overrides:
+            self.print(f"[bold][red]Override[/red] {dep_name} → {self._overrides[dep_name]}")
+            resolved_path = self._download_from_git_remote(dep_name, self._overrides[dep_name])    
+        else:
+            resolved_path = self._download_from_git_remote(dep_name, specifier)
 
         # Load manifest to get version
         try:
-            manifest = load_knitpkg_manifest(dep_path)
+            manifest = load_knitpkg_manifest(resolved_path, self.manifest_type)
             version = manifest.version
         except Exception:
-            version = "unknown"
+            raise DependencyError(f"Failed to load manifest for dependency '{dep_name}#{specifier}' at {resolved_path}")
 
         # Create dependency node
-        dep_node = DependencyNode(
-            name=name,
-            path=dep_path,
+        dep_node = ProjectNode(
+            name=dep_name,
+            path=resolved_path,
             resolved_path=resolved_path,
             version=version,
-            children=[]
+            is_root=False,
+            dependencies=[]
         )
 
-        if self._process_recursive_dependencies(dep_path, name, dep_node):
-            self.resolved_paths.add(resolved_path)
-            self.resolved_deps.append((name, dep_path))
-
-            if self._current_parent is None:
-                self.dependency_tree.append(dep_node)
-            else:
-                self._current_parent.children.append(dep_node)
-                dep_node.parent = self._current_parent
-
-            self.console.log(f"[green]Check[/] {name}")
+        if self._process_recursive_dependencies(resolved_path, dep_name, dep_node):
+            parent.add_dependency(dep_node)
+            self.log(f"[green]Check[/] {dep_name}")
 
         return resolved_path
 
@@ -376,19 +387,19 @@ class DependencyDownloader:
         self, name: str, ref_spec: str, final_ref: str
     ) -> None:
         """Update lockfile for local git dependency."""
-        lock_data = load_lockfile()
-        if is_lock_change(lock_data, name, ref_spec, final_ref, self.registry_base_url):
+        lock_data = load_lockfile(self.project_dir)
+        if is_lock_change(lock_data, name, ref_spec, final_ref, self.default_registry_base_url):
             lock_data["dependencies"][name] = {
                 "specifier": ref_spec,
                 "resolved": final_ref,
                 "resolved_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-                "registry_url": self.registry_base_url
+                "registry_url": self.default_registry_base_url
             }
-            save_lockfile(lock_data)
+            save_lockfile(self.project_dir, lock_data)
 
     def _download_from_git_remote(
         self,
-        name: str,
+        dep_name: str,
         specifier: str
     ) -> Path:
         """
@@ -397,54 +408,58 @@ class DependencyDownloader:
         Raises:
             DependencyHasLocalChangesError: If dependency has local changes in locked mode
         """
-        dep_path = CACHE_DIR / f"{name.strip().lower().replace('/', '_')}"
 
-        lock_data = load_lockfile()
-        lock_data_dep = lock_data["dependencies"].get(name, {})
+        registry_base_url = self.default_registry_base_url
+        version_spec = specifier
+        lock_data_dep_resolved = None
+        if self.locked_mode:
+            lock_data = load_lockfile(self.project_dir)
+            lock_data_dep = lock_data["dependencies"].get(dep_name, {})
+            lock_data_dep_resolved = lock_data_dep.get("resolved", None)
+            if lock_data_dep_resolved:
+                registry_base_url = lock_data_dep.get("registry_url", self.default_registry_base_url)
+                version_spec = lock_data_dep_resolved
 
-        lock_data_dep_resolved = lock_data_dep.get("resolved", None)
-        if self.locked_mode and lock_data_dep_resolved:
-            dist_info = self._get_package_resolve_dist(lock_data_dep.get("registry_url"), name, lock_data_dep_resolved)
-        else:
-            dist_info = self._get_package_resolve_dist(self.registry_base_url, name, specifier)
+        dist_info = self._get_package_resolve_dist(registry_base_url, dep_name, version_spec)
 
-        if dep_path.exists():
-            repo: git.Repo = git.Repo(dep_path, search_parent_directories=True)
+        dep_resolved_path = self.project_dir / CACHE_DIR / f"{dep_name.strip().lower().replace('/', '_')}"
+        if dep_resolved_path.exists():
+            repo: git.Repo = git.Repo(dep_resolved_path, search_parent_directories=True)
 
             status = self._check_repo_integrity(repo, dist_info['repo_url'])
 
             if status == "dirty":
                 if self.locked_mode:
-                    raise DependencyHasLocalChangesError(name)
-                self.console.log(
-                    f"[bold yellow]Warning:[/] Local changes in '{name}' "
+                    raise DependencyHasLocalChangesError(dep_name)
+                self.print(
+                    f"[bold yellow]Warning:[/] Local changes in '{dep_name}' "
                     f"— using modified version"
                 )
             
             elif status == "invalid_remote_url":
                 # Repository exists in cache but remote URL is invalid; clean and download again
-                shutil.rmtree(str(dep_path.resolve()))
-                self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_path)
+                shutil.rmtree(str(dep_resolved_path.resolve()))
+                self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_resolved_path)
                 if not self.locked_mode or not lock_data_dep_resolved:
-                    self._update_lockfile_remote(name, specifier, dist_info["resolved_version"])
+                    self._update_lockfile_remote(dep_name, specifier, dist_info["resolved_version"])
 
             else:
                 # Repository exists in cache and remote URL is correct
                 if not self.locked_mode:
-                    self.console.log(
-                        f"[dim]Cache drifted[/] {name} — re-resolving..."
+                    self.log(
+                        f"[dim]Cache drifted[/] {dep_name} — re-resolving..."
                     )
-                self._checkout_shallow_to_commit(dist_info["commit_hash"], dep_path)
+                self._checkout_shallow_to_commit(dist_info["commit_hash"], dep_resolved_path)
                 if not self.locked_mode or not lock_data_dep_resolved:
-                    self._update_lockfile_remote(name, specifier, dist_info["resolved_version"])
+                    self._update_lockfile_remote(dep_name, specifier, dist_info["resolved_version"])
                 
         else:
             # Repo cache directory does not exist
-            self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_path)
+            self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_resolved_path)
             if not self.locked_mode or not lock_data_dep_resolved:
-                self._update_lockfile_remote(name, specifier, dist_info["resolved_version"])
+                self._update_lockfile_remote(dep_name, specifier, dist_info["resolved_version"])
         
-        return dep_path
+        return dep_resolved_path
 
 
     def _parse_project_name(self, name: str) -> tuple[str, str]:
@@ -475,9 +490,9 @@ class DependencyDownloader:
 
     def _process_recursive_dependencies(
         self,
-        dep_path: Path,
+        resolved_path: Path,
         dep_name: str,
-        dep_node: DependencyNode
+        dep_node: ProjectNode
     ) -> bool:
         """
         Process recursive dependencies. Return True if accepted, False if skipped.
@@ -486,57 +501,46 @@ class DependencyDownloader:
         which can be overridden by platform-specific subclasses.
         """
         try:
-            sub_manifest: dict = load_knitpkg_manifest(dep_path)
+            sub_manifest = load_knitpkg_manifest(resolved_path, self.manifest_type)
 
             # Platform-specific validation (overridable)
-            if not self.validate_manifest(sub_manifest, dep_path, self.target):
-                self.console.log(
+            if not self.validate_manifest(sub_manifest):
+                self.print(
                     f"[yellow]Warning:[/] Invalid manifest for {dep_name}. Dependency ignored."
                 )
                 return False
 
-            if sub_manifest.organization:
-                expected_dep_name = f"@{sub_manifest.organization.strip()}/{sub_manifest.name.strip()}"
-            else:
-                expected_dep_name = sub_manifest.name
+            expected_dep_name = f"@{sub_manifest.organization.strip().lower()}/{sub_manifest.name.strip().lower()}"
 
             if dep_name != expected_dep_name:
-                self.console.log(
+                self.print(
                     f"[yellow]Warning:[/] Dependency name mismatch: "
                     f"'{dep_name}'. Expected: '{expected_dep_name}'."
                 )
-                self.console.log(
+                self.print(
                     f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → "
                     f"{sub_manifest.name} {sub_manifest.version}"
                 )
             else:
-                self.console.log(
+                self.print(
                     f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] "
                     f"{sub_manifest.version}"
                 )
 
             # Platform-specific structure validation (overridable)
-            self.validate_project_structure(sub_manifest, dep_path, is_dependency=True)
+            self.validate_project_structure(sub_manifest, resolved_path, is_dependency=True)
 
             if sub_manifest.dependencies:
-                self.console.log(
+                self.log(
                     f"[dim]Recursive:[/] {dep_name} → "
                     f"{len(sub_manifest.dependencies)} dep(s)"
                 )
-
-                # Set current node as parent for recursive calls
-                previous_parent = self._current_parent
-                self._current_parent = dep_node
-
                 for sub_name, sub_spec in sub_manifest.dependencies.items():
-                    self._download_dependency(sub_name, sub_spec)
-
-                # Restore previous parent
-                self._current_parent = previous_parent
+                    self._download_dependency(sub_name, sub_spec, dep_node)
 
             return True
         except Exception as e:
-            self.console.log(
+            self.print(
                 f"[yellow]Warning:[/] Failed to process dependencies of {dep_name}: {e}"
             )
             return False

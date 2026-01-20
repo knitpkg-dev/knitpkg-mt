@@ -71,7 +71,7 @@ def register(app):
         """
         Manage KnitPkg configuration settings.
         """
-        console = Console(log_path=verbose)
+        console = Console(log_path=False)
 
         if project_dir is None:
             project_path = str(Path.cwd())

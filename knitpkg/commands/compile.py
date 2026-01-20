@@ -70,7 +70,7 @@ class MQLCompiler:
     def __init__(self, console: Console, project_dir: Path):
         self.console = console
         self.project_dir = project_dir
-        self.manifest: Optional[MQLKnitPkgManifest] = None
+        self.manifest: MQLKnitPkgManifest
         self.results: List[CompilationResult] = []
         self.compile_logs_dir = project_dir / COMPILE_LOGS_DIR
 
@@ -195,7 +195,7 @@ class MQLCompiler:
                 )
             raise CompilerNotFoundError(
                 str(compiler_path),
-                self.manifest.target.value
+                self.manifest.target
             )
 
         return compiler_path
@@ -288,7 +288,7 @@ class MQLCompiler:
         # 1. Check for configured data folder path
         if mql_data_folder_path_str:
             configured_path = Path(mql_data_folder_path_str)
-            configured_path_include = configured_path / self.manifest.target.value / "Include"
+            configured_path_include = configured_path / self.manifest.target / "Include"
             if configured_path_include.exists() and configured_path_include.is_dir():
                 return configured_path_include.parent
             else:
@@ -299,8 +299,8 @@ class MQLCompiler:
                 )
 
         # 2. Fallback to auto-detection logic
-        found_mql_paths: List[Path] = find_mql_paths(self.manifest.target)
-        target_folder_name = self.manifest.target.value # MQL5 or MQL4
+        found_mql_paths: List[Path] = find_mql_paths(Target(self.manifest.target))
+        target_folder_name = self.manifest.target # MQL5 or MQL4
 
         if not found_mql_paths:
             self.console.log(
@@ -607,7 +607,7 @@ class MQLCompiler:
 
 def compile_command(project_dir: Path, entrypoints_only: bool, compile_only: bool, verbose: bool):
     """Command wrapper"""
-    console = Console(log_path=verbose)
+    console = Console(log_path=False)
 
     if entrypoints_only and compile_only:
         console.log(

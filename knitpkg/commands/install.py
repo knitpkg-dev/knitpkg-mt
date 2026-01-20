@@ -12,31 +12,24 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
-from typing import List, Tuple, Set, Optional
+from typing import List, Set, Optional
 
-from rich.console import Console
 import typer
 
 from knitpkg.core.utils import navigate_path
-from knitpkg.core.file_reading import load_knitpkg_manifest, read_file_smart
+from knitpkg.core.file_reading import load_knitpkg_manifest, read_source_file_smart
 
-# Import MQL-specific models and downloader
 from knitpkg.mql.constants import FLAT_DIR, INCLUDE_DIR
 from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType, IncludeMode
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from knitpkg.mql.validators import validate_mql_project_structure
 from knitpkg.mql.constants import INCLUDE_DIR
 from knitpkg.core.global_config import get_registry_url
+from knitpkg.core.dependency_downloader import ProjectNode
+from knitpkg.core.console import Console, ConsoleAware
 
-# Import shared types from core
-from knitpkg.core.dependency_downloader import (
-    DependencyNode,
-    ResolvedDeps,
-    DependencyTree
-)
-
-# Import custom exceptions
 from knitpkg.core.exceptions import (
+    KnitPkgError,
     LocalDependencyNotFoundError,
     LockedWithLocalDependencyError,
     DependencyHasLocalChangesError,
@@ -61,9 +54,9 @@ class ResolveKnitPkgIncludePattern:
     """
 
     def __init__(self):
-        self.include_path = None
-        self.directive = None
-        self.directive_path = None
+        self.include_path: Optional[str] = None
+        self.directive: Optional[str] = None
+        self.directive_path: Optional[str] = None
 
         self.pattern = re.compile(
             r'^\s*#\s*include\s+"(?P<include_path>[^"]+)"\s*$'
@@ -82,40 +75,42 @@ class ResolveKnitPkgIncludePattern:
 # INCLUDE MODE PROCESSOR CLASS
 # ==============================================================
 
-class IncludeModeProcessor:
+class IncludeModeDelegate(ConsoleAware):
     """Handles include mode processing."""
 
-    def __init__(self, console: Console, project_dir: Path):
-        self.console = console
-        self.project_dir = project_dir
-        self.resolve_include_pattern: ResolveKnitPkgIncludePattern = (
-            ResolveKnitPkgIncludePattern()
-        )
+    def __init__(self, project_dir: Path, console: Optional[Console] = None, verbose: bool = False):
+        super().__init__(console, verbose)
 
-    def process(self, resolved_deps: ResolvedDeps) -> None:
+        self.project_dir: Path = project_dir
+        self.resolve_include_pattern: ResolveKnitPkgIncludePattern = ResolveKnitPkgIncludePattern()
+
+    def process(self, root_node: ProjectNode) -> None:
         """Process dependencies in include mode."""
-        self.console.log("[bold blue]Resolving dependencies... ('include' mode)[/]")
+        self.log("[bold blue]Resolving dependencies... ('include' mode)[/]")
 
         include_dir = self.project_dir / INCLUDE_DIR
         include_dir.mkdir(parents=True, exist_ok=True)
         total_copied = 0
 
+        resolved_deps: List[tuple[str, Path]] = root_node.resolved_dependencies()
+        self.log(f"[dim]found[/] {len(resolved_deps)} dependency(ies)")
+
         for dep, dep_path in resolved_deps:
             dep_include_dir = dep_path / "knitpkg" / "include"
             if not dep_include_dir.exists():
-                self.console.log(f"[dim]no include[/] {dep} → no knitpkg/include/")
+                self.log(f"[dim]no include[/] {dep} → no knitpkg/include/")
                 continue
 
             mqh_files = list(dep_include_dir.rglob("*.mqh"))
             if not mqh_files:
                 continue
 
-            self.console.log(f"[dim]copying[/] {dep} → {len(mqh_files)} file(s)")
+            self.log(f"[dim]copying[/] {dep} → {len(mqh_files)} file(s)")
             for src in mqh_files:
                 self._safe_copy_with_conflict_warning(src, include_dir, dep)
                 total_copied += 1
 
-        self.console.log(
+        self.log(
             f"[bold green]Check Include mode:[/] {total_copied} file(s) copied → "
             f"[bold]knitpkg/include/[/]"
         )
@@ -137,15 +132,15 @@ class IncludeModeProcessor:
                     directive = self.resolve_include_pattern.directive
                     replace_path = self.resolve_include_pattern.directive_path
 
-                    if directive == 'include':
+                    if directive == 'include' and replace_path is not None:
                         lines[i] = (
                             f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
                             f'/*** ← dependence added by KnitPkg ***/'
                         )
                         modified = True
-                    elif '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix():
+                    elif include_path is not None and '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix():
                         if log_neutralize:
-                            self.console.log(
+                            self.log(
                                 f"[dim]neutralizing[/] autocomplete includes in copied files..."
                             )
                             log_neutralize = False
@@ -154,6 +149,8 @@ class IncludeModeProcessor:
                             f"/*** ← disabled by KnitPkg install (dev helper) ***/"
                         )
                         modified = True
+                    else:
+                        raise KnitPkgError("Invalid directive: {line}")
 
             if modified:
                 mqh_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -179,21 +176,21 @@ class IncludeModeProcessor:
 
         if dst.exists():
             try:
-                src_content = read_file_smart(src)
-                dst_content = read_file_smart(dst)
+                src_content = read_source_file_smart(src)
+                dst_content = read_source_file_smart(dst)
                 if src_content.strip() != dst_content.strip():
-                    self.console.log(
+                    self.log(
                         f"[bold red]CONFLICT DETECTED:[/] {dst.name} will be "
                         f"overwritten by '{dep_name}'"
                     )
-                    self.console.log(f"    → Different content conflict!")
+                    self.log(f"    → Different content conflict!")
                 else:
-                    self.console.log(
+                    self.log(
                         f"[dim]duplicate header[/] {dst.name} (same content, skipped)"
                     )
                     return
             except Exception as e:
-                self.console.log(
+                self.log(
                     f"[yellow]Warning:[/] Could not compare content of {dst.name}: {e}"
                 )
 
@@ -204,30 +201,31 @@ class IncludeModeProcessor:
 # FLAT MODE PROCESSOR CLASS
 # ==============================================================
 
-class FlatModeProcessor:
+class FlatModeDelegate(ConsoleAware):
     """Handles flat mode processing."""
 
-    def __init__(self, console: Console, project_dir: Path):
-        self.console = console
-        self.project_dir = project_dir
-        self.resolve_include_pattern: ResolveKnitPkgIncludePattern = (
-            ResolveKnitPkgIncludePattern()
-        )
+    def __init__(self, project_dir: Path, console: Optional[Console] = None, verbose: bool = False):
+        super().__init__(console, verbose)
 
-    def process(self, manifest: MQLKnitPkgManifest, resolved_deps: ResolvedDeps) -> None:
+        self.project_dir = project_dir
+        self.resolve_include_pattern: ResolveKnitPkgIncludePattern = ResolveKnitPkgIncludePattern()
+
+    def process(self, manifest: MQLKnitPkgManifest, root_node: ProjectNode) -> None:
         """Process entrypoints in flat mode."""
 
-        self.console.log(f"[bold blue]Resolving dependencies... ('flat' mode)[/]")
+        self.log(f"[bold blue]Resolving dependencies... ('flat' mode)[/]")
         flat_dir = self.project_dir / FLAT_DIR
         flat_dir.mkdir(parents=True, exist_ok=True)
+
+        resolved_deps: List[tuple[str, Path]] = root_node.resolved_dependencies()
 
         for entry in manifest.entrypoints or []:
             src = self.project_dir / entry
             if not src.exists():
-                self.console.log(f"[red]Error:[/] entrypoint not found: {entry}")
+                self.log(f"[red]Error:[/] entrypoint not found: {entry}")
                 continue
 
-            content = read_file_smart(src)
+            content = read_source_file_smart(src)
             header = (
                 f"// {'='*70}\n"
                 f"// KNITPKG FLAT — DO NOT EDIT\n"
@@ -242,7 +240,7 @@ class FlatModeProcessor:
 
             flat_file = flat_dir / f"{src.stem}_flat{src.suffix}"
             flat_file.write_text(content, encoding="utf-8")
-            self.console.log(f"[green]Check[/] {flat_file.name} generated")
+            self.log(f"[green]Check[/] {flat_file.name} generated")
 
     def _find_include_file_local(
         self,
@@ -260,7 +258,7 @@ class FlatModeProcessor:
     def _find_include_file_deps(
         self,
         inc_file: str,
-        resolved_deps: ResolvedDeps
+        resolved_deps: List[tuple[str, Path]]
     ) -> Path:
         """Search for an #include file in all resolved dependencies."""
 
@@ -277,42 +275,42 @@ class FlatModeProcessor:
         content: str,
         base_path: Path,
         visited: Set[Path],
-        resolved_deps: ResolvedDeps
+        resolved_deps: List[tuple[str, Path]]
     ) -> str:
         """Recursively resolve all #include directives, preserving #property lines and avoiding cycles."""
 
         def replace(match: re.Match):
             self.resolve_include_pattern.extract_groups(match)
-            include_path: str = self.resolve_include_pattern.include_path
-            directive: str = self.resolve_include_pattern.directive
-            directive_path: str = self.resolve_include_pattern.directive_path
+            include_path: Optional[str] = self.resolve_include_pattern.include_path
+            directive: Optional[str] = self.resolve_include_pattern.directive
+            directive_path: Optional[str] = self.resolve_include_pattern.directive_path
 
             inc_file = None
             inc_path = None
             try:
-                if directive is None:
+                if directive is None and include_path is not None:
                     inc_file = include_path.strip()
                     if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
                         return f"// Ignoring autocomplete.mqh\n"
                     
                     inc_path = self._find_include_file_local(inc_file, base_path)
 
-                elif directive == 'include':
+                elif directive == 'include' and directive_path is not None:
                     inc_file = directive_path.strip()
                     if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
                         return f"// Ignoring autocomplete.mqh\n"
                     
                     inc_path = self._find_include_file_deps(inc_file, resolved_deps)
-                    self.console.log(f"[dim]@knitpkg:include found:[/] '{inc_file}'")
+                    self.log(f"[dim]@knitpkg:include found:[/] '{inc_file}'")
 
                 else:
-                    self.console.log(
+                    self.log(
                         f"[red]ERROR:[/] Invalid @knitpkg:<directive> → '{directive}'"
                     )
                     return f"// ERROR: Invalid @knitpkg:<directive> → '{directive}'"
 
             except FileNotFoundError:
-                self.console.log(
+                self.log(
                     f"[red]ERROR:[/] Include not found in {base_path} → {inc_file}"
                 )
                 return f"// ERROR: Include not found → {inc_file}"
@@ -322,7 +320,7 @@ class FlatModeProcessor:
                 return f"// RECURSIVE INCLUDE SKIPPED: {inc_file}"
             visited.add(inc_path_abs)
 
-            raw = read_file_smart(inc_path)
+            raw = read_source_file_smart(inc_path)
             preserved = [
                 l for l in raw.splitlines()
                 if l.strip().startswith((
@@ -354,23 +352,22 @@ class FlatModeProcessor:
 # KNITPKG INSTALLER CLASS
 # ==============================================================
 
-class KnitPkgInstaller:
+class ProjectInstaller(ConsoleAware):
     """
     Encapsulates KnitPkg install functionality for dependency resolution
     and output generation.
     """
 
-    def __init__(self, console: Console, project_dir: Path):
-        self.console = console
-        self.project_dir = project_dir
-        
-        registry_url = get_registry_url()
-        # Use MQL-specific downloader
-        self.downloader = MQLDependencyDownloader(console, project_dir, registry_url)
-        self.include_processor = IncludeModeProcessor(console, project_dir)
-        self.flat_processor = FlatModeProcessor(console, project_dir)
+    def __init__(self, project_dir: Path, locked_mode: bool, console: Console, verbose: bool):
+        super().__init__(console, verbose)
 
-    def install(self, locked_mode: bool = False, show_tree: bool = True) -> None:
+        self.project_dir = project_dir
+        registry_url = get_registry_url()
+        self.downloader = MQLDependencyDownloader(project_dir, registry_url, locked_mode,
+                                                  MQLKnitPkgManifest, console, verbose)
+        self.locked_mode: bool = locked_mode
+
+    def install(self, show_tree: bool = True) -> None:
         """
         Main entry point for install — resolves dependencies and generates output.
 
@@ -401,21 +398,26 @@ class KnitPkgInstaller:
 
             self._prepare_output_directories(manifest)
 
-            resolved_deps = self._resolve_dependencies(manifest, locked_mode, show_tree)
+            self.log("[bold blue]Downloading dependencies...[/]")
+            root_node: ProjectNode = self.downloader.download_all()
+            if show_tree and root_node:
+                self._log_dependency_tree(root_node)
 
             if effective_mode == IncludeMode.INCLUDE:
-                self.include_processor.process(resolved_deps)
+                include_delegate = IncludeModeDelegate(self.project_dir, self.console, self.verbose)
+                include_delegate.process(root_node)
             else:
-                self.flat_processor.process(manifest, resolved_deps)
+                flat_processor = FlatModeDelegate(self.project_dir, self.console, self.verbose)
+                flat_processor.process(manifest, root_node)
 
-            self._log_completion(resolved_deps, effective_mode)
+            self._log_completion(root_node, effective_mode)
 
         except (LocalDependencyNotFoundError, LockedWithLocalDependencyError, DependencyHasLocalChangesError) as e:
             # Handle dependency errors with clear messages
-            self.console.log(f"[red]Fatal error:[/] {e}")
+            self.log(f"[red]Fatal error:[/] {e}")
             raise SystemExit(1)
         except Exception as e:
-            self.console.log(f"[red]Error:[/] {e}")
+            self.log(f"[red]Error:[/] {e}")
             raise SystemExit(1)
 
     def _log_install_start(
@@ -423,13 +425,13 @@ class KnitPkgInstaller:
         manifest: MQLKnitPkgManifest,
         effective_mode: IncludeMode
     ) -> None:
-        self.console.log(
+        self.log(
             f"[bold magenta]knitpkg install[/] → [bold cyan]{manifest.name}[/] "
-            f"v{manifest.version} {manifest.type.value}"
+            f"v{manifest.version} {manifest.type}"
         )
         if effective_mode != manifest.include_mode:
-            self.console.log(
-                f"       (project type '{manifest.type.value}' enforces "
+            self.log(
+                f"       (project type '{manifest.type}' enforces "
                 f"[bold yellow]'{effective_mode.value}'[/] mode)"
             )
 
@@ -441,69 +443,40 @@ class KnitPkgInstaller:
         if manifest.type != MQLProjectType.PACKAGE:
             shutil.rmtree(include_dir, ignore_errors=True)
         elif include_dir.exists():
-            self.console.log(
+            self.log(
                 f"[dim]Preserving[/] {INCLUDE_DIR.as_posix()} "
                 f"(project type is 'package')"
             )
 
-    def _resolve_dependencies(
-        self,
-        manifest: MQLKnitPkgManifest,
-        locked_mode: bool,
-        show_tree: bool
-    ) -> ResolvedDeps:
-        """
-        Resolve dependencies using downloader.
-
-        Raises:
-            LocalDependencyNotFoundError: If local dependency path doesn't exist
-            LocalDependencyNotGitError: If --locked with non-git local dependency
-            DependencyHasLocalChangesError: If --locked but dependency has changes
-        """
-        self.console.log("[bold blue]Downloading dependencies...[/]")
-
-        # This may raise custom exceptions - let them propagate
-        resolved_deps, dependency_tree = self.downloader.download_all(
-            manifest.dependencies or {}, 
-            manifest.target.value,
-            locked_mode
-        )
-
-        # Log dependency tree by default unless --no-tree flag is used
-        if show_tree and dependency_tree:
-            self._log_dependency_tree(dependency_tree)
-
-        return resolved_deps
-
-    def _log_dependency_tree(self, dependency_tree: DependencyTree) -> None:
+    def _log_dependency_tree(self, dependency_tree: ProjectNode) -> None:
         """Log the dependency tree in a readable format."""
-        self.console.log("\n[bold cyan]Dependency Tree:[/]")
-        for node in dependency_tree:
+        self.log("\n[bold cyan]Dependency Tree:[/]")
+        for node in dependency_tree.dependencies:
             self._log_tree_node(node, "")
-        self.console.log("")
+        self.log("")
 
-    def _log_tree_node(self, node: DependencyNode, prefix: str) -> None:
+    def _log_tree_node(self, node: ProjectNode, prefix: str) -> None:
         """Recursively log a dependency tree node."""
-        is_last = node.parent is None or node == node.parent.children[-1]
-        current_prefix = "├── " if not is_last else "└── "
+        current_prefix = "├── " if not node.is_root else "└── "
 
-        self.console.log(f"{prefix}{current_prefix}[bold]{node.name}[/] v{node.version}")
+        self.log(f"{prefix}{current_prefix}[bold]{node.name}[/] v{node.version}")
 
-        child_prefix = prefix + ("│   " if not is_last else "    ")
-        for child in node.children:
+        child_prefix = prefix + ("│   " if not node.is_root else "    ")
+        for child in node.dependencies:
             self._log_tree_node(child, child_prefix)
 
     def _log_completion(
         self,
-        resolved_deps: ResolvedDeps,
+        node: ProjectNode,
         effective_mode: IncludeMode
     ) -> None:
-        self.console.log(
-            f"[green]Check[/] Resolved {len(resolved_deps)} "
-            f"dependenc{'y' if len(resolved_deps)==1 else 'ies'}"
+        resolved_deps_len = len(node.resolved_names(add_root=False))
+        self.log(
+            f"[green]Check[/] Resolved {resolved_deps_len} "
+            f"dependenc{'y' if resolved_deps_len==1 else 'ies'}"
         )
         output_dir = INCLUDE_DIR if effective_mode == IncludeMode.INCLUDE else FLAT_DIR
-        self.console.log(
+        self.log(
             f"\n[bold green]Check install completed![/] → {output_dir.as_posix()}/"
         )
 
@@ -513,9 +486,10 @@ class KnitPkgInstaller:
 
 def install_command(project_dir: Path, locked_mode: bool, show_tree: bool, verbose: bool):
     """Command wrapper for KnitPkgInstaller."""
-    console = Console(log_path=verbose)
-    installer = KnitPkgInstaller(console, project_dir)
-    installer.install(locked_mode, show_tree)
+    from rich.console import Console as RichConsole
+    console = RichConsole(log_path=False)
+    installer = ProjectInstaller(project_dir, locked_mode, console, verbose)
+    installer.install(show_tree)
 
 # ==============================================================
 # CLI REGISTRATION
@@ -554,4 +528,4 @@ def register(app):
         else:
             project_dir = Path(project_dir).resolve()
 
-        install_command(project_dir, locked, not no_tree, verbose)
+        install_command(project_dir, locked, not no_tree, verbose) # type: ignore

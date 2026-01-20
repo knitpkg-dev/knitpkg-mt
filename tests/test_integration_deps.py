@@ -1,5 +1,5 @@
 # No seu test_integration_deps.py
-from knitpkg.commands.install import KnitPkgInstaller
+from knitpkg.commands.install import ProjectInstaller
 from knitpkg.commands.autocomplete import AutocompleteGenerator
 from pathlib import Path
 import pytest
@@ -497,7 +497,7 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
 
     # Instantiate InstallCommand and call install directly
     # The InstallCommand expects a Console instance
-    installer = KnitPkgInstaller(console=mock_console, project_dir=expert_test_path)
+    installer = ProjectInstaller(console=mock_console, project_dir=expert_test_path)
 
     print(f"\nRunning KnitPkgInstaller.install for {expert_test_path}")
     try:

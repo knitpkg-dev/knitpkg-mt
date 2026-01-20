@@ -3,20 +3,18 @@ from typing import Optional
 import typer
 from pathlib import Path
 import git
-import httpx
-import json
 from rich.console import Console
 
 from knitpkg.core.console import ConsoleAware
 from knitpkg.core.registry import Registry
 from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.core.exceptions import (KnitPkgError, RegistryError)
+from knitpkg.core.exceptions import KnitPkgError, RegistryError
 from knitpkg.core.models import KnitPkgManifest
 from knitpkg.mql.models import MQLKnitPkgManifest
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.utils import is_local_path
 
-class RegisterProject(ConsoleAware):
+class ProjectRegister(ConsoleAware):
     """
     Encapsulates the comprehensive steps required to register a project in the registry.
     This class handles local Git repository validations, manifest loading, tag creation,
@@ -196,7 +194,7 @@ class RegisterProject(ConsoleAware):
         self.print("------------------------------------------\n")
 
 
-    def run(self, is_private: bool):
+    def register(self, is_private: bool):
         """
         Main entry point for the project registration process.
 
@@ -259,7 +257,6 @@ class RegisterProject(ConsoleAware):
                 "dependencies": self.manifest.dependencies,
                 "is_private": is_private
             }
-
             
             response_data = self.registry_service.register(payload)
             if "message" in response_data:
@@ -272,6 +269,7 @@ class RegisterProject(ConsoleAware):
             self.print('')
 
             return response_data
+        
         except RegistryError as e:
             self.print(f"[bold red]✖ Registry error:[/bold red] {e}. Reason: {e.reason} ")
             self.log(f"  Status Code: {e.status_code}")
@@ -279,10 +277,12 @@ class RegisterProject(ConsoleAware):
             self.log(f"  Request URL: {e.request_url}")
             self.print('')
             raise typer.Exit(code=1)
+        
         except KnitPkgError as e:
             self.print(f"[bold red]✖ Registration failed:[/bold red] {e}")
             self.print('')
             raise typer.Exit(code=1)
+        
         except Exception as e:
             self.print(f"[bold red]✖ Unexpected error:[/bold red] {e}")
             self.print('')
@@ -310,10 +310,10 @@ def register(app):
 
         project_path = Path(project_dir).resolve() if project_dir else Path.cwd()
 
-        console: Console = Console(log_path=verbose) # type: ignore
+        console: Console = Console(log_path=False)
 
         registry_url = get_registry_url()
         registry: Registry = Registry(registry_url, console=console, verbose=verbose) # type: ignore
 
-        register: RegisterProject = RegisterProject(project_path, registry, console, True if verbose else False)
-        register.run(is_private=False)
+        register: ProjectRegister = ProjectRegister(project_path, registry, console, True if verbose else False)
+        register.register(is_private=False)

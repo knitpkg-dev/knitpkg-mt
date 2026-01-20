@@ -10,7 +10,7 @@ and validation logic.
 from typing import Optional, List, Any
 from enum import Enum
 from pydantic import Field, field_validator, model_validator
-from typing_extensions import Self  # ← Add this import
+from typing_extensions import Self
 
 from knitpkg.core.models import KnitPkgManifest, ProjectType
 
@@ -53,17 +53,6 @@ class MQLKnitPkgManifest(KnitPkgManifest):
     include_mode, and entrypoints.
     """
 
-    # Override with strict MQL types
-    target: Target = Field(
-        ...,
-        description="Target platform (MQL4 or MQL5)"
-    )
-
-    type: MQLProjectType = Field(
-        ...,
-        description="Project type"
-    )
-
     # MQL-specific fields
     include_mode: IncludeMode = Field(
         default=IncludeMode.INCLUDE,
@@ -77,30 +66,24 @@ class MQLKnitPkgManifest(KnitPkgManifest):
 
     @field_validator("type", mode="before")
     @classmethod
-    def validate_type(cls, v: Any) -> MQLProjectType:
-        """Validate type is not None and is a valid MQLProjectType enum value."""
+    def validate_type(cls, v: Any) -> str:
+        """Override inherited validator to accept MQLProjectType values."""
         if v is None:
             raise ValueError("type cannot be None")
-        if isinstance(v, str):
-            try:
-                return MQLProjectType(v)
-            except ValueError:
-                valid_types = [x.value for x in MQLProjectType]
-                raise ValueError(f"type must be one of {valid_types}, got: {v}")
+        if v not in [t.value for t in MQLProjectType]:
+            valid_types = ", ".join([t.value for t in ProjectType])
+            raise ValueError(f"type must be one of: {valid_types}")
         return v
 
     @field_validator("target", mode="before")
     @classmethod
-    def validate_target(cls, v: Any) -> Target:
+    def validate_target(cls, v: Any) -> str:
         """Validate target is not None and is a valid Target enum value."""
         if v is None:
             raise ValueError("target cannot be None")
-        if isinstance(v, str):
-            try:
-                return Target(v)
-            except ValueError:
-                valid_targets = [x.value for x in Target]
-                raise ValueError(f"target must be one of {valid_targets}, got: {v}")
+        if v not in [t.value for t in Target]:
+            valid_types = ", ".join([t.value for t in Target])
+            raise ValueError(f"target must be one of: {valid_types}")
         return v
 
     @field_validator("entrypoints", mode="before")

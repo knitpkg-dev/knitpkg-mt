@@ -10,12 +10,15 @@ and source code files with proper encoding detection.
 import json
 import yaml
 from pathlib import Path
-from typing import Optional, Union, Type
+from typing import Optional, Union, Type, TypeVar
 import chardet
 
 from .models import KnitPkgManifest
+from .exceptions import ManifestLoadError
 
-def read_file_smart(path: Path) -> str:
+T = TypeVar('T', bound=KnitPkgManifest)
+
+def read_source_file_smart(path: Path) -> str:
     """
     Read any source file with the correct encoding (UTF-8, UTF-16, etc.)
     and safely remove null bytes / line-ending issues common with UTF-16 files.
@@ -58,8 +61,8 @@ def read_file_smart(path: Path) -> str:
 
 def load_knitpkg_manifest(
     path: Optional[Union[str, Path]] = None,
-    manifest_class: Optional[Type[KnitPkgManifest]] = None
-) -> KnitPkgManifest:
+    manifest_class: Type[T] = KnitPkgManifest
+) -> T:
     """
     Load knitpkg.json OR knitpkg.yaml (YAML takes precedence if both exist).
 
@@ -85,6 +88,9 @@ def load_knitpkg_manifest(
     """
     if manifest_class is None:
         manifest_class = KnitPkgManifest
+    
+    if not issubclass(manifest_class, KnitPkgManifest):
+        raise ValueError(f"manifest_class must be KnitPkgManifest or a subclass of it")
 
     if path is None:
         path = Path.cwd()
@@ -114,21 +120,21 @@ def load_knitpkg_manifest(
             f"No manifest file found in {path}: knitpkg.yaml or knitpkgkg.json"
         )
 
-def _load_from_yaml(path: Path, manifest_class: Type[KnitPkgManifest]) -> KnitPkgManifest:
+def _load_from_yaml(path: Path, manifest_class: Type[T]) -> T:
     """Load and parse a knitpkg.yaml manifest file."""
     try:
         raw = path.read_text(encoding="utf-8")
         data = yaml.safe_load(raw)
         if data is None:
-            raise ValueError("knitpkg.yaml is empty")
+            raise ManifestLoadError(str(path), "knitpkg.yaml is empty")
         return manifest_class(**data)
     except Exception as e:
-        raise ValueError(f"Error reading knitpkg.yaml: {e}")
+        raise ManifestLoadError(str(path), str(e))
 
-def _load_from_json(path: Path, manifest_class: Type[KnitPkgManifest]) -> KnitPkgManifest:
+def _load_from_json(path: Path, manifest_class: Type[T]) -> T:
     """Load and parse a knitpkg.json manifest file."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         return manifest_class(**data)
     except Exception as e:
-        raise ValueError(f"Error reading knitpkg.json: {e}")
+        raise ManifestLoadError(str(path), str(e))

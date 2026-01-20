@@ -30,7 +30,7 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, entrypo
     project_dir:
         The path to the project's root directory (where the manifest is located).
     """
-    console = Console(log_path=verbose)
+    console = Console(log_path=False)
 
     console.print(f"[bold green]🚀 Starting build for project in[/bold green] [cyan]{project_dir}[/cyan]")
 
