@@ -18,9 +18,9 @@ from knitpkg.core.exceptions import (
     InvalidRegistryError,
     TokenStorageError,
     TokenRemovalError,
-    TokenNotFoundError
+    TokenNotFoundError,
+    RegistryError
 )
-
 from knitpkg.core.console import ConsoleAware, Console
 
 CREDENTIALS_SERVICE = "knitpkg-mt"
@@ -129,8 +129,6 @@ class Registry(ConsoleAware):
         if not access_token:
             raise AccessTokenError()
         
-        self._register_device_with_registry(access_token, provider)
-        
         # Store the token securely with keyring
         try:            
             keyring.set_password(CREDENTIALS_SERVICE, "provider", provider)
@@ -158,16 +156,19 @@ class Registry(ConsoleAware):
     def register(self, payload: dict) -> dict:
         """Send register request to registry."""
         provider, token = self._get_credentials()
-        
-        response = httpx.post(
-            f"{self.base_url}/project/register",
-            json=payload,
-            headers={"Authorization": f"Bearer {token}",
-                     "X-Provider": provider},
-            timeout=30.0
-        )
-        response.raise_for_status()
-        return response.json()
+
+        try:
+            response = httpx.post(
+                f"{self.base_url}/project/register",
+                json=payload,
+                headers={"Authorization": f"Bearer {token}",
+                        "X-Provider": provider},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise RegistryError(e)
 
     def resolve_package(self, target: str, org: str, pack_name: str, version_spec: str) -> dict:
         """Resolve package distribution info from registry. This is the only method that does
@@ -189,16 +190,17 @@ class Registry(ConsoleAware):
             provider = None
             token = None
 
-        url = f"{self.base_url}/project/resolve/{target}/{org}/{pack_name}/{version_spec}"
-        
-        response = httpx.get(
-            url,
-            headers={"Authorization": f"Bearer {token}",
-                     "X-Provider": provider} if provider and token else None,
-            timeout=10.0
-        )
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = httpx.get(
+                f"{self.base_url}/project/resolve/{target}/{org}/{pack_name}/{version_spec}",
+                headers={"Authorization": f"Bearer {token}",
+                        "X-Provider": provider} if provider and token else None,
+                timeout=10.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise RegistryError(e)
 
     def _fetch_registry_config(self, provider: Optional[str] = None) -> Tuple[str, str, str]:
         """Fetch provider configuration from registry."""
@@ -247,9 +249,6 @@ class Registry(ConsoleAware):
         response.raise_for_status()
         return response.json()
     
-    def _register_device_with_registry(self, access_token: str, provider: str):
-        ...
-
 if __name__ == "__main__":
     from rich.console import Console as RichConsole
     r: Registry = Registry(base_url="http://localhost:8000", console=RichConsole())

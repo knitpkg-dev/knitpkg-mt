@@ -10,7 +10,7 @@ from rich.console import Console
 from knitpkg.core.console import ConsoleAware
 from knitpkg.core.registry import Registry
 from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.core.exceptions import KnitPkgError
+from knitpkg.core.exceptions import (KnitPkgError, RegistryError)
 from knitpkg.core.models import KnitPkgManifest
 from knitpkg.mql.models import MQLKnitPkgManifest
 from knitpkg.core.global_config import get_registry_url
@@ -43,12 +43,12 @@ class RegisterProject(ConsoleAware):
         """
         Loads and validates the manifest file. Initializes Git repository.
         """
-        self.log(f"📦 Loading manifest...")
+        self.print(f"📦 Loading manifest...")
         try:
             self.manifest = load_knitpkg_manifest(self.project_path, manifest_class=MQLKnitPkgManifest)
             self.log("✔ Manifest loaded successfully.")
         except Exception as e:
-            self.print(f"[bold red]✖ Error loading manifest:[/bold red] {e}")
+            self.log(f"[bold red]✖ Error loading manifest:[/bold red] {e}")
             raise KnitPkgError(f"Failed to load manifest: {e}")
 
         try:
@@ -67,7 +67,7 @@ class RegisterProject(ConsoleAware):
         if not self.manifest:
             raise KnitPkgError("Manifest not loaded. Cannot validate fields.")
 
-        self.log("🔍 Validating manifest fields...")
+        self.print("🔍 Validating manifest fields...")
         # Normalizar nomes de pacotes para minúsculas e impedir publicação se dependências usarem caminhos locais
         if self.manifest.name != self.manifest.name.lower():
             raise KnitPkgError(f"Package name '{self.manifest.name}' must be lowercase. Please update your manifest.")
@@ -90,7 +90,7 @@ class RegisterProject(ConsoleAware):
         if not self.repo:
             raise KnitPkgError("Git repository not initialized.")
 
-        self.log("🔍 Checking for remote 'origin'...")
+        self.print("🔍 Checking for remote 'origin'...")
         try:
             self.remote_url = self.repo.remotes.origin.url
             self.log(f"✔ Remote 'origin' found: [bold blue]{self.remote_url}[/bold blue]")
@@ -105,7 +105,7 @@ class RegisterProject(ConsoleAware):
         if not self.repo:
             raise KnitPkgError("Git repository not initialized.")
 
-        self.log("🔍 Checking for uncommitted changes...")
+        self.print("🔍 Checking for uncommitted changes...")
         if self.repo.is_dirty(untracked_files=True):
             raise KnitPkgError("You have uncommitted changes or untracked files in your Git repository. "
                                "Please commit or stash your changes before registering your project.")
@@ -118,7 +118,7 @@ class RegisterProject(ConsoleAware):
         if not self.repo:
             raise KnitPkgError("Git repository not initialized.")
 
-        self.log("🔍 Checking sync status with remote...")
+        self.print("🔍 Checking sync status with remote...")
         try:
             # Fetch to ensure local remote-tracking branches are up-to-date
             self.repo.remotes.origin.fetch()
@@ -160,7 +160,7 @@ class RegisterProject(ConsoleAware):
         if not self.manifest:
             raise KnitPkgError("Manifest not loaded. Cannot create tag.")
 
-        self.log(f"🏷️ Creating and pushing Git tag '[bold magenta]{tag_name}[/bold magenta]'...")
+        self.print(f"🏷️ Creating and pushing Git tag '[bold magenta]{tag_name}[/bold magenta]'...")
         try:
             # Check if tag already exists locally or remotely
             if tag_name in self.repo.tags:
@@ -185,14 +185,14 @@ class RegisterProject(ConsoleAware):
             raise KnitPkgError("Manifest not loaded. Cannot display project info.")
 
         self.print("\n--- Project Information for Registration ---")
-        self.print(f"  [bold]Name:[/bold] {self.manifest.name}")
-        self.print(f"  [bold]Version:[/bold] {self.manifest.version}")
-        self.print(f"  [bold]Description:[/bold] {self.manifest.description or 'N/A'}")
-        self.print(f"  [bold]Author:[/bold] {self.manifest.author or 'N/A'}")
-        self.print(f"  [bold]License:[/bold] {self.manifest.license or 'N/A'}")
-        self.print(f"  [bold]Target:[/bold] {self.manifest.target or 'N/A'}")
-        self.print(f"  [bold]Git Remote:[/bold] {self.remote_url}")
-        self.print(f"  [bold]Commit Hash:[/bold] {self.current_commit_hash}")
+        self.print(f"  Name: [bold]{self.manifest.name}[/bold]")
+        self.print(f"  Version: [bold]{self.manifest.version}[/bold]")
+        self.print(f"  Description: [bold]{self.manifest.description or 'N/A'}[/bold]")
+        self.print(f"  Author: [bold]{self.manifest.author or 'N/A'}[/bold]")
+        self.print(f"  License: [bold]{self.manifest.license or 'N/A'}[/bold]")
+        self.print(f"  Target: [bold]{self.manifest.target or 'N/A'}[/bold]")
+        self.print(f"  Git Remote: [bold]{self.remote_url}[/bold]")
+        self.print(f"  Commit Hash: [bold]{self.current_commit_hash}[/bold]")
         self.print("------------------------------------------\n")
 
 
@@ -223,8 +223,7 @@ class RegisterProject(ConsoleAware):
             KnitPkgError: If any step in the registration process fails.
         """
         try:
-            self.log(f"Starting registration process for project at '{self.project_root}'...")
-
+            self.print(f"Starting registration process for project at '{self.project_root}'...")
 
             # Step 1: Validate project directory and initialize Git
             self._load_manifest_and_initialize_repo()
@@ -247,7 +246,7 @@ class RegisterProject(ConsoleAware):
             self._display_project_info()
 
             # Step 6: Delegate registration to the registry service
-            self.log("🚀 Initiating project registration with the registry service...")
+            self.print("🚀 Initiating project registration with the registry service...")
             payload = {
                 "organization": self.manifest.organization,
                 "name": self.manifest.name,
@@ -264,28 +263,30 @@ class RegisterProject(ConsoleAware):
             
             response_data = self.registry_service.register(payload)
             if "message" in response_data:
-                self.print(f"✅  [bold green]{response_data['message']}[/bold green]")
+                self.print(f"✅ [bold green]{response_data['message']}[/bold green]")
             else:
-                self.print("✅  [bold green]Project registered successfully![/bold green]")
+                self.print("✅ [bold green]Project registered successfully![/bold green]")
             if "project" in response_data:
                 pkg = response_data["project"]
                 self.print(pkg)
+            self.print('')
 
             return response_data
-        except httpx.HTTPStatusError as e:
-            try:
-                error_data = json.loads(e.response.text)
-                detail = error_data.get("detail", str(e))
-                self.print(f"[red]✗[/red] Failed to register project: {detail}")
-            except (json.JSONDecodeError, AttributeError):
-                self.print(f"[red]✗[/red] Failed to register project: {e}")
+        except RegistryError as e:
+            self.print(f"[bold red]✖ Registry error:[/bold red] {e}. Reason: {e.reason} ")
+            self.log(f"  Status Code: {e.status_code}")
+            self.log(f"  Error type: {e.error_type}")
+            self.log(f"  Request URL: {e.request_url}")
+            self.print('')
             raise typer.Exit(code=1)
         except KnitPkgError as e:
             self.print(f"[bold red]✖ Registration failed:[/bold red] {e}")
-            raise
+            self.print('')
+            raise typer.Exit(code=1)
         except Exception as e:
-            self.print(f"[bold red]✖ An unexpected error occurred during registration:[/bold red] {e}")
-            raise
+            self.print(f"[bold red]✖ Unexpected error:[/bold red] {e}")
+            self.print('')
+            raise typer.Exit(code=1)
 
 
 def register(app):

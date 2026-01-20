@@ -1,5 +1,9 @@
 # knitpkg/core/exceptions.py
 
+from typing import Optional
+from httpx import HTTPStatusError
+import json
+
 """
 KnitPkg domain-specific exceptions.
 
@@ -95,7 +99,7 @@ class RegistryRequestError(DependencyError):
 
 class ProviderNotFoundError(DependencyError):
     """Raised when provider is not found in registry config."""
-    def __init__(self, provider: str, available_providers: list[str] = None):
+    def __init__(self, provider: str, available_providers: Optional[list[str]] = None):
         self.provider = provider
         self.available_providers = available_providers
         if available_providers:
@@ -105,50 +109,6 @@ class ProviderNotFoundError(DependencyError):
             )
         else:
             super().__init__(f"Provider '{provider}' not found in registry configuration")
-
-class CallbackServerError(KnitPkgError):
-    """Raised when callback server fails to start or handle request."""
-    def __init__(self, details: str):
-        self.details = details
-        super().__init__(f"Callback server error: {details}")
-
-class AuthorizationCodeError(KnitPkgError):
-    """Raised when authorization code is not received from callback."""
-    def __init__(self):
-        super().__init__("Failed to obtain authorization code from OAuth callback")
-
-class TokenExchangeError(KnitPkgError):
-    """Raised when token exchange fails."""
-    def __init__(self, details: str):
-        self.details = details
-        super().__init__(f"Token exchange failed: {details}")
-
-class AccessTokenError(KnitPkgError):
-    """Raised when access token is missing from response."""
-    def __init__(self):
-        super().__init__("Access token not found in registry response")
-
-class InvalidRegistryError(KnitPkgError):
-    """Raised when registry configuration is invalid."""
-    def __init__(self, details: str):
-        self.details = details
-        super().__init__(f"Invalid registry configuration: {details}")
-
-class TokenStorageError(KnitPkgError):
-    """Raised when token storage fails."""
-    def __init__(self, details: str):
-        self.details = details
-        super().__init__(f"Failed to store token securely: {details}")
-
-class TokenRemovalError(KnitPkgError):
-    """Raised when token removal fails."""
-    def __init__(self):
-        super().__init__(f"Failed to remove token")
-
-class TokenNotFoundError(KnitPkgError):
-    """Raised when access token is not found in keyring."""
-    def __init__(self):
-        super().__init__(f"No access token found")
 
 class GitOperationError(DependencyError):
     """Raised when git operations fail."""
@@ -170,6 +130,87 @@ class GitCommitNotFoundError(DependencyError):
         self.commit_hash = commit_hash
         self.details = details
         super().__init__(f"Commit {commit_hash[:8]} not found or checkout failed: {details}")
+
+# ==============================================================
+# AUTHENTICATION ERRORS
+# ==============================================================
+
+class AuthenticationError(KnitPkgError):
+    """Base class for Authentication errors."""
+    pass
+
+class CallbackServerError(AuthenticationError):
+    """Raised when callback server fails to start or handle request."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Callback server error: {details}")
+
+class AuthorizationCodeError(AuthenticationError):
+    """Raised when authorization code is not received from callback."""
+    def __init__(self):
+        super().__init__("Failed to obtain authorization code from OAuth callback")
+
+class TokenExchangeError(AuthenticationError):
+    """Raised when token exchange fails."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Token exchange failed: {details}")
+
+class AccessTokenError(AuthenticationError):
+    """Raised when access token is missing from response."""
+    def __init__(self):
+        super().__init__("Access token not found in registry response")
+
+class InvalidRegistryError(AuthenticationError):
+    """Raised when registry configuration is invalid."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Invalid registry configuration: {details}")
+
+class TokenStorageError(AuthenticationError):
+    """Raised when token storage fails."""
+    def __init__(self, details: str):
+        self.details = details
+        super().__init__(f"Failed to store token securely: {details}")
+
+class TokenRemovalError(AuthenticationError):
+    """Raised when token removal fails."""
+    def __init__(self):
+        super().__init__(f"Failed to remove token")
+
+class TokenNotFoundError(AuthenticationError):
+    """Raised when access token is not found in keyring."""
+    def __init__(self):
+        super().__init__("You are not logged in. Please run 'kp login --provider <provider>' first.")
+
+# ==============================================================
+# REGISTRY ERRORS
+# ==============================================================
+class RegistryError(KnitPkgError):
+    """Base class for Registry authentication errors."""
+    
+    def __init__(self, http_error: HTTPStatusError, *args: object) -> None:
+        self.reason = http_error.response.reason_phrase
+        self.status_code = http_error.response.status_code
+        self.request_url = http_error.request.url
+
+        status_class = http_error.response.status_code // 100
+        error_types = {
+            1: "Informational response",
+            3: "Redirect response",
+            4: "Client error",
+            5: "Server error",
+        }
+        self.error_type = error_types.get(status_class, "Invalid status code")
+
+        try:
+            error_data = json.loads(http_error.response.text)
+            detail = error_data.get("detail", str(http_error))
+        except (json.JSONDecodeError, AttributeError):
+            detail = str(http_error)
+
+        super().__init__(detail)
+
 
 # ==============================================================
 # MANIFEST ERRORS
