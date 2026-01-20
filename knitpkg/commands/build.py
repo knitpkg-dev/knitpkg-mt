@@ -54,7 +54,7 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, entrypo
         console.print(f"[red]❌ Error loading manifest:[/red] {e}")
         raise typer.Exit(code=1)
 
-    project_type = manifest.type.value # Assumes `manifest.type` is an Enum and has `.value`
+    project_type = manifest.type # Assumes `manifest.type` is an Enum and has `.value`
     console.print(f"   [bold]Project Name:[/bold] [yellow]{manifest.name}[/yellow]")
     console.print(f"   [bold]Project Type:[/bold] [magenta]{project_type}[/magenta]")
     console.print(f"   [bold]Version:[/bold] [magenta]{manifest.version}[/magenta]")
