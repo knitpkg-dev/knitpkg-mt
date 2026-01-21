@@ -69,7 +69,7 @@ def load_knitpkg_manifest(
     Args:
         path:
             - None: current directory
-            - Path to file (knitpkg.yaml/knitpkg.json)
+            - Path to file (knitpkg.yaml/knitpkg.yal/knitpkg.json)
             - Directory (searches for manifest inside it)
         manifest_class: Manifest class to use (defaults to KnitPkgManifest).
             Use MQLKnitPkgManifest for MQL-specific validation.
@@ -79,6 +79,7 @@ def load_knitpkg_manifest(
 
     Raises:
         ValueError: Invalid filename
+        ManifestLoadError: YAML/JSON parsing error
         FileNotFoundError: No manifest found
 
     Example:
@@ -98,26 +99,30 @@ def load_knitpkg_manifest(
     path = Path(path)
 
     if path.is_file():
-        if path.name not in ("knitpkg.yaml", "knitpkg.json"):
+        if path.name not in ("knitpkg.yaml", "knitpkg.yml", "knitpkg.json"):
             raise ValueError(
                 f"Invalid file: {path.name}\n"
-                f"Expected: knitpkg.yaml or knitpkg.json"
+                f"Expected: knitpkg.yaml, knitpkg.yml or knitpkg.json"
             )
         yaml_path = path if path.name == "knitpkg.yaml" else None
+        yml_path = path if path.name == "knitpkg.yml" else None
         json_path = path if path.name == "knitpkg.json" else None
     elif path.is_dir():
         yaml_path = path / "knitpkg.yaml"
+        yml_path = path / "knitpkg.yml"
         json_path = path / "knitpkg.json"
     else:
         raise FileNotFoundError(f"Path not found: {path}")
 
     if yaml_path and yaml_path.exists():
         return _load_from_yaml(yaml_path, manifest_class)
+    if yml_path and yml_path.exists():
+        return _load_from_yaml(yml_path, manifest_class)
     elif json_path and json_path.exists():
         return _load_from_json(json_path, manifest_class)
     else:
         raise FileNotFoundError(
-            f"No manifest file found in {path}: knitpkg.yaml or knitpkgkg.json"
+            f"No manifest file found in {path}"
         )
 
 def _load_from_yaml(path: Path, manifest_class: Type[T]) -> T:
@@ -126,7 +131,7 @@ def _load_from_yaml(path: Path, manifest_class: Type[T]) -> T:
         raw = path.read_text(encoding="utf-8")
         data = yaml.safe_load(raw)
         if data is None:
-            raise ManifestLoadError(str(path), "knitpkg.yaml is empty")
+            raise ManifestLoadError(str(path), "Manifest file is empty")
         return manifest_class(**data)
     except Exception as e:
         raise ManifestLoadError(str(path), str(e))
@@ -135,6 +140,8 @@ def _load_from_json(path: Path, manifest_class: Type[T]) -> T:
     """Load and parse a knitpkg.json manifest file."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
+        if data is None:
+            raise ManifestLoadError(str(path), "Manifest file is empty")
         return manifest_class(**data)
     except Exception as e:
         raise ManifestLoadError(str(path), str(e))

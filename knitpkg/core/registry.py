@@ -249,16 +249,3 @@ class Registry(ConsoleAware):
         response.raise_for_status()
         return response.json()
     
-if __name__ == "__main__":
-    from rich.console import Console as RichConsole
-    r: Registry = Registry(base_url="http://localhost:8000", console=RichConsole())
-
-    r.login("mql5forge")
-    #print(r.resolve_package('MQL5','douglasrechia','knitpkg-mt-bar','^1.0.0'))
-
-    #r.login("github")
-    #print(r.resolve_package('MQL5','dougrechia','knitpkg-mt-showcase2','^1.0.0'))
-
-    #r.login("gitlab")
-    
-    #r.login("bitbucket")

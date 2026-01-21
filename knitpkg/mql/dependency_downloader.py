@@ -53,19 +53,3 @@ class MQLDependencyDownloader(DependencyDownloader):
             is_dependency,
             self.console
         )
-
-#if __name__ == "__main__":
-#    from knitpkg.mql.models import MQLKnitPkgManifest
-#    from rich.console import Console as RichConsole
-#    d = MQLDependencyDownloader(Path("C:\\Users\\dougl\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\MQL5\\Indicators\\knitpkg-mt-ind-sma"), \
-#                                "http://localhost:8000", \
-#                                manifest_type=MQLKnitPkgManifest, \
-#                                console=RichConsole(log_path=False),
-#                                verbose=True)
-#    node = d.download_all()
-#    if not node:
-#        print("No nodes downloaded")
-#    else:
-#        print(node.name)
-#        print(node.resolved_names())
-#        print(node.resolved_names(True))

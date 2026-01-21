@@ -14,7 +14,18 @@ from rich.console import Console
 
 from knitpkg.core.registry import Registry
 from knitpkg.core.global_config import get_registry_url
-from knitpkg.core.exceptions import ProviderNotFoundError
+from knitpkg.core.exceptions import KnitPkgError, RegistryError
+
+# ==============================================================
+# COMMAND WRAPPER
+# ==============================================================
+
+def login_command(provider: str, console: Console, verbose: bool):
+    """Command wrapper for login command."""
+    registry_url = get_registry_url()
+
+    registry: Registry = Registry(registry_url, console=console, verbose=verbose) # type: ignore
+    registry.login(provider)
 
 def register(app):
     """Register the login command with the Typer app."""
@@ -36,13 +47,31 @@ def register(app):
         The token enables subsequent operations like publishing packages.
         """
         console = Console(log_path=False)
-
-        registry_url = get_registry_url()
-
-        registry: Registry = Registry(registry_url, console=console, verbose=verbose) # type: ignore
-
         try:
-            registry.login(provider)
-        except ProviderNotFoundError as e:
-            console.print(f"[red]Error:[/] {e}")
+            console.print("")
+            login_command(provider, console, True if verbose else False)
+            console.print("")
+
+        except KeyboardInterrupt:
+            console.print("\n[bold yellow]⚠ Login cancelled by user.[/bold yellow]")
+            console.print("")
+            raise typer.Exit(code=1)
+
+        except RegistryError as e:
+            console.print(f"[bold red]❌ Registry error:[/bold red] {e}. Reason: {e.reason} ")
+            if verbose:
+                console.log(f"  Status Code: {e.status_code}")
+                console.log(f"  Error type: {e.error_type}")
+                console.log(f"  Request URL: {e.request_url}")
+            console.print("")
+            raise typer.Exit(code=1)
+        
+        except KnitPkgError as e:
+            console.print(f"[bold red]❌ Login failed:[/bold red] {e}")
+            console.print("")
+            raise typer.Exit(code=1)
+        
+        except Exception as e:
+            console.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console.print("")
             raise typer.Exit(code=1)

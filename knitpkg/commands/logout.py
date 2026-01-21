@@ -13,19 +13,25 @@ from typing import Optional
 from rich.console import Console
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.registry import Registry
-from knitpkg.core.exceptions import TokenRemovalError
+from knitpkg.core.exceptions import KnitPkgError
+
+# ==============================================================
+# COMMAND WRAPPER
+# ==============================================================
+
+def logout_command(console: Console, verbose: bool):
+    """Command wrapper for logout command."""
+    registry_url = get_registry_url()
+
+    registry: Registry = Registry(registry_url, console=console, verbose=verbose) # type: ignore
+    registry.logout()
+
 
 def register(app):
     """Register the logout command with the main Typer app."""
 
     @app.command()
     def logout(
-        provider: Optional[str] = typer.Option(
-            None,
-            "--provider",
-            "-p",
-            help="Specify a provider (e.g., github) to log out from. If not specified, logs out from all providers."
-        ),
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
@@ -40,13 +46,22 @@ def register(app):
         are removed from the system keyring.
         """
         console = Console(log_path=False)
-
-        registry_url = get_registry_url()
-
-        registry: Registry = Registry(registry_url, console=console, verbose=verbose) # type: ignore
-
         try:
-            registry.logout()
-        except TokenRemovalError as e:
-            console.print(f"[red]Error:[/] {e}")
+            console.print("")
+            logout_command(console, True if verbose else False)
+            console.print("")
+
+        except KeyboardInterrupt:
+            console.print("\n[bold yellow]⚠ Logout cancelled by user.[/bold yellow]")
+            console.print("")
+            raise typer.Exit(code=1)
+
+        except KnitPkgError as e:
+            console.print(f"[bold red]❌ Logout failed:[/bold red] {e}")
+            console.print("")
+            raise typer.Exit(code=1)
+        
+        except Exception as e:
+            console.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console.print("")
             raise typer.Exit(code=1)

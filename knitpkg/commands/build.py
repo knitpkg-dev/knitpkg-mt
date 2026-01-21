@@ -4,19 +4,18 @@ from pathlib import Path
 from rich.console import Console
 import typer
 
-# Import functions from existing commands that will be invoked
 from knitpkg.commands.install import install_command
 from knitpkg.commands.autocomplete import autocomplete_command
 from knitpkg.commands.compile import compile_command
 
-# Import utility function to load the manifest
 from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.mql.models import MQLKnitPkgManifest # Import the manifest model
+from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType
+from knitpkg.core.exceptions import KnitPkgError, RegistryError
 
 # ==============================================================
 # COMMAND WRAPPER
 # ==============================================================
-def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, entrypoints_only: bool, compile_only: bool, verbose: bool) -> None:
+def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool) -> None:
     """
     Main logic for the `kp-mt build` command.
 
@@ -30,51 +29,29 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, entrypo
     project_dir:
         The path to the project's root directory (where the manifest is located).
     """
-    console = Console(log_path=False)
 
     console.print(f"[bold green]🚀 Starting build for project in[/bold green] [cyan]{project_dir}[/cyan]")
 
     # 1. Load the project manifest
-    manifest_path_json = project_dir / "knitpkg.json"
-    manifest_path_yaml = project_dir / "knitpkg.yaml"
+    manifest: MQLKnitPkgManifest = load_knitpkg_manifest(project_dir, manifest_class=MQLKnitPkgManifest)
 
-    if manifest_path_json.is_file():
-        manifest_path = manifest_path_json
-    elif manifest_path_yaml.is_file():
-        manifest_path = manifest_path_yaml
-    else:
-        console.print(f"[red]❌ Error: Manifest (knitpkg.json or knitpkg.yaml) not found in[/red] [cyan]{project_dir}[/cyan]")
-        raise FileNotFoundError(f"Manifest not found in directory {project_dir}")
-
-    try:
-        manifest: MQLKnitPkgManifest = load_knitpkg_manifest(
-            manifest_path, manifest_class=MQLKnitPkgManifest
-        )
-    except Exception as e:
-        console.print(f"[red]❌ Error loading manifest:[/red] {e}")
-        raise typer.Exit(code=1)
-
-    project_type = manifest.type # Assumes `manifest.type` is an Enum and has `.value`
     console.print(f"   [bold]Project Name:[/bold] [yellow]{manifest.name}[/yellow]")
-    console.print(f"   [bold]Project Type:[/bold] [magenta]{project_type}[/magenta]")
+    console.print(f"   [bold]Project Type:[/bold] [magenta]{manifest.type}[/magenta]")
     console.print(f"   [bold]Version:[/bold] [magenta]{manifest.version}[/magenta]")
 
     # 2. Execute commands based on project type
-    if project_type == "package":
-        console.print("\n[bold blue]→ 'package' type detected. Executing autocomplete and compile...[/bold blue]")
-
-        console.print("[cyan]   ▶️   Generating autocomplete...[/cyan]")
-        autocomplete_command(project_dir, verbose) # Invokes the function directly
+    project_type = MQLProjectType(manifest.type) # Assumes `manifest.type` is an Enum and has `.value`
+    if project_type == MQLProjectType.PACKAGE:
+        console.print("\n[cyan]▶️  Generating autocomplete...[/cyan]")
+        autocomplete_command(project_dir, console, verbose) # Invokes the function directly
     else:
-        console.print(f"\n[bold blue]→ '{project_type}' type detected. Executing install and compile...[/bold blue]")
+        console.print("\n[cyan]▶️  Installing dependencies...[/cyan]")
+        install_command(project_dir, locked_mode, show_tree, console, verbose)
 
-        console.print("[cyan]   ▶️   Installing dependencies...[/cyan]")
-        install_command(project_dir, locked_mode, show_tree, verbose)
+    console.print("\n[cyan]▶️  Compiling project...[/cyan]")
+    compile_command(project_dir, entrypoints_only, compile_only, console, verbose)
 
-    console.print("[cyan]   ▶️   Compiling project...[/cyan]")
-    compile_command(project_dir, entrypoints_only, compile_only, verbose)
-
-    console.print("\n[bold green]✅   Build completed successfully![/bold green]")
+    console.print("\n[bold green]✅ Build completed successfully![/bold green]")
 
 
 # ----------------------------------------------------------------------
@@ -127,11 +104,40 @@ def register(app):
             project_dir = Path.cwd()
         else:
             project_dir = Path(project_dir).resolve()
+        console = Console(log_path=False)
 
-        build_command(project_dir, \
-                    True if locked else False, \
-                    False if no_tree else True, \
-                    True if entrypoints_only else False, 
-                    True if compile_only else False, \
-                    True if verbose else False)
+        try:
+            console.print("")
+            build_command(project_dir, \
+                        True if locked else False, \
+                        False if no_tree else True, \
+                        True if entrypoints_only else False, 
+                        True if compile_only else False, \
+                        console,
+                        True if verbose else False)
+            console.print("")
+
+        except KeyboardInterrupt:
+            console.print("\n[bold yellow]⚠ Build cancelled by user.[/bold yellow]")
+            console.print("")
+            raise typer.Exit(code=1)
+
+        except RegistryError as e:
+            console.print(f"[bold red]❌ Registry error:[/bold red] {e}. Reason: {e.reason} ")
+            if verbose:
+                console.log(f"  Status Code: {e.status_code}")
+                console.log(f"  Error type: {e.error_type}")
+                console.log(f"  Request URL: {e.request_url}")
+            console.print("")
+            raise typer.Exit(code=1)
+        
+        except KnitPkgError as e:
+            console.print(f"[bold red]❌ Build failed:[/bold red] {e}")
+            console.print("")
+            raise typer.Exit(code=1)
+        
+        except Exception as e:
+            console.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console.print("")
+            raise typer.Exit(code=1)
 
