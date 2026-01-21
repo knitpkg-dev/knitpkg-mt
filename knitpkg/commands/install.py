@@ -22,7 +22,7 @@ from knitpkg.core.file_reading import load_knitpkg_manifest, read_source_file_sm
 from knitpkg.mql.constants import FLAT_DIR, INCLUDE_DIR
 from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType, IncludeMode
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
-from knitpkg.mql.validators import validate_mql_project_structure
+from knitpkg.mql.warnings import warn_mql_project_structure
 from knitpkg.mql.constants import INCLUDE_DIR
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.dependency_downloader import ProjectNode
@@ -389,7 +389,7 @@ class ProjectInstaller(ConsoleAware):
             self._log_install_start(manifest, effective_mode)
 
             # Validate main project structure
-            validate_mql_project_structure(
+            warn_mql_project_structure(
                 manifest,
                 self.project_dir,
                 is_dependency=False,

@@ -20,11 +20,10 @@ import typer
 
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.mql.models import MQLKnitPkgManifest, Target
-from knitpkg.mql.settings import get_mql5_compiler_path, get_mql4_compiler_path
 from knitpkg.mql.constants import FLAT_DIR
-from knitpkg.mql.settings import get_mql4_data_folder_path, get_mql5_data_folder_path
 from knitpkg.mql.constants import COMPILE_LOGS_DIR
 from knitpkg.mql.mql_paths import find_mql_paths
+from knitpkg.mql.settings import MQLSettings
 
 # Import MQL-specific exceptions
 from knitpkg.mql.exceptions import (
@@ -168,13 +167,12 @@ class MQLCompiler:
             UnsupportedTargetError: If manifest target is not MQL4 or MQL5
             CompilerNotFoundError: If the compiler executable does not exist
         """
-        if self.manifest.target == Target.MQL5:
-            compiler_path = Path(get_mql5_compiler_path(str(self.project_dir)))
-        elif self.manifest.target == Target.MQL4:
-            compiler_path = Path(get_mql4_compiler_path(str(self.project_dir)))
-        else:
+        settings: MQLSettings = MQLSettings(self.project_dir)
+        try:
+            compiler_path: Path = Path(settings.get_compiler_path(Target(self.manifest.target)))
+        except ValueError:
             self.console.log(
-                f"[red]Error:[/] Unsupported target: {self.manifest.target}"
+                f"[red]Error:[/] Invalid target in manifest: {self.manifest.target}"
             )
             raise UnsupportedTargetError(self.manifest.target)
 
@@ -279,11 +277,8 @@ class MQLCompiler:
         Raises:
             IncludePathNotFoundError: If the MQL include directory cannot be located.
         """
-        mql_data_folder_path_str: Optional[str] = None
-        if self.manifest.target == Target.MQL5:
-            mql_data_folder_path_str = get_mql5_data_folder_path(str(self.project_dir))
-        elif self.manifest.target == Target.MQL4:
-            mql_data_folder_path_str = get_mql4_data_folder_path(str(self.project_dir))
+        settings: MQLSettings = MQLSettings(self.project_dir)
+        mql_data_folder_path_str: Optional[str] = settings.get_data_folder_path(Target(self.manifest.target))
 
         # 1. Check for configured data folder path
         if mql_data_folder_path_str:

@@ -13,14 +13,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Any
 from dataclasses import dataclass
-import datetime as dt
 
 import shutil
 import git
 import datetime as dt
 
 from knitpkg.core.registry import Registry
-from knitpkg.core.lockfile import load_lockfile, save_lockfile, is_lock_change
+from knitpkg.core.lockfile import LockFile
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.utils import is_local_path
 from knitpkg.core.constants import CACHE_DIR
@@ -383,20 +382,6 @@ class DependencyDownloader(ConsoleAware):
 
         return resolved_path
 
-    def _update_lockfile_remote(
-        self, name: str, ref_spec: str, final_ref: str
-    ) -> None:
-        """Update lockfile for local git dependency."""
-        lock_data = load_lockfile(self.project_dir)
-        if is_lock_change(lock_data, name, ref_spec, final_ref, self.default_registry_base_url):
-            lock_data["dependencies"][name] = {
-                "specifier": ref_spec,
-                "resolved": final_ref,
-                "resolved_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-                "registry_url": self.default_registry_base_url
-            }
-            save_lockfile(self.project_dir, lock_data)
-
     def _download_from_git_remote(
         self,
         dep_name: str,
@@ -408,25 +393,21 @@ class DependencyDownloader(ConsoleAware):
         Raises:
             DependencyHasLocalChangesError: If dependency has local changes in locked mode
         """
+        lockfile: LockFile = LockFile(self.project_dir)
 
-        registry_base_url = self.default_registry_base_url
-        version_spec = specifier
-        lock_data_dep_resolved = None
-        if self.locked_mode:
-            lock_data = load_lockfile(self.project_dir)
-            lock_data_dep = lock_data["dependencies"].get(dep_name, {})
-            lock_data_dep_resolved = lock_data_dep.get("resolved", None)
-            if lock_data_dep_resolved:
-                registry_base_url = lock_data_dep.get("registry_url", self.default_registry_base_url)
-                version_spec = lock_data_dep_resolved
+        if self.locked_mode and lockfile.is_dependency(dep_name):
+            self.log(f"[dim]Locked[/] {dep_name}")
+            registry_base_url = lockfile.get(dep_name, "registry_url", self.default_registry_base_url)
+            version_spec = lockfile.get(dep_name, "resolved")
+        else:
+            registry_base_url = self.default_registry_base_url
+            version_spec = specifier
 
         dist_info = self._get_package_resolve_dist(registry_base_url, dep_name, version_spec)
 
         dep_resolved_path = self.project_dir / CACHE_DIR / f"{dep_name.strip().lower().replace('/', '_')}"
         if dep_resolved_path.exists():
-            repo: git.Repo = git.Repo(dep_resolved_path, search_parent_directories=True)
-
-            status = self._check_repo_integrity(repo, dist_info['repo_url'])
+            status = self._check_repo_integrity(dist_info['repo_url'], dep_resolved_path)
 
             if status == "dirty":
                 if self.locked_mode:
@@ -440,8 +421,8 @@ class DependencyDownloader(ConsoleAware):
                 # Repository exists in cache but remote URL is invalid; clean and download again
                 shutil.rmtree(str(dep_resolved_path.resolve()))
                 self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_resolved_path)
-                if not self.locked_mode or not lock_data_dep_resolved:
-                    self._update_lockfile_remote(dep_name, specifier, dist_info["resolved_version"])
+                if not self.locked_mode or not lockfile.is_dependency(dep_name):
+                    lockfile.update_if_changed(dep_name, specifier, dist_info["resolved_version"], self.default_registry_base_url)
 
             else:
                 # Repository exists in cache and remote URL is correct
@@ -450,14 +431,14 @@ class DependencyDownloader(ConsoleAware):
                         f"[dim]Cache drifted[/] {dep_name} — re-resolving..."
                     )
                 self._checkout_shallow_to_commit(dist_info["commit_hash"], dep_resolved_path)
-                if not self.locked_mode or not lock_data_dep_resolved:
-                    self._update_lockfile_remote(dep_name, specifier, dist_info["resolved_version"])
+                if not self.locked_mode or not lockfile.is_dependency(dep_name):
+                    lockfile.update_if_changed(dep_name, specifier, dist_info["resolved_version"], self.default_registry_base_url)
                 
         else:
             # Repo cache directory does not exist
             self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_resolved_path)
-            if not self.locked_mode or not lock_data_dep_resolved:
-                self._update_lockfile_remote(dep_name, specifier, dist_info["resolved_version"])
+            if not self.locked_mode or not lockfile.is_dependency(dep_name):
+                lockfile.update_if_changed(dep_name, specifier, dist_info["resolved_version"], self.default_registry_base_url)
         
         return dep_resolved_path
 
@@ -469,9 +450,10 @@ class DependencyDownloader(ConsoleAware):
             return parts[0], parts[1]
         return '', name
 
-    def _check_repo_integrity(self, repo: git.Repo, repo_url: str) -> str:
+    def _check_repo_integrity(self, repo_url: str, dep_resolved_path: Path) -> str:
         """Check the state of a local repository dependency."""
         try:
+            repo: git.Repo = git.Repo(dep_resolved_path, search_parent_directories=True)
             if repo.bare:
                 raise git.InvalidGitRepositoryError
 

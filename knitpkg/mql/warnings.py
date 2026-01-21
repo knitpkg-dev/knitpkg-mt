@@ -18,14 +18,15 @@ from knitpkg.mql.constants import INCLUDE_DIR
 # MQL PROJECT STRUCTURE VALIDATION
 # ==============================================================
 
-def validate_mql_project_structure(
+def warn_mql_project_structure(
     manifest,
     project_dir: Path,
     is_dependency: bool = False,
     console: Optional[Console] = None
 ) -> None:
     """
-    Ensure include-type projects have their .mqh files inside knitpkg/include/.
+    Warn log if include-type projects do not have their .mqh files 
+    in the correct location: inside knitpkg/include/.
 
     Called for both the main project and recursive dependencies.
     Emits friendly warnings only (does not break the build).
@@ -78,9 +79,9 @@ def validate_mql_project_structure(
 # MQL MANIFEST VALIDATION
 # ==============================================================
 
-def validate_mql_dependency_manifest(manifest, console: Optional[Console] = None) -> bool:
+def warn_mql_dependency_manifest(manifest, console: Optional[Console] = None) -> bool:
     """
-    Validate MQL-specific manifest constraints for dependencies.
+    Warn log if MQL-specific manifest constraints for dependencies are violated.
 
     Args:
         manifest: MQLKnitPkgManifest object

@@ -8,48 +8,70 @@ This module handles reading and writing user configuration stored in
 """
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import yaml
 
 SETTINGS_FILE = Path(".knitpkg/settings.yaml")
 
-def load_settings(project_path: Path) -> Dict[str, Any]:
-    """
-    Load settings from .knitpkg/settings.yaml.
+# ==============================================================
+# SETTINGS CLASS
+# ==============================================================
 
-    Returns empty dict if file doesn't exist or is corrupted.
-    """
-    settings_file = project_path / SETTINGS_FILE
-    if not settings_file.exists():
-        return {}
+class Settings:
+    """Manages settings operations for a project."""
+    
+    def __init__(self, project_path: Path):
+        self.project_path = Path(project_path)
+        self.settings_file = self.project_path / SETTINGS_FILE
+        self._data: Optional[Dict[str, Any]] = None
+    
+    def load(self) -> Dict[str, Any]:
+        """Load settings data and cache it."""
+        if not self.settings_file.exists():
+            self._data = {}
+            return self._data
+        
+        try:
+            content = self.settings_file.read_text(encoding="utf-8")
+            data = yaml.safe_load(content)
+            self._data = data if isinstance(data, dict) else {}
+        except:
+            self._data = {}
+        return self._data
+    
+    def save(self) -> None:
+        """Save cached data to settings file."""
+        if self._data is None:
+            return
+        self.settings_file.parent.mkdir(parents=True, exist_ok=True)
+        content = yaml.dump(self._data, default_flow_style=False, sort_keys=False)
+        self.settings_file.write_text(content, encoding="utf-8")
+    
+    def save_if_changed(self, key: str, value: Any) -> None:
+        """Save settings if key/value has changed."""
+        if self._data is None:
+            self.load()
 
-    try:
-        content = settings_file.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
+        data: Dict[str, Any] = self._data # type: ignore
+        
+        if data.get(key) != value:
+            data[key] = value
+            self.save()
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get a specific setting value."""
+        if self._data is None:
+            self.load()
 
-def save_settings(project_path: Path, settings: Dict[str, Any]) -> None:
-    """
-    Save settings to .knitpkg/settings.yaml.
+        data: Dict[str, Any] = self._data # type: ignore
 
-    Creates parent directories if needed.
-    """
-    settings_file = project_path / SETTINGS_FILE
-    settings_file.parent.mkdir(parents=True, exist_ok=True)
-    content = yaml.dump(settings, default_flow_style=False, sort_keys=False)
-    settings_file.write_text(content, encoding="utf-8")
+        return data.get(key, default)
+    
+    def get_settings(self) -> Dict[str, Any]:
+        """Get all settings."""
+        if self._data is None:
+            self.load()
 
-def get_setting(project_path: Path, key: str, default: Any = None) -> Any:
-    """Get a specific setting value."""
-    settings = load_settings(project_path)
-    return settings.get(key, default)
+        data: Dict[str, Any] = self._data # type: ignore
 
-def set_setting(project_path: Path, key: str, value: Any) -> None:
-    """
-    Set a specific setting value, preserving other settings.
-    """
-    settings = load_settings(project_path)
-    settings[key] = value
-    save_settings(project_path, settings)
+        return data.copy()

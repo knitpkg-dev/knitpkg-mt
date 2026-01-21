@@ -13,17 +13,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from knitpkg.mql.settings import (
-    get_mql5_compiler_path,
-    set_mql5_compiler_path,
-    get_mql4_compiler_path,
-    set_mql4_compiler_path,
-    get_mql5_data_folder_path,
-    set_mql5_data_folder_path,
-    get_mql4_data_folder_path,
-    set_mql4_data_folder_path,
-)
-
+from knitpkg.mql.settings import MQLSettings
+from knitpkg.mql.models import Target
 
 def register(app):
     """Register the config command with the Typer app."""
@@ -60,7 +51,7 @@ def register(app):
             False,
             "--list",
             "-l",
-            help="List all current configuration settings"
+            help="List all configurations in use"
         ),
         verbose: Optional[bool] = typer.Option(
             False,
@@ -74,19 +65,21 @@ def register(app):
         console = Console(log_path=False)
 
         if project_dir is None:
-            project_path = str(Path.cwd())
+            project_path = Path.cwd()
         else:
-            project_path = str(Path(project_dir).resolve())
+            project_path = Path(project_dir).resolve()
+
+        settings: MQLSettings = MQLSettings(project_path)
 
         # Set compiler paths
         if mql5_compiler_path:
-            set_mql5_compiler_path(project_path, str(mql5_compiler_path.resolve()))
+            settings.set_compiler_path(str(mql5_compiler_path.resolve()), Target.MQL5)
             console.log(
                 f"[green]MQL5 compiler path set to:[/]"
                 f" {mql5_compiler_path.resolve()}"
             )
         if mql4_compiler_path:
-            set_mql4_compiler_path(project_path, str(mql4_compiler_path.resolve()))
+            settings.set_compiler_path(str(mql4_compiler_path.resolve()), Target.MQL4)
             console.log(
                 f"[green]MQL4 compiler path set to:[/]"
                 f" {mql4_compiler_path.resolve()}"
@@ -94,13 +87,13 @@ def register(app):
 
         # Set MQL data folder paths
         if mql5_data_folder_path:
-            set_mql5_data_folder_path(project_path, str(mql5_data_folder_path.resolve()))
+            settings.set_data_folder_path(str(mql5_data_folder_path.resolve()), Target.MQL5)
             console.log(
                 f"[green]MQL5 data folder path set to:[/]"
                 f" {mql5_data_folder_path.resolve()}"
             )
         if mql4_data_folder_path:
-            set_mql4_data_folder_path(project_path, str(mql4_data_folder_path.resolve()))
+            settings.set_data_folder_path(str(mql4_data_folder_path.resolve()), Target.MQL4)
             console.log(
                 f"[green]MQL4 data folder path set to:[/]"
                 f" {mql4_data_folder_path.resolve()}"
@@ -117,11 +110,11 @@ def register(app):
             table.add_column("Value")
 
             # Display compiler paths
-            table.add_row("mql5-compiler-path", get_mql5_compiler_path(project_path) or "[dim]Not set[/]")
-            table.add_row("mql4-compiler-path", get_mql4_compiler_path(project_path) or "[dim]Not set[/]")
+            table.add_row("mql5-compiler-path", settings.get_compiler_path(Target.MQL5) or "[dim]Not set[/]")
+            table.add_row("mql4-compiler-path", settings.get_compiler_path(Target.MQL4) or "[dim]Not set[/]")
 
             # Display data folder paths
-            table.add_row("mql5-data-folder-path", get_mql5_data_folder_path(project_path) or "[dim]Not set[/]")
-            table.add_row("mql4-data-folder-path", get_mql4_data_folder_path(project_path) or "[dim]Not set[/]")
+            table.add_row("mql5-data-folder-path", settings.get_data_folder_path(Target.MQL5) or "[dim]Not set[/]")
+            table.add_row("mql4-data-folder-path", settings.get_data_folder_path(Target.MQL4) or "[dim]Not set[/]")
 
             console.print(table)
