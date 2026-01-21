@@ -30,7 +30,7 @@ class MQLDependencyDownloader(DependencyDownloader):
     def validate_manifest(self, manifest) -> bool:
         """Validate MQL-specific manifest constraints."""
         validated = True
-        if not warn_mql_dependency_manifest(manifest, self.console):
+        if not warn_mql_dependency_manifest(manifest, self):
             validated = False
         
         if manifest.target != self._target:
@@ -51,5 +51,5 @@ class MQLDependencyDownloader(DependencyDownloader):
             manifest,
             project_dir,
             is_dependency,
-            self.console
+            self
         )

@@ -18,6 +18,7 @@ from knitpkg.core.dependency_downloader import ProjectNode
 from knitpkg.core.console import Console, ConsoleAware
 
 from knitpkg.core.exceptions import KnitPkgError
+from knitpkg.mql.exceptions import InvalidDirectiveError, IncludeFileNotFoundError
 
 # ==============================================================
 # KNITPKG INCLUDE DIRECTIVES PATTERN CLASS
@@ -95,7 +96,7 @@ class IncludeModeDelegate(ConsoleAware):
                 total_copied += 1
 
         self.log(
-            f"[bold green]Check Include mode:[/] {total_copied} file(s) copied → "
+            f"[bold green]✔ Include mode:[/] {total_copied} file(s) copied → "
             f"[bold]knitpkg/include/[/]"
         )
         self._process_directives(include_dir)
@@ -134,7 +135,7 @@ class IncludeModeDelegate(ConsoleAware):
                         )
                         modified = True
                     else:
-                        raise KnitPkgError("Invalid directive: {line}")
+                        raise InvalidDirectiveError(line)
 
             if modified:
                 mqh_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -163,7 +164,7 @@ class IncludeModeDelegate(ConsoleAware):
                 src_content = read_source_file_smart(src)
                 dst_content = read_source_file_smart(dst)
                 if src_content.strip() != dst_content.strip():
-                    self.print(
+                    self.print( 
                         f"[bold red]CONFLICT DETECTED:[/] {dst.name} will be "
                         f"overwritten by '{dep_name}'"
                     )
@@ -174,7 +175,7 @@ class IncludeModeDelegate(ConsoleAware):
                     )
                     return
             except Exception as e:
-                self.log(
+                self.print( 
                     f"[yellow]Warning:[/] Could not compare content of {dst.name}: {e}"
                 )
 
@@ -206,7 +207,7 @@ class FlatModeDelegate(ConsoleAware):
         for entry in manifest.entrypoints or []:
             src = self.project_dir / entry
             if not src.exists():
-                self.print(f"[red]Error:[/] entrypoint not found: {entry}")
+                self.print(f"[red]Error:[/] entrypoint not found: {entry}") 
                 continue
 
             content = read_source_file_smart(src)
@@ -224,7 +225,7 @@ class FlatModeDelegate(ConsoleAware):
 
             flat_file = flat_dir / f"{src.stem}_flat{src.suffix}"
             flat_file.write_text(content, encoding="utf-8")
-            self.log(f"[green]Check[/] {flat_file.name} generated")
+            self.log(f"[green]✔[/] {flat_file.name} generated")
 
     def _find_include_file_local(
         self,
@@ -237,7 +238,7 @@ class FlatModeDelegate(ConsoleAware):
         if path and path.exists() and path.suffix.lower() in {".mqh", ".mq4", ".mq5"}:
             return path
 
-        raise FileNotFoundError(f"Include not found in the current project: {inc_file}")
+        raise IncludeFileNotFoundError(inc_file, "the current project")
 
     def _find_include_file_deps(
         self,
@@ -252,7 +253,7 @@ class FlatModeDelegate(ConsoleAware):
             if path and path.exists() and path.suffix.lower() in {".mqh", ".mq4", ".mq5"}:
                 return path
 
-        raise FileNotFoundError(f"Include not found in any resolved dependencies: {inc_file}")
+        raise IncludeFileNotFoundError(inc_file, "any resolved dependencies")
 
     def _resolve_includes(
         self,
@@ -271,33 +272,23 @@ class FlatModeDelegate(ConsoleAware):
 
             inc_file = None
             inc_path = None
-            try:
-                if directive is None and include_path is not None:
-                    inc_file = include_path.strip()
-                    if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
-                        return f"// Ignoring autocomplete.mqh\n"
-                    
-                    inc_path = self._find_include_file_local(inc_file, base_path)
+            if directive is None and include_path is not None:
+                inc_file = include_path.strip()
+                if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
+                    return f"// Ignoring autocomplete.mqh\n"
+                
+                inc_path = self._find_include_file_local(inc_file, base_path)
 
-                elif directive == 'include' and directive_path is not None:
-                    inc_file = directive_path.strip()
-                    if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
-                        return f"// Ignoring autocomplete.mqh\n"
-                    
-                    inc_path = self._find_include_file_deps(inc_file, resolved_deps)
-                    self.log(f"[dim]@knitpkg:include found:[/] '{inc_file}'")
+            elif directive == 'include' and directive_path is not None:
+                inc_file = directive_path.strip()
+                if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
+                    return f"// Ignoring autocomplete.mqh\n"
+                
+                inc_path = self._find_include_file_deps(inc_file, resolved_deps)
+                self.log(f"[dim]@knitpkg:include found:[/] '{inc_file}'")
 
-                else:
-                    self.print(
-                        f"[red]ERROR:[/] Invalid @knitpkg:<directive> → '{directive}'"
-                    )
-                    return f"// ERROR: Invalid @knitpkg:<directive> → '{directive}'"
-
-            except FileNotFoundError:
-                self.print(
-                    f"[red]ERROR:[/] Include not found in {base_path} → {inc_file}"
-                )
-                return f"// ERROR: Include not found → {inc_file}"
+            else:
+                raise InvalidDirectiveError(match.group(0))
 
             inc_path_abs = inc_path.absolute()
             if inc_path_abs in visited:
@@ -376,20 +367,28 @@ class ProjectInstaller(ConsoleAware):
             manifest,
             self.project_dir,
             is_dependency=False,
-            console=self.console
+            console=self
         )
 
         self._prepare_output_directories(manifest)
 
-        self.log("[bold blue]Downloading dependencies...[/]")
+        self.print("📦 Downloading dependencies...") 
         root_node: ProjectNode = self.downloader.download_all()
+        
+        if not root_node:
+            self.log("[dim]No dependencies to install[/]")
+        else:
+            self.log("[green]✔[/] All dependencies downloaded")
+
         if show_tree and root_node:
             self._log_dependency_tree(root_node)
 
         if effective_mode == IncludeMode.INCLUDE:
+            self.print("📝 Generating include files...") 
             include_delegate = IncludeModeDelegate(self.project_dir, self.console, self.verbose)
             include_delegate.process(root_node)
         else:
+            self.print("📝 Generating flat files...") 
             flat_processor = FlatModeDelegate(self.project_dir, self.console, self.verbose)
             flat_processor.process(manifest, root_node)
 
@@ -401,9 +400,9 @@ class ProjectInstaller(ConsoleAware):
         manifest: MQLKnitPkgManifest,
         effective_mode: IncludeMode
     ) -> None:
-        self.print(
-            f"[bold magenta]knitpkg install[/] → [bold cyan]{manifest.name}[/] "
-            f"v{manifest.version} {manifest.type}"
+        self.print(  
+            f"📦 [bold magenta]Install[/] → [bold cyan]@{manifest.organization}/{manifest.name}[/] "
+            f"#{manifest.version} ({manifest.type})"
         )
         if effective_mode != manifest.include_mode:
             self.log(
@@ -412,6 +411,7 @@ class ProjectInstaller(ConsoleAware):
             )
 
     def _prepare_output_directories(self, manifest: MQLKnitPkgManifest) -> None:
+        self.print("📁 Preparing knitpkg package directories...")  
         flat_dir = self.project_dir / FLAT_DIR
         include_dir = self.project_dir / INCLUDE_DIR
 
@@ -426,7 +426,7 @@ class ProjectInstaller(ConsoleAware):
 
     def _log_dependency_tree(self, dependency_tree: ProjectNode) -> None:
         """Log the dependency tree in a readable format."""
-        self.print("\n[bold cyan]Dependency Tree:[/]")
+        self.print("\n🌳 [bold cyan]Dependency Tree:[/]") 
         for node in dependency_tree.dependencies:
             self._log_tree_node(node, "")
         self.print("")
@@ -448,10 +448,10 @@ class ProjectInstaller(ConsoleAware):
     ) -> None:
         resolved_deps_len = len(node.resolved_names(add_root=False))
         self.log(
-            f"[green]Check[/] Resolved {resolved_deps_len} "
+            f"[green]✔[/] Resolved {resolved_deps_len} "
             f"dependenc{'y' if resolved_deps_len==1 else 'ies'}"
         )
         output_dir = INCLUDE_DIR if effective_mode == IncludeMode.INCLUDE else FLAT_DIR
-        self.print(
-            f"\n[bold green]Check install completed![/] → {output_dir.as_posix()}/"
+        self.print( 
+            f"\n✅ [bold green]Install completed![/] → {output_dir.as_posix()}/"
         )

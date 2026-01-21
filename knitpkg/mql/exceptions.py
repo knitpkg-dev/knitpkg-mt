@@ -9,6 +9,34 @@ The CLI layer catches them and translates into appropriate exit codes.
 
 from knitpkg.core.exceptions import KnitPkgError
 
+# ==============================================================
+# DEPENDENCY INSTALL ERRORS
+# ==============================================================
+
+class InstallError(KnitPkgError):
+    """Base exception for all MQL install failures."""
+    pass
+
+
+class InvalidDirectiveError(InstallError):
+    """Raised when an invalid KnitPkg directive is encountered during install."""
+    
+    def __init__(self, line: str):
+        self.line = line
+        super().__init__(f"Invalid directive: {line}")
+
+
+class IncludeFileNotFoundError(InstallError):
+    """Raised when an include file cannot be found during flat mode processing."""
+    
+    def __init__(self, inc_file: str, search_location: str):
+        self.inc_file = inc_file
+        self.search_location = search_location
+        super().__init__(f"Include not found in {search_location}: {inc_file}")
+
+# ==============================================================
+# MQL COMPILATION ERRORS
+# ==============================================================
 
 class MQLCompilationError(KnitPkgError):
     """Base exception for all MQL compilation failures."""

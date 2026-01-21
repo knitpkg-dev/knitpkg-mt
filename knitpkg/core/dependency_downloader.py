@@ -347,7 +347,7 @@ class DependencyDownloader(ConsoleAware):
 
         if self._process_recursive_dependencies(resolved_path, dep_name, dep_node):
             parent.add_dependency(dep_node)
-            self.log(f"[green]Check[/] {dep_name}")
+            self.log(f"[green]✔[/] {dep_name}")
 
         return resolved_path
 
@@ -378,7 +378,7 @@ class DependencyDownloader(ConsoleAware):
 
         if self._process_recursive_dependencies(resolved_path, dep_name, dep_node):
             parent.add_dependency(dep_node)
-            self.log(f"[green]Check[/] {dep_name}")
+            self.log(f"[green]✔[/] {dep_name}")
 
         return resolved_path
 

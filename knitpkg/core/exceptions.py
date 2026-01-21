@@ -24,15 +24,6 @@ class DependencyError(KnitPkgError):
     """Base exception for dependency-related errors."""
     pass
 
-class CorruptGitDependencyCacheError(DependencyError):
-    """Raised when a cached git dependency is corrupt."""
-    def __init__(self, name: str, path: str):
-        self.name = name
-        self.path = path
-        super().__init__(
-            f"Cached git dependency '{name}' is corrupt:\n    → {path}"
-        )
-
 class LocalDependencyNotFoundError(DependencyError):
     """Raised when a local dependency path does not exist."""
     def __init__(self, name: str, path: str):
@@ -58,26 +49,6 @@ class DependencyHasLocalChangesError(DependencyError):
             f"Cannot proceed with --locked: dependency '{name}' has local changes"
         )
 
-class LocalDependencyNotInLockfileError(DependencyError):
-    """Raised when --locked is used but dependency is not in lockfile."""
-    def __init__(self, name: str):
-        self.name = name
-        super().__init__(
-            f"Cannot proceed with --locked: dependency '{name}' not found in lockfile"
-        )
-
-class LocalDependencyCommitMismatchError(DependencyError):
-    """Raised when --locked is used but local commit doesn't match lockfile."""
-    def __init__(self, name: str, current_commit: str, locked_commit: str):
-        self.name = name
-        self.current_commit = current_commit
-        self.locked_commit = locked_commit
-        super().__init__(
-            f"Cannot proceed with --locked: dependency '{name}' commit mismatch\n"
-            f"    Current: {current_commit[:8]}\n"
-            f"    Locked:  {locked_commit[:8]}"
-        )
-
 class LocalDependencyManifestError(DependencyError):
     """Raised when a local dependency's manifest cannot be loaded."""
     def __init__(self, name: str, path: str):
@@ -86,26 +57,6 @@ class LocalDependencyManifestError(DependencyError):
         super().__init__(
             f"Cannot load manifest for local dependency '{name}' at {path}"
         )
-
-class ProviderNotFoundError(DependencyError):
-    """Raised when provider is not found in registry config."""
-    def __init__(self, provider: str, available_providers: Optional[list[str]] = None):
-        self.provider = provider
-        self.available_providers = available_providers
-        if available_providers:
-            super().__init__(
-                f"Provider '{provider}' not found in registry configuration. "
-                f"Available providers: {', '.join(available_providers)}"
-            )
-        else:
-            super().__init__(f"Provider '{provider}' not found in registry configuration")
-
-class GitOperationError(DependencyError):
-    """Raised when git operations fail."""
-    def __init__(self, operation: str, details: str):
-        self.operation = operation
-        self.details = details
-        super().__init__(f"Git {operation} failed: {details}")
 
 class GitCloneError(DependencyError):
     """Raised when git clone fails."""
@@ -121,12 +72,22 @@ class GitCommitNotFoundError(DependencyError):
         self.details = details
         super().__init__(f"Commit {commit_hash[:8]} not found or checkout failed: {details}")
 
+
 # ==============================================================
-# AUTHENTICATION ERRORS
+# REGISTRY BASE ERRORS
 # ==============================================================
 
-class AuthenticationError(KnitPkgError):
-    """Base class for Authentication errors."""
+class RegistryBaseError(KnitPkgError):
+    """Base class for errors with Registry services"""
+    pass
+
+
+# ==============================================================
+# REGISTRY AUTHENTICATION ERRORS
+# ==============================================================
+
+class AuthenticationError(RegistryBaseError):
+    """Base class for Authentication errors with Registry."""
     pass
 
 class CallbackServerError(AuthenticationError):
@@ -173,9 +134,11 @@ class TokenNotFoundError(AuthenticationError):
     def __init__(self):
         super().__init__("You are not logged in. Please run 'kp login --provider <provider>' first.")
 
+
 # ==============================================================
 # REGISTRY ERRORS
 # ==============================================================
+
 class RegistryError(KnitPkgError):
     """Base class for Registry authentication errors."""
     
@@ -203,6 +166,24 @@ class RegistryError(KnitPkgError):
 
 
 # ==============================================================
+# OTHERS REGISTRY ERRORS
+# ==============================================================
+
+class ProviderNotFoundError(RegistryBaseError):
+    """Raised when provider is not found in registry config."""
+    def __init__(self, provider: str, available_providers: Optional[list[str]] = None):
+        self.provider = provider
+        self.available_providers = available_providers
+        if available_providers:
+            super().__init__(
+                f"Provider '{provider}' not found in registry configuration. "
+                f"Available providers: {', '.join(available_providers)}"
+            )
+        else:
+            super().__init__(f"Provider '{provider}' not found in registry configuration")
+
+
+# ==============================================================
 # MANIFEST ERRORS
 # ==============================================================
 
@@ -222,3 +203,4 @@ class ManifestLoadError(ManifestError):
         self.file_path = file_path
         self.details = details
         super().__init__(f"Error loading {file_path}: {details}")
+

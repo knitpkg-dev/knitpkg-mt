@@ -95,5 +95,5 @@ class AutocompleteGenerator(ConsoleAware):
 
         output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
         self.log(
-            f"[bold green]Check[/] Autocomplete file generated → [bold]{output_file}[/]"
+            f"[bold green]✔[/] Autocomplete file generated → [bold]{output_file}[/]"
         )

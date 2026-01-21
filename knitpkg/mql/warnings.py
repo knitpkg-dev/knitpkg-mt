@@ -8,7 +8,7 @@ project structure validation and manifest constraints.
 """
 
 from pathlib import Path
-from knitpkg.core.console import Console
+from knitpkg.core.console import ConsoleAware
 
 from typing import Optional
 from knitpkg.mql.models import MQLProjectType, Target
@@ -22,7 +22,7 @@ def warn_mql_project_structure(
     manifest,
     project_dir: Path,
     is_dependency: bool = False,
-    console: Optional[Console] = None
+    console: Optional[ConsoleAware] = None
 ) -> None:
     """
     Warn log if include-type projects do not have their .mqh files 
@@ -71,7 +71,7 @@ def warn_mql_project_structure(
         console.log("")
     else:
         console.log(
-            f"[green]Check {prefix}[/] {len(mqh_files)} .mqh file(s) found in "
+            f"[green]✔ {prefix}[/] {len(mqh_files)} .mqh file(s) found in "
             f"{INCLUDE_DIR.as_posix()}"
         )
 
@@ -79,7 +79,7 @@ def warn_mql_project_structure(
 # MQL MANIFEST VALIDATION
 # ==============================================================
 
-def warn_mql_dependency_manifest(manifest, console: Optional[Console] = None) -> bool:
+def warn_mql_dependency_manifest(manifest, console: Optional[ConsoleAware] = None) -> bool:
     """
     Warn log if MQL-specific manifest constraints for dependencies are violated.
 
