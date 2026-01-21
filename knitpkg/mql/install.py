@@ -401,8 +401,8 @@ class ProjectInstaller(ConsoleAware):
         effective_mode: IncludeMode
     ) -> None:
         self.print(  
-            f"📦 [bold magenta]Install[/] → [bold cyan]@{manifest.organization}/{manifest.name}[/] "
-            f"#{manifest.version} ({manifest.type})"
+            f"📦 [bold magenta]Install[/] → [bold cyan]@{manifest.organization}/{manifest.name}[/] : "
+            f"{manifest.version} ({manifest.type})"
         )
         if effective_mode != manifest.include_mode:
             self.log(
@@ -435,7 +435,7 @@ class ProjectInstaller(ConsoleAware):
         """Recursively log a dependency tree node."""
         current_prefix = "├── " if not node.is_root else "└── "
 
-        self.print(f"{prefix}{current_prefix}[bold]{node.name}[/] v{node.version}")
+        self.print(f"{prefix}{current_prefix}[bold]{node.name}[/] : {node.version}")
 
         child_prefix = prefix + ("│   " if not node.is_root else "    ")
         for child in node.dependencies:

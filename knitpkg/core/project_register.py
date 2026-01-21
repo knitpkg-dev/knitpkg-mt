@@ -41,9 +41,12 @@ class ProjectRegister(ConsoleAware):
         """
         Loads and validates the manifest file. Initializes Git repository.
         """
-        self.print(f"📦 Loading manifest...")
         self.manifest = load_knitpkg_manifest(self.project_path, manifest_class=self.manifest_class)
-        self.log("✔ Manifest loaded successfully.")
+
+        self.print(  
+            f"📦 [bold magenta]Register[/] → [bold cyan]@{self.manifest.organization}/{self.manifest.name}[/] : "
+            f"{self.manifest.version} ({self.manifest.type})"
+        )
 
         try:
             self.repo = git.Repo(self.project_root)
@@ -154,7 +157,7 @@ class ProjectRegister(ConsoleAware):
         if not self.manifest:
             raise KnitPkgError("Manifest not loaded. Cannot create tag.")
 
-        self.print(f"🏷️ Creating and pushing Git tag '[bold magenta]{tag_name}[/bold magenta]'...")
+        self.print(f"🏷️  Creating and pushing Git tag '[bold magenta]{tag_name}[/bold magenta]'...")
         try:
             # Check if tag already exists locally or remotely
             if tag_name in self.repo.tags:
@@ -216,8 +219,6 @@ class ProjectRegister(ConsoleAware):
         Raises:
             KnitPkgError: If any step in the registration process fails.
         """
-        self.print(f"Starting registration process for project at '{self.project_root}'...")
-
         # Step 1: Validate project directory and initialize Git
         self._load_manifest_and_initialize_repo()
         if not self.manifest: # Should not happen if _load_manifest raises on error

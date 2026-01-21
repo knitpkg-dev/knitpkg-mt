@@ -501,11 +501,11 @@ class DependencyDownloader(ConsoleAware):
                 )
                 self.print(
                     f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → "
-                    f"{sub_manifest.name} {sub_manifest.version}"
+                    f"{sub_manifest.name} : {sub_manifest.version}"
                 )
             else:
                 self.print(
-                    f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] "
+                    f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] : "
                     f"{sub_manifest.version}"
                 )
 
