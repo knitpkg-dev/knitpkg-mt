@@ -15,7 +15,12 @@ class ConsoleAware:
         self.verbose = verbose
 
     def print(self, msg: str) -> None:
-        if self.console:
+        if not self.console:
+            return
+
+        if self.verbose:
+            self.console.log(msg)
+        else:
             self.console.print(msg)
 
     def log(self, msg: str) -> None:

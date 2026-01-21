@@ -81,6 +81,14 @@ class MQLCompiler(ConsoleAware):
             NoFilesToCompileError: If no files are available for compilation
             CompilationFailedError: If one or more files fail to compile
         """
+
+        if entrypoints_only and compile_only:
+            self.print(
+                "[red]Error:[/] --entrypoints-only and --compile-only "
+                "are mutually exclusive"
+            )
+            raise ValueError("Both entrypoints_only and compile_only cannot be True")
+
         # Load manifest
         self.manifest = load_knitpkg_manifest(
             self.project_dir,

@@ -47,33 +47,36 @@ def register(app):
         
         console: Console = Console(log_path=False)
 
+        from knitpkg.core.console import ConsoleAware
+        console_awr = ConsoleAware(console=console, verbose=True if verbose else False)
+
         try:
-            console.print("")
+            console_awr.print("")
             register_command(project_dir if project_dir is not None else Path.cwd(), 
                             console=console, 
                             verbose=True if verbose else False)
-            console.print("")
+            console_awr.print("")
         
         except KeyboardInterrupt:
-            console.print("\n[bold yellow]⚠ Registration cancelled by user.[/bold yellow]")
-            console.print("")
+            console_awr.print("\n[bold yellow]⚠ Registration cancelled by user.[/bold yellow]")
+            console_awr.print("")
             raise typer.Exit(code=1)
 
         except RegistryError as e:
-            console.print(f"[bold red]❌ Registry error:[/bold red] {e}. Reason: {e.reason} ")
+            console_awr.print(f"[bold red]❌ Registry error:[/bold red] {e}. Reason: {e.reason} ")
             if verbose:
-                console.log(f"  Status Code: {e.status_code}")
-                console.log(f"  Error type: {e.error_type}")
-                console.log(f"  Request URL: {e.request_url}")
-            console.print("")
+                console_awr.log(f"  Status Code: {e.status_code}")
+                console_awr.log(f"  Error type: {e.error_type}")
+                console_awr.log(f"  Request URL: {e.request_url}")
+            console_awr.print("")
             raise typer.Exit(code=1)
         
         except KnitPkgError as e:
-            console.print(f"[bold red]❌ Registration failed:[/bold red] {e}")
-            console.print("")
+            console_awr.print(f"[bold red]❌ Registration failed:[/bold red] {e}")
+            console_awr.print("")
             raise typer.Exit(code=1)
         
         except Exception as e:
-            console.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
-            console.print("")
+            console_awr.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console_awr.print("")
             raise typer.Exit(code=1)

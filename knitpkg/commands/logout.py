@@ -46,22 +46,24 @@ def register(app):
         are removed from the system keyring.
         """
         console = Console(log_path=False)
+        from knitpkg.core.console import ConsoleAware
+        console_awr = ConsoleAware(console=console, verbose=True if verbose else False)
         try:
-            console.print("")
+            console_awr.print("")
             logout_command(console, True if verbose else False)
-            console.print("")
+            console_awr.print("")
 
         except KeyboardInterrupt:
-            console.print("\n[bold yellow]⚠ Logout cancelled by user.[/bold yellow]")
-            console.print("")
+            console_awr.print("\n[bold yellow]⚠ Logout cancelled by user.[/bold yellow]")
+            console_awr.print("")
             raise typer.Exit(code=1)
 
         except KnitPkgError as e:
-            console.print(f"[bold red]❌ Logout failed:[/bold red] {e}")
-            console.print("")
+            console_awr.print(f"[bold red]❌ Logout failed:[/bold red] {e}")
+            console_awr.print("")
             raise typer.Exit(code=1)
         
         except Exception as e:
-            console.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
-            console.print("")
+            console_awr.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console_awr.print("")
             raise typer.Exit(code=1)

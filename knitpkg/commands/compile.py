@@ -22,13 +22,6 @@ from knitpkg.core.exceptions import KnitPkgError
 def compile_command(project_dir: Path, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool):
     """Command wrapper"""
 
-    if entrypoints_only and compile_only:
-        console.log(
-            "[red]Error:[/] --entrypoints-only and --compile-only "
-            "are mutually exclusive"
-        )
-        raise SystemExit(1)
-
     compiler = MQLCompiler(project_dir, console, verbose)
 
     compiler.compile(entrypoints_only, compile_only)
@@ -68,30 +61,34 @@ def register(app):
             project_dir = Path.cwd()
         else:
             project_dir = Path(project_dir).resolve()
+            
         console = Console(log_path=False)
+
+        from knitpkg.core.console import ConsoleAware
+        console_awr = ConsoleAware(console=console, verbose=True if verbose else False)
         
         try:
-            console.print("")
+            console_awr.print("")
             compile_command(project_dir, \
                             True if entrypoints_only else False, \
                             True if compile_only else False, \
                             console, \
                             True if verbose else False, \
                             )
-            console.print("")
+            console_awr.print("")
 
         except KeyboardInterrupt:
-            console.print("\n[bold yellow]⚠ Compilation cancelled by user.[/bold yellow]")
-            console.print("")
+            console_awr.print("\n[bold yellow]⚠ Compilation cancelled by user.[/bold yellow]")
+            console_awr.print("")
             raise typer.Exit(code=1)
         
         except KnitPkgError as e:
-            console.print(f"[bold red]❌ Compilation failed:[/bold red] {e}")
-            console.print("")
+            console_awr.print(f"[bold red]❌ Compilation failed:[/bold red] {e}")
+            console_awr.print("")
             raise typer.Exit(code=1)
         
         except Exception as e:
-            console.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
-            console.print("")
+            console_awr.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console_awr.print("")
             raise typer.Exit(code=1)
         
