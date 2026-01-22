@@ -128,7 +128,7 @@ def register(app):
             console_awr.print("")
 
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠ Build cancelled by user.[/bold yellow]")
+            console_awr.print("\n[bold yellow]⚠️ Build cancelled by user.[/bold yellow]")
             console_awr.print("")
             raise typer.Exit(code=1)
 

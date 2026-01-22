@@ -46,29 +46,29 @@ def config_command(
     # Set compiler paths
     if mql5_compiler_path:
         settings.set_compiler_path(str(mql5_compiler_path.resolve()), Target.MQL5)
-        console_awr.log(
-            f"[green]MQL5 compiler path set to:[/]"
-            f" {mql5_compiler_path.resolve()}"
+        console_awr.print(
+            f"🔧 [green]MQL5 compiler path set[/green] → "
+            f"[cyan]{mql5_compiler_path.resolve()}[/cyan]"
         )
     if mql4_compiler_path:
         settings.set_compiler_path(str(mql4_compiler_path.resolve()), Target.MQL4)
-        console_awr.log(
-            f"[green]MQL4 compiler path set to:[/]"
-            f" {mql4_compiler_path.resolve()}"
+        console_awr.print(
+            f"🔧 [green]MQL4 compiler path set[/green] → "
+            f"[cyan]{mql4_compiler_path.resolve()}[/cyan]"
         )
 
     # Set MQL data folder paths
     if mql5_data_folder_path:
         settings.set_data_folder_path(str(mql5_data_folder_path.resolve()), Target.MQL5)
-        console_awr.log(
-            f"[green]MQL5 data folder path set to:[/]"
-            f" {mql5_data_folder_path.resolve()}"
+        console_awr.print(
+            f"📁 [green]MQL5 data folder path set[/green] → "
+            f"[cyan]{mql5_data_folder_path.resolve()}[/cyan]"
         )
     if mql4_data_folder_path:
         settings.set_data_folder_path(str(mql4_data_folder_path.resolve()), Target.MQL4)
-        console_awr.log(
-            f"[green]MQL4 data folder path set to:[/]"
-            f" {mql4_data_folder_path.resolve()}"
+        console_awr.print(
+            f"📁 [green]MQL4 data folder path set[/green] → "
+            f"[cyan]{mql4_data_folder_path.resolve()}[/cyan]"
         )
 
     # List all settings if requested or no settings were changed
@@ -76,7 +76,7 @@ def config_command(
         not mql5_compiler_path and not mql4_compiler_path and
         not mql5_data_folder_path and not mql4_data_folder_path
     ):
-        console_awr.print("[bold cyan]Configuration in use:[/]")
+        console_awr.print("📋 [bold cyan]Configuration in use:[/]")
         console_awr.print("")
         
         # Display compiler paths
@@ -150,7 +150,7 @@ def register(app):
             console_awr.print("")
             
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠ Config setting cancelled by user.[/bold yellow]")
+            console_awr.print("\n[bold yellow]⚠️ Config setting cancelled by user.[/bold yellow]")
             console_awr.print("")
             raise typer.Exit(code=1)
         

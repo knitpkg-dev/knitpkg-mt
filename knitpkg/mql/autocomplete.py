@@ -10,6 +10,7 @@ from knitpkg.core.console import Console, ConsoleAware
 # Import MQL-specific downloader
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from knitpkg.core.global_config import get_registry_url
+from knitpkg.mql.exceptions import InvalidUsageError
 
 # ==============================================================
 # AUTOCOMPLETE GENERATOR CLASS
@@ -42,28 +43,24 @@ class AutocompleteGenerator(ConsoleAware):
             manifest_class=MQLKnitPkgManifest
         )
 
-        if manifest.type != ProjectType.PACKAGE:
-            self.log(
-                "[red]Error:[/] Command `kp-mt autocomplete` only works on projects "
-                "with type: package"
+        self.print(
+                f"📝 [bold green]Autocomplete[/bold green] → "
+                f"[cyan]@{manifest.organization}/{manifest.name}[/cyan] : {manifest.version}"
             )
-            raise SystemExit(1)
 
-        self.log(
-            f"[bold magenta]autocomplete[/] → generating autocomplete file for " # Alterado
-            f"[cyan]{manifest.name}[/]"
-        )
+        if manifest.type != ProjectType.PACKAGE:
+            raise InvalidUsageError("Command `kp-mt autocomplete` only works on projects with type: package")
 
         # Resolve dependencies (reuse same logic as install)
         resolved_deps = []
         if manifest.dependencies:
             registry_url = get_registry_url()
-            downloader = MQLDependencyDownloader(self.project_dir, registry_url, True, MQLKnitPkgManifest, console=self.console, verbose=self.verbose)
+            downloader = MQLDependencyDownloader(self.project_dir, registry_url, False, MQLKnitPkgManifest, console=self.console, verbose=self.verbose)
             project_root = downloader.download_all()
             resolved_deps = project_root.resolved_dependencies()
         else:
-            self.log(
-                "[yellow]Warning:[/] No dependencies found in manifest. "
+            self.print(
+                "[yellow]⚠️  Warning:[/] No dependencies found in manifest. "
                 "Autocomplete file will be empty."
             )
 
@@ -94,6 +91,6 @@ class AutocompleteGenerator(ConsoleAware):
                         seen_paths.add(str(rel_path))
 
         output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        self.log(
-            f"[bold green]✔[/] Autocomplete file generated → [bold]{output_file}[/]"
+        self.print(
+            f"[bold green]✅ Autocomplete file generated[/bold green] → {output_file.relative_to(self.project_dir).as_posix()}"
         )

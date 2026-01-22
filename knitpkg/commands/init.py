@@ -115,7 +115,7 @@ def register(app):
                 console
             )
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠ Init cancelled by user.[/bold yellow]")
+            console_awr.print("\n[bold yellow]⚠️ Init cancelled by user.[/bold yellow]")
             console_awr.print("")
             raise typer.Exit(code=1)
 

@@ -20,17 +20,17 @@ def globalconfig_command(set_registry: str, list_all: bool, console: Console):
 
     if set_registry:
         set_global_registry(set_registry)
-        console_awr.print(f"✓ Default registry set to: {set_registry}")
+        console_awr.print(f"⚙️ [bold green]Registry set[/bold green] → [cyan]{set_registry}[/cyan]")
         return
 
     if list_all:
         current_registry = get_registry_url()
-        console_awr.print(f"Registry: [cyan]{current_registry}[/cyan]")
+        console_awr.print(f"📋 [bold cyan]Registry[/bold cyan] → [cyan]{current_registry}[/cyan]")
         return
 
     # Show all config
-    console_awr.print("[bold]KnitPkg Configuration[/bold]\n")
-    console_awr.print(f"Registry: [cyan]{get_registry_url()}[/cyan]")
+    console_awr.print("📋 [bold cyan]KnitPkg Configuration[/bold cyan]\n")
+    console_awr.print(f"  Registry: [cyan]{get_registry_url()}[/cyan]")
 
 
 def register(app: typer.Typer):
@@ -50,7 +50,7 @@ def register(app: typer.Typer):
             globalconfig_command(set_registry, list_all, console)
             console_awr.print("")
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠ Global config setting cancelled by user.[/bold yellow]")
+            console_awr.print("\n[bold yellow]⚠️ Global config setting cancelled by user.[/bold yellow]")
             console_awr.print("")
             raise typer.Exit(code=1)
         

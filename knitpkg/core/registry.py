@@ -87,7 +87,7 @@ class Registry(ConsoleAware):
         callback_port = parsed_uri.port or 8789
         endpoint_path = parsed_uri.path
         
-        self.print(f"[cyan]Opening browser for login via [bold]{provider}[/]...")
+        self.print(f"🔐 [cyan]Opening browser for login via [bold]{provider}[/]...")
         webbrowser.open(auth_url)
 
         # Start local server to capture the callback
@@ -133,7 +133,7 @@ class Registry(ConsoleAware):
         try:            
             keyring.set_password(CREDENTIALS_SERVICE, "provider", provider)
             keyring.set_password(CREDENTIALS_SERVICE, "token", access_token)
-            self.print(f"[bold green]Login successful![/]")
+            self.print(f"✅ [bold green]Login successful![/]")
         except Exception as e:
             raise TokenStorageError(str(e))
 
@@ -145,9 +145,9 @@ class Registry(ConsoleAware):
             keyring.delete_password(CREDENTIALS_SERVICE, "provider")
             keyring.delete_password(CREDENTIALS_SERVICE, "token")
             if provider:
-                self.print(f"[bold green]Successfully logged out[/] from [cyan]{provider}[/].")
+                self.print(f"🚪 [bold green]Successfully logged out[/] from [cyan]{provider}[/].")
             else:
-                self.print(f"[bold green]Successfully logged out[/].")
+                self.print(f"🚪 [bold green]Successfully logged out[/].")
         except Exception:
             if keyring.get_password(CREDENTIALS_SERVICE, "provider") is not None or \
                 keyring.get_password(CREDENTIALS_SERVICE, "token") is not None:
