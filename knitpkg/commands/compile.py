@@ -19,10 +19,10 @@ from knitpkg.core.exceptions import KnitPkgError
 # COMMAND WRAPPER
 # ==============================================================
 
-def compile_command(project_dir: Path, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool):
+def compile_command(project_dir: Path, inplace: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool):
     """Command wrapper"""
 
-    compiler = MQLCompiler(project_dir, console, verbose)
+    compiler = MQLCompiler(project_dir, inplace, console, verbose)
 
     compiler.compile(entrypoints_only, compile_only)
 
@@ -38,6 +38,11 @@ def register(app):
             "--project-dir",
             "-d",
             help="Project directory (default: current directory)"
+        ),
+        inplace: Optional[bool] = typer.Option(
+            False,
+            "--in-place",
+            help="Keeps compiled binaries in place or move those to bin/"
         ),
         entrypoints_only: Optional[bool] = typer.Option(
             False,
@@ -70,6 +75,7 @@ def register(app):
         try:
             console_awr.print("")
             compile_command(project_dir, \
+                            True if inplace else False, \
                             True if entrypoints_only else False, \
                             True if compile_only else False, \
                             console, \

@@ -9,8 +9,7 @@ from enum import Enum
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.console import Console, ConsoleAware
 from knitpkg.mql.models import MQLKnitPkgManifest, Target
-from knitpkg.mql.constants import FLAT_DIR
-from knitpkg.mql.constants import COMPILE_LOGS_DIR
+from knitpkg.mql.constants import FLAT_DIR, COMPILE_LOGS_DIR, BIN_DIR
 from knitpkg.mql.mql_paths import find_mql_paths
 from knitpkg.mql.settings import MQLSettings
 
@@ -38,7 +37,7 @@ class CompilationStatus(str, Enum):
 @dataclass
 class CompilationResult:
     """Result of a single file compilation."""
-    file_path: Path
+    file_path: Optional[Path]
     status: CompilationStatus
     error_count: int = 0
     warning_count: int = 0
@@ -55,10 +54,11 @@ class CompilationResult:
 class MQLCompiler(ConsoleAware):
     """Handles MQL4/MQL5 source code compilation."""
 
-    def __init__(self, project_dir: Path, console: Console, verbose: bool):
+    def __init__(self, project_dir: Path, inplace: bool, console: Console, verbose: bool):
         super().__init__(console, verbose)
 
-        self.project_dir = project_dir
+        self.project_dir: Path = project_dir
+        self.inplace: bool = inplace
         self.manifest: MQLKnitPkgManifest
         self.results: List[CompilationResult] = []
         self.compile_logs_dir = project_dir / COMPILE_LOGS_DIR
@@ -120,9 +120,11 @@ class MQLCompiler(ConsoleAware):
         self._prepare_compile_logs_dir()
 
         # Compile each file
+        moved_files: List[str] = []
         for file_path in files_to_compile:
             result = self._compile_file(compiler_path, file_path)
             self.results.append(result)
+            self._move_to_bin_if_not_inplace(result, moved_files)
 
         # Print summary
         self._print_summary()
@@ -321,7 +323,7 @@ class MQLCompiler(ConsoleAware):
         """Parse MetaEditor compilation log."""
         if not log_path.exists():
             return CompilationResult(
-                file_path=log_path,
+                file_path=None,
                 status=CompilationStatus.ERROR,
                 error_count=1,
                 messages=["Log file not found"]
@@ -335,7 +337,7 @@ class MQLCompiler(ConsoleAware):
                 log_content = log_path.read_text(encoding="utf-8", errors="ignore")
             except Exception as e:
                 return CompilationResult(
-                    file_path=log_path,
+                    file_path=None,
                     status=CompilationStatus.ERROR,
                     error_count=1,
                     messages=[f"Failed to read log: {e}"]
@@ -356,7 +358,7 @@ class MQLCompiler(ConsoleAware):
         result_match = result_pattern.search(log_content)
         if not result_match:
             return CompilationResult(
-                file_path=log_path,
+                file_path=None,
                 status=CompilationStatus.ERROR,
                 error_count=1,
                 messages=["Could not parse compilation result"]
@@ -399,7 +401,7 @@ class MQLCompiler(ConsoleAware):
             messages.append(f"[yellow]{formatted}[/]")
 
         return CompilationResult(
-            file_path=log_path,
+            file_path=None,
             status=status,
             error_count=error_count,
             warning_count=warning_count,
@@ -531,6 +533,37 @@ class MQLCompiler(ConsoleAware):
                 messages=[str(e)]
             )
 
+    def _move_to_bin_if_not_inplace(self, result: CompilationResult, moved_files: List[str]):
+        if self.inplace:
+            return
+        
+        bin_dir = self.project_dir / BIN_DIR
+        bin_dir.mkdir(exist_ok=True)
+
+        if not result.file_path:
+            return
+
+        compiled_file_ext = ".ex5" if self.manifest.target == Target.MQL5 else ".ex4"
+
+        # Only move files that were actually compiled (not skipped)
+        if result.status in (CompilationStatus.SUCCESS, CompilationStatus.SUCCESS_WITH_WARNINGS):
+            compiled_file = result.file_path.with_suffix(compiled_file_ext)
+            if compiled_file.exists():
+                dst_file_name = compiled_file.name
+
+                if dst_file_name in moved_files:
+                    dst_file_name = f"{compiled_file.stem}_{len(moved_files)}{compiled_file.suffix}"
+                    self.print(
+                        f"[yellow]Warning:[/] {(result.file_path.relative_to(self.project_dir)).as_posix()} "
+                        f"compiled file name conflict, renaming to {dst_file_name}"
+                    )
+
+                shutil.move(
+                    str(compiled_file),
+                    str(bin_dir / dst_file_name)
+                )
+                moved_files.append(dst_file_name)
+                self.print(f"  [dim]Moved:[/] bin/{dst_file_name}")
 
     def _print_summary(self) -> None:
         """Print compilation summary."""
@@ -547,6 +580,8 @@ class MQLCompiler(ConsoleAware):
             self.print("")
             
             for result in self.results:
+                if not result.file_path:
+                    continue
                 rel_path = result.file_path.relative_to(self.project_dir).as_posix()
                 if result.status == CompilationStatus.SUCCESS:
                     status = "[green]✓[/]"

@@ -20,6 +20,8 @@ GITIGNORE_PACKAGE = """
 .knitpkg/
 knitpkg/autocomplete/
 knitpkg/flat/
+bin/
+target/
 
 *.mqproj
 
@@ -34,6 +36,8 @@ GITIGNORE_DEFAULT = """
 knitpkg/autocomplete/
 knitpkg/flat/
 knitpkg/include
+bin/
+target/
 
 *.mqproj
 
