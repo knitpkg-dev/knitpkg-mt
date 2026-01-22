@@ -17,7 +17,7 @@ from knitpkg.core.exceptions import KnitPkgError, RegistryError
 # ==============================================================
 # COMMAND WRAPPER
 # ==============================================================
-def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool) -> None:
+def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool) -> None:
     """
     Main logic for the `kp-mt build` command.
 
@@ -52,7 +52,7 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, entrypo
         install_command(project_dir, locked_mode, show_tree, console, verbose)
 
     console_awr.print("\n[cyan]▶️  Compiling project...[/cyan]")
-    compile_command(project_dir, entrypoints_only, compile_only, console, verbose)
+    compile_command(project_dir, inplace, entrypoints_only, compile_only, console, verbose)
 
     console_awr.print("\n[bold green]✅ Build completed successfully![/bold green]")
 
@@ -86,6 +86,11 @@ def register(app):
             "--no-tree",
             help="Skip displaying dependency tree after resolution."
         ),
+        inplace: Optional[bool] = typer.Option(
+            False,
+            "--in-place",
+            help="Keeps compiled binaries in place or move those to bin/"
+        ),
         entrypoints_only: Optional[bool] = typer.Option(
             False,
             "--entrypoints-only",
@@ -114,11 +119,12 @@ def register(app):
 
         try:
             console_awr.print("")
-            build_command(project_dir, \
-                        True if locked else False, \
-                        False if no_tree else True, \
+            build_command(project_dir, 
+                        True if locked else False, 
+                        False if no_tree else True, 
+                        True if inplace else False, 
                         True if entrypoints_only else False, 
-                        True if compile_only else False, \
+                        True if compile_only else False, 
                         console,
                         True if verbose else False)
             console_awr.print("")
