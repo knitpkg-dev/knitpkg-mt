@@ -11,12 +11,11 @@ overridden by subclasses.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from dataclasses import dataclass
 
 import shutil
 import git
-import datetime as dt
 
 from knitpkg.core.registry import Registry
 from knitpkg.core.lockfile import LockFile
@@ -152,21 +151,24 @@ class DependencyDownloader(ConsoleAware):
             dependencies=[]
         )
         self._root_node: ProjectNode = root
-        self._overrides: dict = manifest.overrides
+        
+        overrides: dict[str, str]
+        if manifest.overrides:
+            overrides = {self._normalize_dep_name(name, manifest.organization): spec for name, spec in manifest.overrides.items()}
+        else:
+            overrides = {}
 
         for name, spec in dependencies.items():
-            org, dep_name = self._parse_project_name(name)
-            if not org:
-                name = f"@{manifest.organization.lower()}/{dep_name.lower()}"
-            self._download_dependency(name, spec, root)
-
-        if self.verbose:
-            resolved_names: List[str] = root.resolved_names(add_root=False)
-            for ovrd in self._overrides.keys():
-                if ovrd not in resolved_names:
-                    self.print(f"[bold][yellow]Warning:[/] Override for missing dependency '{ovrd}'[/bold]")
+            name = self._normalize_dep_name(name, manifest.organization)
+            self._download_dependency(name, spec, overrides, root)
 
         return root
+    
+    def _normalize_dep_name(self, name: str, organization: str) -> str:
+        org, dep_name = self._parse_project_name(name)
+        if org:
+            return name
+        return f"@{organization.lower()}/{dep_name.lower()}"
 
     def _get_package_resolve_dist(self, registry_base_url: str, dep_name: str, version_spec: str) -> dict:
         """Resolve project distribution info from registry.
@@ -284,7 +286,7 @@ class DependencyDownloader(ConsoleAware):
     # CORE RESOLUTION LOGIC (Platform-agnostic)
     # ==============================================================
 
-    def _download_dependency(self, dep_name: str, specifier: str, parent: ProjectNode):
+    def _download_dependency(self, dep_name: str, specifier: str, overrides: Dict[str, str], parent: ProjectNode):
         """
         Resolve and download a dependency (local or remote).
 
@@ -302,11 +304,11 @@ class DependencyDownloader(ConsoleAware):
             return
 
         if is_local_path(specifier):
-            self._handle_local_dependency(dep_name, specifier, parent)
+            self._handle_local_dependency(dep_name, specifier, overrides, parent)
         else:
-            self._handle_remote_dependency(dep_name, specifier, parent)
+            self._handle_remote_dependency(dep_name, specifier, overrides, parent)
 
-    def _handle_local_dependency(self, dep_name: str, specifier: str, parent: ProjectNode):
+    def _handle_local_dependency(self, dep_name: str, specifier: str, overrides: Dict[str, str], parent: ProjectNode):
         """
         Handle local dependency resolution.
 
@@ -314,7 +316,7 @@ class DependencyDownloader(ConsoleAware):
             LocalDependencyNotFoundError: If path doesn't exist
             LocalDependencyNotGitError: If --locked with non-git dependency
         """
-        if dep_name in self._overrides:
+        if dep_name in overrides:
             raise DependencyError("Overrides cannot be local dependencies: {dep_name}")
         if self.locked_mode:
             raise LockedWithLocalDependencyError(dep_name)
@@ -348,17 +350,17 @@ class DependencyDownloader(ConsoleAware):
             dependencies=[]
         )
 
-        if self._process_recursive_dependencies(resolved_path, dep_name, dep_node):
+        if self._process_recursive_dependencies(resolved_path, dep_name, dep_node, overrides):
             parent.add_dependency(dep_node)
             self.log(f"[green]✔[/] {dep_name}")
 
         return resolved_path
 
-    def _handle_remote_dependency(self, dep_name: str, specifier: str, parent: ProjectNode):
+    def _handle_remote_dependency(self, dep_name: str, specifier: str, overrides: Dict[str, str], parent: ProjectNode):
         """Handle remote dependency resolution."""
-        if dep_name in self._overrides:
-            self.print(f"[bold][red]Override[/red] {dep_name} → {self._overrides[dep_name]}")
-            resolved_path = self._download_from_git_remote(dep_name, self._overrides[dep_name])    
+        if dep_name in overrides:
+            self.print(f"[bold][yellow]Override[/yellow] {dep_name} → {overrides[dep_name]}")
+            resolved_path = self._download_from_git_remote(dep_name, overrides[dep_name])    
         else:
             resolved_path = self._download_from_git_remote(dep_name, specifier)
 
@@ -379,7 +381,7 @@ class DependencyDownloader(ConsoleAware):
             dependencies=[]
         )
 
-        if self._process_recursive_dependencies(resolved_path, dep_name, dep_node):
+        if self._process_recursive_dependencies(resolved_path, dep_name, dep_node, overrides):
             parent.add_dependency(dep_node)
             self.log(f"[green]✔[/] {dep_name}")
 
@@ -477,7 +479,8 @@ class DependencyDownloader(ConsoleAware):
         self,
         resolved_path: Path,
         dep_name: str,
-        dep_node: ProjectNode
+        dep_node: ProjectNode,
+        overrides: Dict[str, str]
     ) -> bool:
         """
         Process recursive dependencies. Return True if accepted, False if skipped.
@@ -485,51 +488,51 @@ class DependencyDownloader(ConsoleAware):
         This method calls validate_manifest() and validate_project_structure()
         which can be overridden by platform-specific subclasses.
         """
-        try:
-            sub_manifest = load_knitpkg_manifest(resolved_path, self.manifest_type)
+        sub_manifest = load_knitpkg_manifest(resolved_path, self.manifest_type)
 
-            # Platform-specific validation (overridable)
-            if not self.validate_manifest(sub_manifest):
-                self.print(
-                    f"[yellow]Warning:[/] Invalid manifest for {dep_name}. Dependency ignored."
-                )
-                return False
-
-            expected_dep_name = f"@{sub_manifest.organization.strip().lower()}/{sub_manifest.name.strip().lower()}"
-
-            if dep_name != expected_dep_name:
-                self.print(
-                    f"[yellow]Warning:[/] Dependency name mismatch: "
-                    f"'{dep_name}'. Expected: '{expected_dep_name}'."
-                )
-                self.print(
-                    f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → "
-                    f"{sub_manifest.name} : {sub_manifest.version}"
-                )
-            else:
-                self.print(
-                    f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] : "
-                    f"{sub_manifest.version}"
-                )
-
-            # Platform-specific structure validation (overridable)
-            self.validate_project_structure(sub_manifest, resolved_path, is_dependency=True)
-
-            if sub_manifest.dependencies:
-                self.log(
-                    f"[dim]Recursive:[/] {dep_name} → "
-                    f"{len(sub_manifest.dependencies)} dep(s)"
-                )
-                for sub_name, sub_spec in sub_manifest.dependencies.items():
-                    org, dep_name = self._parse_project_name(sub_name)
-                    if not org:
-                        sub_name = f"@{sub_manifest.organization.lower()}/{dep_name.lower()}"
-                    self._download_dependency(sub_name, sub_spec, dep_node)
-
-            return True
-        except Exception as e:
+        # Platform-specific validation (overridable)
+        if not self.validate_manifest(sub_manifest):
             self.print(
-                f"[yellow]Warning:[/] Failed to process dependencies of {dep_name}: {e}"
+                f"[yellow]Warning:[/] Invalid manifest for {dep_name}. Dependency ignored."
             )
             return False
+
+        expected_dep_name = f"@{sub_manifest.organization.strip().lower()}/{sub_manifest.name.strip().lower()}"
+
+        if dep_name != expected_dep_name:
+            self.print(
+                f"[yellow]Warning:[/] Dependency name mismatch: "
+                f"'{dep_name}'. Expected: '{expected_dep_name}'."
+            )
+            self.print(
+                f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] → "
+                f"{sub_manifest.name} : {sub_manifest.version}"
+            )
+        else:
+            self.print(
+                f"[dim cyan]↳ processing dependency[/] [bold]{dep_name}[/] : "
+                f"{sub_manifest.version}"
+            )
+
+        # Platform-specific structure validation (overridable)
+        self.validate_project_structure(sub_manifest, resolved_path, is_dependency=True)
+
+        if sub_manifest.dependencies:
+            self.log(
+                f"[dim]Recursive:[/] {dep_name} → "
+                f"{len(sub_manifest.dependencies)} dep(s)"
+            )
+
+            # Merge overrides (parent overrides take precedence)
+            overrides_dep = overrides.copy()
+            for sub_dep_name, sub_spec in sub_manifest.overrides.items():
+                sub_dep_name = self._normalize_dep_name(sub_dep_name, sub_manifest.organization)
+                if sub_dep_name not in overrides_dep:
+                    overrides_dep[sub_dep_name] = sub_spec
+
+            for sub_name, sub_spec in sub_manifest.dependencies.items():
+                sub_name = self._normalize_dep_name(sub_name, sub_manifest.organization)
+                self._download_dependency(sub_name, sub_spec, overrides_dep, dep_node)
+
+        return True
 
