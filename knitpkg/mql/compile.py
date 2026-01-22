@@ -15,11 +15,17 @@ from knitpkg.mql.settings import MQLSettings
 
 # Import MQL-specific exceptions
 from knitpkg.mql.exceptions import (
+    MQLCompilationError,
     CompilerNotFoundError,
-    UnsupportedTargetError,
     NoFilesToCompileError,
     CompilationFailedError,
-    IncludePathNotFoundError
+    MQLIncludePathNotFoundError,
+    CompilationLogParseError,
+    CompilationExecutionError,
+    CompilationLogNotFoundError,
+    CompilationFileNotFoundError,
+    CompilationInvalidEntrypointError,
+    InvalidUsageError
 )
 
 
@@ -37,7 +43,7 @@ class CompilationStatus(str, Enum):
 @dataclass
 class CompilationResult:
     """Result of a single file compilation."""
-    file_path: Optional[Path]
+    file_path: Path
     status: CompilationStatus
     error_count: int = 0
     warning_count: int = 0
@@ -83,16 +89,17 @@ class MQLCompiler(ConsoleAware):
         """
 
         if entrypoints_only and compile_only:
-            self.print(
-                "[red]Error:[/] --entrypoints-only and --compile-only "
-                "are mutually exclusive"
-            )
-            raise ValueError("Both entrypoints_only and compile_only cannot be True")
+            raise InvalidUsageError("Both --entrypoints-only and --compile-only are mutually exclusive")
 
         # Load manifest
         self.manifest = load_knitpkg_manifest(
             self.project_dir,
             manifest_class=MQLKnitPkgManifest
+        )
+
+        self.print(
+            f"📦 [bold magenta]Compile[/] → "
+            f"[cyan]@{self.manifest.organization}/{self.manifest.name}[/] : {self.manifest.version}"
         )
 
         # Determine compiler path based on target
@@ -102,16 +109,8 @@ class MQLCompiler(ConsoleAware):
         files_to_compile = self._collect_files(entrypoints_only, compile_only)
 
         if not files_to_compile:
-            self.print(
-                "[yellow]Warning:[/] No files to compile. "
-                "Check your manifest's 'compile' and 'entrypoints' fields."
-            )
             raise NoFilesToCompileError()
 
-        self.print(
-            f"[bold magenta]compile[/] → "
-            f"[cyan]{self.manifest.name}[/] v{self.manifest.version}"
-        )
         self.print(
             f"[dim]Files to compile:[/] {len(files_to_compile)}"
         )
@@ -121,8 +120,9 @@ class MQLCompiler(ConsoleAware):
 
         # Compile each file
         moved_files: List[str] = []
+        inc_path = self._get_mql_include_path()
         for file_path in files_to_compile:
-            result = self._compile_file(compiler_path, file_path)
+            result = self._compile_file(compiler_path, file_path, inc_path)
             self.results.append(result)
             self._move_to_bin_if_not_inplace(result, moved_files)
 
@@ -168,29 +168,9 @@ class MQLCompiler(ConsoleAware):
             CompilerNotFoundError: If the compiler executable does not exist
         """
         settings: MQLSettings = MQLSettings(self.project_dir)
-        try:
-            compiler_path: Path = Path(settings.get_compiler_path(Target(self.manifest.target)))
-        except ValueError:
-            self.print(
-                f"[red]Error:[/] Invalid target in manifest: {self.manifest.target}"
-            )
-            raise UnsupportedTargetError(self.manifest.target)
+        compiler_path: Path = Path(settings.get_compiler_path(Target(self.manifest.target)))
 
         if not compiler_path.exists():
-            self.print(
-                f"[red]Error:[/] Compiler not found: {compiler_path}"
-            )
-            self.print(
-                f"[yellow]Hint:[/] Configure compiler path with:"
-            )
-            if self.manifest.target == Target.MQL5:
-                self.print(
-                    f"  kp-mt config --mql5-compiler-path <path-to-MetaEditor64.exe>"
-                )
-            else:
-                self.print(
-                    f"  kp-mt config --mql4-compiler-path <path-to-MetaEditor.exe>"
-                )
             raise CompilerNotFoundError(
                 str(compiler_path),
                 self.manifest.target
@@ -223,21 +203,17 @@ class MQLCompiler(ConsoleAware):
                     elif file_name_str.endswith(".mq4"):
                         file_name_str = file_name_str.removesuffix(".mq4") + "_flat.mq4"
                     else:
-                        self.print(
-                            f"[yellow]Warning:[/] Invalid file name to compile: {file_str}"
-                        )
-                        continue
+                        raise CompilationInvalidEntrypointError(file_str)
+                        
                     file_path = self.project_dir / FLAT_DIR / file_name_str
                     if file_path.exists():
                         files.append(file_path)
                     else:
-                        self.print(
-                            f"[yellow]Warning:[/] File not found (flat from entrypoints): {(FLAT_DIR / file_name_str).as_posix()}"
-                        )
+                        raise CompilationFileNotFoundError(str(file_path), "flat from entrypoints")
             else:
                 # include_mode is not 'flat', warn user
                 self.print(
-                    f"[yellow]Warning:[/] Entrypoints defined in manifest but include_mode is not 'flat'. "
+                    f"[yellow]⚠️  Warning:[/] Entrypoints defined in manifest but include_mode is not 'flat'. "
                     f"Entrypoints will not be compiled. Set include_mode to 'flat' or use 'compile' field."
                 )
 
@@ -248,9 +224,7 @@ class MQLCompiler(ConsoleAware):
                 if file_path.exists():
                     files.append(file_path)
                 else:
-                    self.print(
-                        f"[yellow]Warning:[/] File not found (compile): {file_str}"
-                    )
+                    raise CompilationFileNotFoundError(file_str, "compile")
 
         # Remove duplicates while preserving order
         seen = set()
@@ -288,8 +262,8 @@ class MQLCompiler(ConsoleAware):
                 return configured_path_include.parent
             else:
                 self.print(
-                    f"[yellow]Warning:[/] Configured MQL data folder "
-                    f"'{configured_path.as_posix()}' does not exist or is not a valid MQL directory. "
+                    f"[yellow]⚠️  Warning:[/] Configured MQL data folder "
+                    f"'{configured_path}' does not exist or is not a valid MQL directory. "
                     f"Attempting auto-detection."
                 )
 
@@ -298,36 +272,25 @@ class MQLCompiler(ConsoleAware):
         target_folder_name = self.manifest.target # MQL5 or MQL4
 
         if not found_mql_paths:
-            self.print(
-                f"[red]Error:[/] Could not find MQL {target_folder_name} "
-                f"include path automatically. "
-                f"Please configure it manually using 'kp-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
-            )
-            # Raise the new exception instead of SystemExit(1)
-            raise IncludePathNotFoundError(target_folder_name)
+            raise MQLIncludePathNotFoundError(target_folder_name)
 
         if len(found_mql_paths) > 1:
             self.print(
-                f"[yellow]Warning:[/] Multiple MQL {target_folder_name} "
+                f"[yellow]⚠️  Warning:[/] Multiple {target_folder_name} "
                 f"data folders found. Using the first one detected: "
-                f"{found_mql_paths[0].parent.as_posix()}"
+                f"{found_mql_paths[0].parent}"
             )
             self.print(
-                f"[yellow]Hint:[/] To specify a particular data folder, "
-                f"use 'kp-mt config --mql{target_folder_name[3:]}-data-folder-path <path>'."
+                f"[yellow]💡 Hint:[/] To specify a particular data folder, "
+                f"use 'kp-mt config --{self.manifest.target.lower()}-data-folder-path <path>'."
             )
 
         return found_mql_paths[0]
 
-    def _parse_compilation_log(self, log_path: Path) -> CompilationResult:
+    def _parse_compilation_log(self, log_path: Path, src_file_path: Path) -> CompilationResult:
         """Parse MetaEditor compilation log."""
         if not log_path.exists():
-            return CompilationResult(
-                file_path=None,
-                status=CompilationStatus.ERROR,
-                error_count=1,
-                messages=["Log file not found"]
-            )
+            raise CompilationLogNotFoundError(str(log_path))
 
         try:
             # MetaEditor logs are UTF-16 LE
@@ -336,12 +299,7 @@ class MQLCompiler(ConsoleAware):
             try:
                 log_content = log_path.read_text(encoding="utf-8", errors="ignore")
             except Exception as e:
-                return CompilationResult(
-                    file_path=None,
-                    status=CompilationStatus.ERROR,
-                    error_count=1,
-                    messages=[f"Failed to read log: {e}"]
-                )
+                raise CompilationLogParseError(f"Failed to read compilation log file: {e}")
 
         # Remove BOM if present
         if log_content.startswith('\ufeff'):
@@ -357,12 +315,7 @@ class MQLCompiler(ConsoleAware):
 
         result_match = result_pattern.search(log_content)
         if not result_match:
-            return CompilationResult(
-                file_path=None,
-                status=CompilationStatus.ERROR,
-                error_count=1,
-                messages=["Could not parse compilation result"]
-            )
+            raise CompilationLogParseError("Failed to parse compilation result from log")
 
         error_count = int(result_match.group(1))
         warning_count = int(result_match.group(2))
@@ -401,7 +354,7 @@ class MQLCompiler(ConsoleAware):
             messages.append(f"[yellow]{formatted}[/]")
 
         return CompilationResult(
-            file_path=None,
+            file_path=src_file_path,
             status=status,
             error_count=error_count,
             warning_count=warning_count,
@@ -472,66 +425,56 @@ class MQLCompiler(ConsoleAware):
             # If anything fails, return original line
             return line
 
-    def _compile_file(self, compiler_path: Path, file_path: Path) -> CompilationResult:
+    def _compile_file(self, compiler_path: Path, src_file_path: Path, inc_path: Path) -> CompilationResult:
         """
         Compile a single file using MetaEditor.
         Returns CompilationResult with status and messages.
         """
-        rel_path = file_path.relative_to(self.project_dir)
-        self.print(f"[dim]Compiling:[/] {rel_path.as_posix()}")
+        rel_path = src_file_path.relative_to(self.project_dir)
+        self.print(f"🔨 [dim]Compiling:[/] {rel_path.as_posix()}")
 
         # Get individual log file path for this source file
-        log_file = self._get_log_file_path(file_path)
+        log_file = self._get_log_file_path(src_file_path)
 
+        # NOTE: The MetaEditor compiler does not handle file paths with spaces correctly 
+        # when invoked via os.subprocess.run(). Workaround: navigate to the compiler 
+        # directory and invoke via os.system() instead.
+
+        cmd = f'{compiler_path.name} /compile:"{src_file_path}" /log:"{log_file}"'
+
+        if inc_path:
+            cmd += f' /inc:"{inc_path}"'
+            
         try:
-            # NOTE: The MetaEditor compiler does not handle file paths with spaces correctly 
-            # when invoked via os.subprocess.run(). Workaround: navigate to the compiler 
-            # directory and invoke via os.system() instead.
-
-            cmd = f'{compiler_path.name} /compile:"{file_path}" /log:"{log_file}"'
-
-            inc_path = self._get_mql_include_path()
-            if inc_path:
-                cmd = cmd + f' /inc:"{inc_path}"'
-                
             os.chdir(compiler_path.parent)
             os.system(cmd)
-
-            # Parse log to determine actual result
-            result = self._parse_compilation_log(log_file)
-            result.file_path = file_path
-
-            # Show immediate feedback
-            if result.status == CompilationStatus.SUCCESS:
-                self.log(f"  [green]✓[/] {rel_path.as_posix()}")
-            elif result.status == CompilationStatus.SUCCESS_WITH_WARNINGS:
-                self.print(
-                    f"  [yellow]⚠[/] {rel_path.as_posix()} "
-                    f"({result.warning_count} warning{'s' if result.warning_count > 1 else ''})"
-                )
-            else:
-                self.print(
-                    f"  [red]✗[/] {rel_path.as_posix()} "
-                    f"({result.error_count} error{'s' if result.error_count > 1 else ''})"
-                )
-
-            # Show error/warning messages
-            if result.messages:
-                for msg in result.messages:
-                    self.print(f"    {msg}")
-
-            return result
-
         except Exception as e:
+            raise CompilationExecutionError(f"Failed to execute compilation command: {e}")
+
+        # Parse log to determine actual result
+        result = self._parse_compilation_log(log_file, src_file_path)
+
+        # Show immediate feedback
+        if result.status == CompilationStatus.SUCCESS:
+            self.log(f"  [green]✓[/] {rel_path.as_posix()}")
+        elif result.status == CompilationStatus.SUCCESS_WITH_WARNINGS:
             self.print(
-                f"  [red]✗[/] {rel_path} (error: {e})"
+                f"  [yellow]⚠[/] {rel_path.as_posix()} "
+                f"({result.warning_count} warning{'s' if result.warning_count > 1 else ''})"
             )
-            return CompilationResult(
-                file_path=file_path,
-                status=CompilationStatus.ERROR,
-                error_count=1,
-                messages=[str(e)]
+        else:
+            self.print(
+                f"  [red]✗[/] {rel_path.as_posix()} "
+                f"({result.error_count} error{'s' if result.error_count > 1 else ''})"
             )
+
+        # Show error/warning messages
+        if result.messages:
+            for msg in result.messages:
+                self.print(f"    {msg}")
+
+        return result
+
 
     def _move_to_bin_if_not_inplace(self, result: CompilationResult, moved_files: List[str]):
         if self.inplace:
@@ -554,7 +497,7 @@ class MQLCompiler(ConsoleAware):
                 if dst_file_name in moved_files:
                     dst_file_name = f"{compiled_file.stem}_{len(moved_files)}{compiled_file.suffix}"
                     self.print(
-                        f"[yellow]Warning:[/] {(result.file_path.relative_to(self.project_dir)).as_posix()} "
+                        f"[yellow]⚠️  Warning:[/] {(result.file_path.relative_to(self.project_dir)).as_posix()} "
                         f"compiled file name conflict, renaming to {dst_file_name}"
                     )
 
@@ -563,7 +506,7 @@ class MQLCompiler(ConsoleAware):
                     str(bin_dir / dst_file_name)
                 )
                 moved_files.append(dst_file_name)
-                self.print(f"  [dim]Moved:[/] bin/{dst_file_name}")
+                self.print(f"  📁 [dim]Moved:[/] bin/{dst_file_name}")
 
     def _print_summary(self) -> None:
         """Print compilation summary."""
@@ -576,7 +519,7 @@ class MQLCompiler(ConsoleAware):
 
         if warning_count > 0 or error_count > 0:
             self.print("")
-            self.print("[bold cyan]Compilation Summary:[/]")
+            self.print("[bold cyan]📊 Compilation Summary:[/]")
             self.print("")
             
             for result in self.results:
@@ -602,24 +545,19 @@ class MQLCompiler(ConsoleAware):
         self.print("")
         if error_count == 0 and warning_count == 0:
             self.print(
-                f"[bold green]✓ All files compiled successfully![/] "
+                f"[bold green]✅ All files compiled successfully![/] "
                 f"({success_count}/{len(self.results)})"
             )
         elif error_count == 0:
             self.print(
-                f"[bold yellow]⚠ Compilation completed with warnings:[/] "
+                f"[bold yellow]⚠️ Compilation completed with warnings:[/] "
                 f"{success_count} succeeded, {warning_count} with warnings"
-            )
-        else:
-            self.print(
-                f"[bold red]✗ Compilation failed:[/] "
-                f"{success_count} succeeded, {warning_count} with warnings, {error_count} failed"
             )
 
         if warning_count > 0 or error_count > 0:
             self.print("")
             self.print(
-                f"[dim]Compilation logs saved to:[/] {self.compile_logs_dir.relative_to(self.project_dir).as_posix()}"
+                f"[dim]📝 Compilation logs saved to:[/] {self.compile_logs_dir.relative_to(self.project_dir).as_posix()}"
             )
         self.print("")
 

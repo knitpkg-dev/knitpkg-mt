@@ -49,7 +49,7 @@ class CompilerNotFoundError(MQLCompilationError):
     def __init__(self, compiler_path: str, target: str):
         self.compiler_path = compiler_path
         self.target = target
-        super().__init__(f"Compiler not found: {compiler_path}")
+        super().__init__(f"Compiler not found: {compiler_path}. Hint: configure compiler path with `kp-mt config --{target.lower()}-compiler-path <path-to-MetaEditor.exe>`")
 
 
 class UnsupportedTargetError(MQLCompilationError):
@@ -77,11 +77,12 @@ class CompilationFailedError(MQLCompilationError):
         self.warning_count = warning_count
         self.total = total
         super().__init__(
-            f"Compilation failed: {error_count} error(s), "
-            f"{warning_count} warning(s), {total} file(s) total"
+            f"{error_count} error{'' if error_count == 1 else 's'}, "
+            f"{warning_count if warning_count > 0 else 'no'} warning{'' if warning_count == 1 else 's'}, "
+            f"{total} file{'' if total == 1 else 's'} total"
         )
 
-class IncludePathNotFoundError(MQLCompilationError): # NEW
+class MQLIncludePathNotFoundError(MQLCompilationError): # NEW
     """Raised when the MetaTrader include directory cannot be located."""
 
     def __init__(self, target_folder: str):
@@ -90,3 +91,55 @@ class IncludePathNotFoundError(MQLCompilationError): # NEW
             f"MetaTrader include directory for '{target_folder}' not found. "
             "Ensure MetaTrader is installed and the data folder exists."
         )
+
+
+class CompilationLogParseError(MQLCompilationError):
+    """Raised when parsing the MetaEditor compilation log fails."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(f"Compilation log parse error: {message}")
+
+
+class CompilationExecutionError(MQLCompilationError):
+    """Raised when the MetaEditor compiler execution fails."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(f"Compilation execution error: {message}")
+
+
+class CompilationLogNotFoundError(MQLCompilationError):
+    """Raised when the compilation log file is not found."""
+
+    def __init__(self, log_path: str):
+        self.log_path = log_path
+        super().__init__(f"Compilation log file not found: {log_path}")
+
+
+class CompilationFileNotFoundError(MQLCompilationError):
+    """Raised when a file specified for compilation cannot be found."""
+
+    def __init__(self, file_path: str, context: str = ""):
+        self.file_path = file_path
+        self.context = context
+        message = f"Compilation file not found: {file_path}"
+        if context:
+            message += f" ({context})"
+        super().__init__(message)
+
+
+class CompilationInvalidEntrypointError(MQLCompilationError):
+    """Raised when an entrypoint file has an invalid extension."""
+
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        super().__init__(f"Invalid entrypoint file extension: {file_path}. Supported extensions: .mq4, .mq5, .mqh")
+
+
+class InvalidUsageError(KnitPkgError):
+    """Raised when the user provides invalid command-line arguments or options."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(f"Invalid usage: {message}")

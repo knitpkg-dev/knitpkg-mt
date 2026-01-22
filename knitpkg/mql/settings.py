@@ -12,6 +12,7 @@ data folder paths.
 
 from knitpkg.core.settings import Settings
 from knitpkg.mql.models import Target
+from knitpkg.mql.exceptions import UnsupportedTargetError
 
 # Default compiler paths for MetaTrader
 DEFAULT_MQL5_COMPILER = r"C:\Program Files\MetaTrader 5\MetaEditor64.exe"
@@ -30,7 +31,7 @@ class MQLSettings(Settings):
         elif target == Target.MQL5:
             return self.get("mql5-compiler-path", DEFAULT_MQL5_COMPILER)
         else:
-            raise ValueError(f"Unsupported target: {target}")
+            raise UnsupportedTargetError(target)
     
     def set_compiler_path(self, path: str, target: Target):
         """Set compiler path for specified MQL version."""
@@ -51,7 +52,7 @@ class MQLSettings(Settings):
             self.save_if_changed("mql5-compiler-path", str(compiler_path))
         
         else:
-            raise ValueError(f"Unsupported target: {target}")
+            raise UnsupportedTargetError(target)
 
     def get_data_folder_path(self, target: Target) -> Optional[str]:
         """Get compiler path for specified MQL version."""
@@ -62,7 +63,7 @@ class MQLSettings(Settings):
             return self.get("mql5-data-folder-path")
         
         else:
-            raise ValueError(f"Unsupported target: {target}")
+            raise UnsupportedTargetError(target)
     
     def set_data_folder_path(self, path: str, target: Target):
         """Set compiler path for specified MQL version."""
@@ -73,4 +74,4 @@ class MQLSettings(Settings):
             self.save_if_changed("mql5-data-folder-path", str(path))
         
         else:
-            raise ValueError(f"Unsupported target: {target}")
+            raise UnsupportedTargetError(target)

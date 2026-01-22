@@ -6,7 +6,7 @@ from .exceptions import (
     UnsupportedTargetError,
     NoFilesToCompileError,
     CompilationFailedError,
-    IncludePathNotFoundError
+    MQLIncludePathNotFoundError
 )
 
 __all__ = [
@@ -15,5 +15,5 @@ __all__ = [
     'UnsupportedTargetError',
     'NoFilesToCompileError',
     'CompilationFailedError',
-    'IncludePathNotFoundError'
+    'MQLIncludePathNotFoundError'
 ]
