@@ -6,6 +6,7 @@ from typing import Optional, List
 from dataclasses import dataclass
 from enum import Enum
 
+from knitpkg.core.exceptions import InvalidUsageError
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.console import Console, ConsoleAware
 from knitpkg.mql.models import MQLKnitPkgManifest, Target
@@ -24,8 +25,7 @@ from knitpkg.mql.exceptions import (
     CompilationExecutionError,
     CompilationLogNotFoundError,
     CompilationFileNotFoundError,
-    CompilationInvalidEntrypointError,
-    InvalidUsageError
+    CompilationInvalidEntrypointError
 )
 
 

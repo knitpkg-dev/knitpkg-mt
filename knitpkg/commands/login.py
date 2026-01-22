@@ -55,12 +55,12 @@ def register(app):
             console_awr.print("")
 
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠️ Login cancelled by user.[/bold yellow]")
+            console_awr.print("\n[bold yellow]⚠️  Login cancelled by user.[/bold yellow]")
             console_awr.print("")
             raise typer.Exit(code=1)
 
         except RegistryError as e:
-            console_awr.print(f"[bold red]❌ Registry error:[/bold red] {e}. Reason: {e.reason} ")
+            console_awr.print(f"\n[bold red]❌ Registry error:[/bold red] {e}. Reason: {e.reason} ")
             if verbose:
                 console_awr.log(f"  Status Code: {e.status_code}")
                 console_awr.log(f"  Error type: {e.error_type}")
@@ -69,11 +69,11 @@ def register(app):
             raise typer.Exit(code=1)
         
         except KnitPkgError as e:
-            console_awr.print(f"[bold red]❌ Login failed:[/bold red] {e}")
+            console_awr.print(f"\n[bold red]❌ Login failed:[/bold red] {e}")
             console_awr.print("")
             raise typer.Exit(code=1)
         
         except Exception as e:
-            console_awr.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console_awr.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}")
             console_awr.print("")
             raise typer.Exit(code=1)

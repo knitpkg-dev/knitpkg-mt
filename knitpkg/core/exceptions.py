@@ -204,3 +204,15 @@ class ManifestLoadError(ManifestError):
         self.details = details
         super().__init__(f"Error loading {file_path}: {details}")
 
+
+# ==============================================================
+# USAGE ERRORS
+# ==============================================================
+
+class InvalidUsageError(KnitPkgError):
+    """Raised when the user provides invalid command-line arguments or options."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(f"Invalid usage: {message}")
+

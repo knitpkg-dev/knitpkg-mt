@@ -10,7 +10,7 @@ from knitpkg.core.console import Console, ConsoleAware
 # Import MQL-specific downloader
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from knitpkg.core.global_config import get_registry_url
-from knitpkg.mql.exceptions import InvalidUsageError
+from knitpkg.core.exceptions import InvalidUsageError
 
 # ==============================================================
 # AUTOCOMPLETE GENERATOR CLASS

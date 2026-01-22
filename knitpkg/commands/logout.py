@@ -54,16 +54,16 @@ def register(app):
             console_awr.print("")
 
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠️ Logout cancelled by user.[/bold yellow]")
+            console_awr.print("\n[bold yellow]⚠️  Logout cancelled by user.[/bold yellow]")
             console_awr.print("")
             raise typer.Exit(code=1)
 
         except KnitPkgError as e:
-            console_awr.print(f"[bold red]❌ Logout failed:[/bold red] {e}")
+            console_awr.print(f"\n[bold red]❌ Logout failed:[/bold red] {e}")
             console_awr.print("")
             raise typer.Exit(code=1)
         
         except Exception as e:
-            console_awr.print(f"[bold red]❌ Unexpected error:[/bold red] {e}")
+            console_awr.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}")
             console_awr.print("")
             raise typer.Exit(code=1)

@@ -137,9 +137,3 @@ class CompilationInvalidEntrypointError(MQLCompilationError):
         super().__init__(f"Invalid entrypoint file extension: {file_path}. Supported extensions: .mq4, .mq5, .mqh")
 
 
-class InvalidUsageError(KnitPkgError):
-    """Raised when the user provides invalid command-line arguments or options."""
-
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(f"Invalid usage: {message}")
