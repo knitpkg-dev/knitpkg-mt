@@ -424,20 +424,19 @@ class ProjectInstaller(ConsoleAware):
                 f"(project type is 'package')"
             )
 
-    def _log_dependency_tree(self, dependency_tree: ProjectNode) -> None:
+    def _log_dependency_tree(self, root_node: ProjectNode) -> None:
         """Log the dependency tree in a readable format."""
         self.print("\n🌳 [bold cyan]Dependency Tree:[/]") 
-        for node in dependency_tree.dependencies:
-            self._log_tree_node(node, "")
+        self._log_tree_node(root_node, "")
         self.print("")
 
     def _log_tree_node(self, node: ProjectNode, prefix: str) -> None:
         """Recursively log a dependency tree node."""
-        current_prefix = "├── " if not node.is_root else "└── "
+        current_prefix = " ├── " if not node.is_root else " └── "
 
         self.print(f"{prefix}{current_prefix}[bold]{node.name}[/] : {node.version}")
 
-        child_prefix = prefix + ("│   " if not node.is_root else "    ")
+        child_prefix = prefix + (" │   " if not node.is_root else "     ")
         for child in node.dependencies:
             self._log_tree_node(child, child_prefix)
 

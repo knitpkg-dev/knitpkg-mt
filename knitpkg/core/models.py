@@ -269,7 +269,7 @@ class KnitPkgManifest(BaseModel):
 
             if not _is_valid_ref(spec):
                 raise ValueError(
-                    f"Invalid version/reference in dependency '{dep_name}': #{ref}\n"
+                    f"Invalid version/reference in dependency '{dep_name}': {spec}\n"
                     "Valid formats:\n"
                     "  1.2.3           v1.2.3           ^1.2.0           ~1.2.3\n"
                     "  >=1.0.0 <2.0.0   >1.5.0           <=3.0.0\n"

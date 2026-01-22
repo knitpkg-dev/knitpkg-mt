@@ -144,7 +144,7 @@ class DependencyDownloader(ConsoleAware):
         dependencies = manifest.dependencies or {}
 
         root: ProjectNode = ProjectNode(
-            name=manifest.name,
+            name=f"@{manifest.organization.lower()}/{manifest.name.lower()}",
             path=self.project_dir,
             resolved_path=self.project_dir.resolve(),
             version=manifest.version,
@@ -155,6 +155,9 @@ class DependencyDownloader(ConsoleAware):
         self._overrides: dict = manifest.overrides
 
         for name, spec in dependencies.items():
+            org, dep_name = self._parse_project_name(name)
+            if not org:
+                name = f"@{manifest.organization.lower()}/{dep_name.lower()}"
             self._download_dependency(name, spec, root)
 
         if self.verbose:
@@ -518,6 +521,9 @@ class DependencyDownloader(ConsoleAware):
                     f"{len(sub_manifest.dependencies)} dep(s)"
                 )
                 for sub_name, sub_spec in sub_manifest.dependencies.items():
+                    org, dep_name = self._parse_project_name(sub_name)
+                    if not org:
+                        sub_name = f"@{sub_manifest.organization.lower()}/{dep_name.lower()}"
                     self._download_dependency(sub_name, sub_spec, dep_node)
 
             return True
