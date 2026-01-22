@@ -33,14 +33,12 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace
     """
     console_awr = ConsoleAware(console=console, verbose=True if verbose else False)
 
-    console_awr.print(f"[bold green]🚀 Starting build for project in[/bold green] [cyan]{project_dir}[/cyan]")
-
     # 1. Load the project manifest
     manifest: MQLKnitPkgManifest = load_knitpkg_manifest(project_dir, manifest_class=MQLKnitPkgManifest)
-
-    console_awr.print(f"   [bold]Project Name:[/bold] [yellow]{manifest.name}[/yellow]")
-    console_awr.print(f"   [bold]Project Type:[/bold] [magenta]{manifest.type}[/magenta]")
-    console_awr.print(f"   [bold]Version:[/bold] [magenta]{manifest.version}[/magenta]")
+    console_awr.print(
+                f"🚀 [bold][green]Build[/green] → "
+                f"[cyan]@{manifest.organization}/{manifest.name}[/cyan] : {manifest.version}[/bold]"
+            )
 
     # 2. Execute commands based on project type
     project_type = MQLProjectType(manifest.type) # Assumes `manifest.type` is an Enum and has `.value`
@@ -54,7 +52,7 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace
     console_awr.print("\n[cyan]▶️  Compiling project...[/cyan]")
     compile_command(project_dir, inplace, entrypoints_only, compile_only, console, verbose)
 
-    console_awr.print("\n[bold green]✅ Build completed successfully![/bold green]")
+    console_awr.print("[bold green]✅ Build completed successfully![/bold green]")
 
 
 # ----------------------------------------------------------------------

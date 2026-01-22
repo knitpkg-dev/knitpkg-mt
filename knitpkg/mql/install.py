@@ -401,7 +401,7 @@ class ProjectInstaller(ConsoleAware):
         effective_mode: IncludeMode
     ) -> None:
         self.print(  
-            f"📦 [bold magenta]Install[/] → [bold cyan]@{manifest.organization}/{manifest.name}[/] : "
+            f"📦 [bold magenta]Install[/] → [cyan]@{manifest.organization}/{manifest.name}[/] : "
             f"{manifest.version} ({manifest.type})"
         )
         if effective_mode != manifest.include_mode:
