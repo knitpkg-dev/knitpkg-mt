@@ -13,14 +13,14 @@ _NUMERIC_PART = r"(?:0|[1-9]\d*)"
 _VERSPEC_PATTERN = (
     r"^\s*"  # Allows leading spaces
     r"(?:"
-    # 1. Exact version (e.g., "1.2.3", "v1.2.3", "1.2.3-alpha.1+build.123")
-    r"(?:v|V)?" + _SEMVER_CORE_PATTERN +
+    # 1. Exact version (e.g., "1.2.3", "1.2.3", "1.2.3-alpha.1+build.123")
+    r"" + _SEMVER_CORE_PATTERN +
     r"|"
     # 2. Caret range (e.g., "^1.2.3", "^0.0.0")
-    r"\^(?:v|V)?" + _SEMVER_CORE_PATTERN +
+    r"\^" + _SEMVER_CORE_PATTERN +
     r"|"
     # 3. Tilde range (e.g., "~1.2.3", "~0.0.0")
-    r"~" + r"(?:v|V)?" + _SEMVER_CORE_PATTERN +
+    r"~" + _SEMVER_CORE_PATTERN +
     r"|"
     # 4. Wildcard versions (e.g., "1.x", "1.2.x", "1.*", "1.2.*", "*", "x")
     r"(?:"
@@ -36,8 +36,8 @@ _VERSPEC_PATTERN = (
     r"|"
     # 5. Range operators (e.g., ">=1.0.0", "<2.0.0", ">=1.0.0 <2.0.0")
     r"(?:"
-        r"(?:[<>=~^]+)\s*(?:v|V)?" + _SEMVER_CORE_PATTERN +
-        r"(?:\s+(?:[<>=~^]+)\s*(?:v|V)?" + _SEMVER_CORE_PATTERN + r")*"
+        r"(?:[<>=~^]+)\s*" + _SEMVER_CORE_PATTERN +
+        r"(?:\s+(?:[<>=~^]+)\s*" + _SEMVER_CORE_PATTERN + r")*"
     r")"
     r")"
     r"\s*$"  # Allows trailing spaces

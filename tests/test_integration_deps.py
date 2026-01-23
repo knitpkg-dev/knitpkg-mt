@@ -2,6 +2,7 @@
 from knitpkg.commands.install import ProjectInstaller
 from knitpkg.commands.autocomplete import AutocompleteGenerator
 from pathlib import Path
+from typing import Optional
 import pytest
 
 # --- MockConsole para capturar a saída ---
@@ -447,7 +448,7 @@ dependencies:
 """
 
 # --- Helper function to create project files ---
-def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_content: str, yaml_content: str, mq5_path: str = None, mq5_content: str = None):
+def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_content: str, yaml_content: str, mq5_path: Optional[str] = None, mq5_content: Optional[str] = None):
     project_path = root_dir / project_name
     project_path.mkdir(parents=True, exist_ok=True)
 
@@ -468,7 +469,7 @@ def create_project_files(root_dir: Path, project_name: str, mqh_path: str, mqh_c
         with open(mq5_file_path, "w", encoding="utf-8") as f:
             f.write(mq5_content)
 
-def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str, expert_test_mq5_content: str, expert_test_mqh_content: str) -> str:
+def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: str, expert_test_mq5_content: str, expert_test_mqh_content: str) -> Path:
     """
     Tests the resolution of a complex dependency tree (4 levels with merge)
     and the correct generation of the flat include file by instantiating KnitPkgInstaller directly.
@@ -497,12 +498,12 @@ def create_test_dir_with_all_projects(tmp_path: Path, expert_test_yaml_content: 
 
     # Instantiate InstallCommand and call install directly
     # The InstallCommand expects a Console instance
-    installer = ProjectInstaller(console=mock_console, project_dir=expert_test_path)
+    installer = ProjectInstaller(console=mock_console, project_dir=expert_test_path, locked_mode=False, verbose=False)
 
     print(f"\nRunning KnitPkgInstaller.install for {expert_test_path}")
     try:
         # The install method expects the path to the project root
-        installer.install(locked_mode=False, show_tree=True)
+        installer.install(show_tree=True)
 
         # Print captured output for debugging if needed
         print("\n--- Captured Console Logs ---")
@@ -602,7 +603,7 @@ def test_autocomplete(tmp_path: Path):
 
     # Instantiate AutocompleteGenerator and call generate directly
     # The AutocompleteGenerator expects a Console instance
-    generator = AutocompleteGenerator(mock_console, depd_test_path)
+    generator = AutocompleteGenerator(depd_test_path, mock_console)
 
     print(f"\nRunning AutocompleteGenerator.generate for {depd_test_path}")
     try:
