@@ -24,7 +24,7 @@ from knitpkg.core.path_helper import is_local_path
 from knitpkg.core.constants import CACHE_DIR
 from knitpkg.core.models import ProjectType, KnitPkgManifest
 from knitpkg.core.console import ConsoleAware, Console
-from knitpkg.core.resolve_helper import normalize_dep_name
+from knitpkg.core.resolve_helper import normalize_dep_name, parse_project_name
 
 # Import custom exceptions
 from knitpkg.core.exceptions import (
@@ -178,7 +178,7 @@ class DependencyDownloader(ConsoleAware):
         Raises:
             RegistryRequestError: If registry request fails
         """
-        org, pack_name = self._parse_project_name(dep_name)
+        org, pack_name = parse_project_name(dep_name)
 
         registry: Registry = Registry(registry_base_url, self.console, self.verbose)
         response_json = registry.resolve_package(self._target, org, pack_name, version_spec)
@@ -301,6 +301,17 @@ class DependencyDownloader(ConsoleAware):
         else:
             self._handle_remote_dependency(dep_name, specifier, overrides, parent)
 
+    def _resolve_local_path(self, dep_name: str, dep_path: Path) -> Path:
+        """Resolve local dependency path."""
+        if dep_path.is_absolute() and dep_path.exists():
+            return dep_path.resolve()
+        
+        resolved_path = self.project_dir / dep_path
+        if resolved_path.exists():
+            return resolved_path.resolve()
+        
+        raise LocalDependencyNotFoundError(dep_name, str(dep_path))
+
     def _handle_local_dependency(self, dep_name: str, specifier: str, overrides: Dict[str, str], parent: ProjectNode):
         """
         Handle local dependency resolution.
@@ -319,16 +330,13 @@ class DependencyDownloader(ConsoleAware):
         else:
             dep_path = Path(specifier)
 
-        if not dep_path.exists():
-            raise LocalDependencyNotFoundError(dep_name, str(dep_path))
-        
-        resolved_path = dep_path.resolve()
+        resolved_path = self._resolve_local_path(dep_name, dep_path)
 
         self.log(f"[bold magenta]Local[/] {dep_name}")
 
         # Load manifest to get version
         try:
-            manifest = load_knitpkg_manifest(dep_path, self.manifest_type)
+            manifest = load_knitpkg_manifest(resolved_path, self.manifest_type)
             version = manifest.version
         except Exception:
             raise LocalDependencyManifestError(dep_name, str(dep_path))

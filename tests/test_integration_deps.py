@@ -402,6 +402,7 @@ void OnTick()
 
 EXPERT_TEST_YAML_CONTENT_1 = """
 name: ExpertTest
+organization: NullSolutions
 version: 1.0.0
 type: expert
 target: MQL5
@@ -419,6 +420,7 @@ dependencies:
 
 EXPERT_TEST_YAML_CONTENT_2 = """
 name: ExpertTest
+organization: Acme
 version: 1.0.0
 type: expert
 target: MQL5
@@ -434,6 +436,7 @@ dependencies:
 
 EXPERT_TEST_YAML_CONTENT_3 = """
 name: ExpertTest
+organization: NullSolutions
 version: 1.0.0
 type: expert
 target: MQL5
