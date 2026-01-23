@@ -20,10 +20,11 @@ import git
 from knitpkg.core.registry import Registry
 from knitpkg.core.lockfile import LockFile
 from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.core.utils import is_local_path
+from knitpkg.core.path_helper import is_local_path
 from knitpkg.core.constants import CACHE_DIR
 from knitpkg.core.models import ProjectType, KnitPkgManifest
 from knitpkg.core.console import ConsoleAware, Console
+from knitpkg.core.resolve_helper import normalize_dep_name
 
 # Import custom exceptions
 from knitpkg.core.exceptions import (
@@ -154,22 +155,16 @@ class DependencyDownloader(ConsoleAware):
         
         overrides: dict[str, str]
         if manifest.overrides:
-            overrides = {self._normalize_dep_name(name, manifest.organization): spec for name, spec in manifest.overrides.items()}
+            overrides = {normalize_dep_name(name, manifest.organization): spec for name, spec in manifest.overrides.items()}
         else:
             overrides = {}
 
         for name, spec in dependencies.items():
-            name = self._normalize_dep_name(name, manifest.organization)
+            name = normalize_dep_name(name, manifest.organization)
             self._download_dependency(name, spec, overrides, root)
 
         return root
     
-    def _normalize_dep_name(self, name: str, organization: str) -> str:
-        org, dep_name = self._parse_project_name(name)
-        if org:
-            return name
-        return f"@{organization.lower()}/{dep_name.lower()}"
-
     def _get_package_resolve_dist(self, registry_base_url: str, dep_name: str, version_spec: str) -> dict:
         """Resolve project distribution info from registry.
         
@@ -297,8 +292,6 @@ class DependencyDownloader(ConsoleAware):
         Returns:
             Resolved path or None if already resolved
         """
-        dep_name = dep_name.lower()
-
         if self._root_node.is_resolved(dep_name):
             self.log(f"[dim]Skip[/] {dep_name} (already resolved)")
             return
@@ -447,14 +440,6 @@ class DependencyDownloader(ConsoleAware):
         
         return dep_resolved_path
 
-
-    def _parse_project_name(self, name: str) -> tuple[str, str]:
-        """Parse package name format @org/package-name into (org, pack_name) tuple."""
-        if name.startswith('@') and '/' in name:
-            parts = name[1:].split('/', 1)
-            return parts[0], parts[1]
-        return '', name
-
     def _check_repo_integrity(self, repo_url: str, dep_resolved_path: Path) -> str:
         """Check the state of a local repository dependency."""
         try:
@@ -525,14 +510,15 @@ class DependencyDownloader(ConsoleAware):
 
             # Merge overrides (parent overrides take precedence)
             overrides_dep = overrides.copy()
-            for sub_dep_name, sub_spec in sub_manifest.overrides.items():
-                sub_dep_name = self._normalize_dep_name(sub_dep_name, sub_manifest.organization)
-                if sub_dep_name not in overrides_dep:
-                    overrides_dep[sub_dep_name] = sub_spec
+            for sub_ovr_name, sub_ovr_version in sub_manifest.overrides.items():
+                sub_ovr_name = normalize_dep_name(sub_ovr_name, sub_manifest.organization)
+                if sub_ovr_name not in overrides_dep:
+                    overrides_dep[sub_ovr_name] = sub_ovr_version
 
-            for sub_name, sub_spec in sub_manifest.dependencies.items():
-                sub_name = self._normalize_dep_name(sub_name, sub_manifest.organization)
-                self._download_dependency(sub_name, sub_spec, overrides_dep, dep_node)
+            # Process recursive sub-dependencies
+            for sub_dep_name, sub_dep_spec in sub_manifest.dependencies.items():
+                sub_dep_name = normalize_dep_name(sub_dep_name, sub_manifest.organization)
+                self._download_dependency(sub_dep_name, sub_dep_spec, overrides_dep, dep_node)
 
         return True
 

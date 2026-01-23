@@ -1,4 +1,3 @@
-import typer
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from pathlib import Path
@@ -16,6 +15,8 @@ from knitpkg.mql import project_init_templates as templates
 from knitpkg.core.console import Console, ConsoleAware
 from knitpkg.core.exceptions import InvalidUsageError
 
+from knitpkg.core.models import PROJECT_NAME_RE, ORGANIZATION_RE
+from knitpkg.core.version_handling import validate_version
 
 class IndicatorInputType(str, Enum):
     """Indicator data input type."""
@@ -51,33 +52,12 @@ class ProjectInitializer(ConsoleAware):
 
     def validate_project_name(self, name: str) -> bool:
         """Validates if the project name is suitable for a directory name."""
-        return re.fullmatch(r"^[\w\-\.]+$", name) is not None
+        return PROJECT_NAME_RE.fullmatch(name) is not None
 
     def validate_organization_name(self, name: str) -> bool:
         """Validates organization name. Accepts empty or alphanumeric pattern."""
-        return re.fullmatch(r"^[\w\-\.]+$", name) is not None
+        return ORGANIZATION_RE.fullmatch(name) is not None
     
-    def validate_version(self, version: Optional[str]) -> bool:
-        """Validates version string against SemVer format with major version > 0."""""
-        if not version:
-            return False
-        
-        # Validate SemVer format and check major version
-        semver_pattern = re.compile(
-            r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
-            r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?" 
-            r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
-        )
-        
-        match = semver_pattern.match(version)
-        if not match:
-            return False
-        
-        major_version = int(match.group('major'))
-        if major_version == 0:
-            return False
-        return True
-
     def get_gitignore_content(self) -> str:
         """Returns the appropriate .gitignore content based on project type."""
         if self.project_type == MQLProjectType.PACKAGE:
@@ -302,14 +282,14 @@ class ProjectInitializer(ConsoleAware):
         if version is None:
             while True:
                 version = Prompt.ask("Project version (SemVer)", default="1.0.0")
-                if self.validate_version(version):
+                if validate_version(version):
                     self.version = version
                     break
                 self.print(
                     f"[red]Invalid version: `{version}`. Only SemVer or ranges are accepted.[/]"
                 )
         else:
-            if not self.validate_version(version):
+            if not validate_version(version):
                 raise InvalidUsageError(f"Invalid version: `{version}`. Only SemVer or ranges are accepted.")
         self.version = version
 

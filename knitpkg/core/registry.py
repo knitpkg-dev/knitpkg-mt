@@ -192,7 +192,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.get(
-                f"{self.base_url}/project/resolve/{target}/{org}/{pack_name}/{version_spec}",
+                f"{self.base_url}/project/{target}/{org}/{pack_name}/{version_spec}/resolve",
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider} if provider and token else None,
                 timeout=10.0

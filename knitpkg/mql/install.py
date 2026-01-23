@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import List, Set, Optional
 
-from knitpkg.core.utils import navigate_path
+from knitpkg.core.path_helper import navigate_path
 from knitpkg.core.file_reading import load_knitpkg_manifest, read_source_file_smart
 
 from knitpkg.mql.constants import FLAT_DIR, INCLUDE_DIR

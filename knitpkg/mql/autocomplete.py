@@ -3,7 +3,7 @@ from pathlib import Path
 
 from knitpkg.mql.models import ProjectType, MQLKnitPkgManifest
 from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.core.utils import navigate_path
+from knitpkg.core.path_helper import navigate_path
 from knitpkg.mql.constants import INCLUDE_DIR
 from knitpkg.core.console import Console, ConsoleAware
 

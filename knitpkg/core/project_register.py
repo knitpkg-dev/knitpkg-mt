@@ -9,7 +9,7 @@ from knitpkg.core.registry import Registry
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.exceptions import KnitPkgError, RegistryError
 from knitpkg.core.models import KnitPkgManifest
-from knitpkg.core.utils import is_local_path
+from knitpkg.core.path_helper import is_local_path
 
 T = TypeVar('T', bound=KnitPkgManifest)
 
