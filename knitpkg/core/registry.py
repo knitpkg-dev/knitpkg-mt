@@ -244,6 +244,36 @@ class Registry(ConsoleAware):
         except httpx.HTTPStatusError as e:
             raise RegistryError(e)
 
+    def get_project_info(self, target: str, organization: str, project_name: str) -> dict:
+        """Get project information from the registry.
+        
+        Args:
+            target: Target platform (e.g., 'mt5')
+            organization: Organization name
+            project_name: Package name
+            
+        Returns:
+            Dict containing project information
+        """
+        try:
+            provider, token = self._get_credentials()
+        except TokenNotFoundError:
+            # If no token found, proceed without auth (for public projects)
+            provider = None
+            token = None
+
+        try:
+            response = httpx.get(
+                f"{self.base_url}/project/{target}/{organization}/{project_name}",
+                headers={"Authorization": f"Bearer {token}",
+                        "X-Provider": provider} if provider and token else None,
+                timeout=10.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise RegistryError(e)
+
     def _fetch_registry_config(self, provider: Optional[str] = None) -> Tuple[str, str, str]:
         """Fetch provider configuration from registry."""
 

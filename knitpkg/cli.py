@@ -19,7 +19,8 @@ from knitpkg.commands import (
     global_config,
     register,
     whoami,
-    yank
+    yank,
+    info
     # deploy, # Not yet implemented
 )
 
@@ -44,6 +45,7 @@ register.register(app)
 logout.register(app)
 whoami.register(app)
 yank.register(app)
+info.register(app)
 
 @app.callback()
 def main(
