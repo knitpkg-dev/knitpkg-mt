@@ -170,6 +170,22 @@ class Registry(ConsoleAware):
         except httpx.HTTPStatusError as e:
             raise RegistryError(e)
 
+    def whoami(self) -> dict:
+        """Get current user information from registry."""
+        provider, token = self._get_credentials()
+
+        try:
+            response = httpx.get(
+                f"{self.base_url}/auth/whoami",
+                headers={"Authorization": f"Bearer {token}",
+                        "X-Provider": provider},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise RegistryError(e)
+
     def resolve_package(self, target: str, org: str, pack_name: str, version_spec: str) -> dict:
         """Resolve package distribution info from registry. This is the only method that does
         NOT require initialization, as it can work with public packages.
@@ -249,3 +265,8 @@ class Registry(ConsoleAware):
         response.raise_for_status()
         return response.json()
     
+if __name__ == "__main__":
+    from rich.console import Console as RichConsole
+    c = RichConsole()
+    r = Registry('http://localhost:8000',c)
+    c.print(r.whoami())
