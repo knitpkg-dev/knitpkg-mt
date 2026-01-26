@@ -218,6 +218,32 @@ class Registry(ConsoleAware):
         except httpx.HTTPStatusError as e:
             raise RegistryError(e)
 
+    def yank(self, target: str, organization: str, project_name: str, version: str) -> dict:
+        """Yank a package version from the registry.
+        
+        Args:
+            target: Target platform (e.g., 'mt5')
+            organization: Organization name
+            project_name: Package name
+            version: Version to yank
+            
+        Returns:
+            Dict containing yank response
+        """
+        provider, token = self._get_credentials()
+
+        try:
+            response = httpx.post(
+                f"{self.base_url}/project/{target}/{organization}/{project_name}/{version}/yank",
+                headers={"Authorization": f"Bearer {token}",
+                        "X-Provider": provider},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise RegistryError(e)
+
     def _fetch_registry_config(self, provider: Optional[str] = None) -> Tuple[str, str, str]:
         """Fetch provider configuration from registry."""
 
@@ -265,8 +291,3 @@ class Registry(ConsoleAware):
         response.raise_for_status()
         return response.json()
     
-if __name__ == "__main__":
-    from rich.console import Console as RichConsole
-    c = RichConsole()
-    r = Registry('http://localhost:8000',c)
-    c.print(r.whoami())

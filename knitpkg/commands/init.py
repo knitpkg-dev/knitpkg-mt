@@ -54,8 +54,9 @@ def register(app):
             False, "--dry-run", "-d", help="Show what would be done without making actual changes."
         ),
         project_type: MQLProjectType = typer.Option(
-            None, "--type", "-t", help="Project type (package, expert, indicator, library, service)."
+            None, "--type", help="Project type (package, expert, indicator, library, service)."
         ),
+        target: Target = typer.Option(None, "--target", "-t", help="MetaTrader platform target (MQL4 or MQL5)."),
         name: str = typer.Option(
             None,
             "--name",
@@ -74,7 +75,6 @@ def register(app):
         description: str = typer.Option(None, "--description", help="Short project description."),
         author: str = typer.Option(None, "--author", help="Author's name."),
         license: str = typer.Option(None, "--license", help="License identifier (e.g., MIT)."),
-        target: Target = typer.Option(None, "--target", help="MetaTrader platform target (MQL4 or MQL5)."),
         include_mode: IncludeMode = typer.Option(
             None, "--include-mode", help="Include resolution mode (include or flat)."
         ),
