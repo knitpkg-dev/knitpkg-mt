@@ -411,6 +411,12 @@ class DependencyDownloader(ConsoleAware):
 
         dist_info = self._get_package_resolve_dist(registry_base_url, dep_name, version_spec)
 
+        if dist_info['yank']:
+            self.print(
+                f"[bold yellow]Warning:[/] Dependency '{dep_name}' version "
+                f"'{dist_info['resolved_version']}' has been yanked from the registry."
+            )
+
         dep_resolved_path = self.project_dir / CACHE_DIR / f"{dep_name.strip().lower().replace('/', '_')}"
         if dep_resolved_path.exists():
             status = self._check_repo_integrity(dist_info['repo_url'], dep_resolved_path)

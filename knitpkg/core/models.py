@@ -79,9 +79,20 @@ class KnitPkgManifest(BaseModel):
         description="Project name (alphanumeric, hyphens, underscores, dots only)"
     )
 
+    description: str = Field(
+        ...,
+        max_length=500,
+        description="Short project description"
+    )
+
     version: str = Field(
         ...,
         description="Semantic Versioning string (e.g. 1.0.0)"
+    )
+
+    version_description: Optional[str] = Field(
+        default=None,
+        description="Description of the version/changes"
     )
 
     # Base project type (only 'package' at this level)
@@ -93,12 +104,6 @@ class KnitPkgManifest(BaseModel):
     keywords: Optional[List[str]] = Field(
         default=None,
         description="List of keywords for package discovery"
-    )
-
-    description: str = Field(
-        ...,
-        max_length=500,
-        description="Short project description"
     )
 
     author: Optional[str] = Field(
