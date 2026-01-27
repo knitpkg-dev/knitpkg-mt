@@ -39,7 +39,7 @@ def register(app):
         global_setting: bool = typer.Option(
             True,
             "--global/--local",
-            help="Set global or local telemetry. Local means it is enabled only for this project."
+            help="Set global or local telemetry. `global` enables telemetry globally for all projects of this user; `local` means it is enabled only for this project."
         ),
         project_dir: Path = typer.Option(
             None,

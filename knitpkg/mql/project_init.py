@@ -484,7 +484,7 @@ class ProjectInitializer(ConsoleAware):
                 "Are you sure? The KnitPkg ecosystem's vitality depends on community participation. "
                 "Without telemetry data, we cannot effectively improve and maintain this critical infrastructure."
             )
-            enable_telemetry = Confirm.ask("Proceed with disabling telemetry?", default=False)
+            enable_telemetry = Confirm.ask("Enable telemetry for this project? ( please say 'yes' :-D )", default=False)
 
         self.enable_telemetry = enable_telemetry
 
