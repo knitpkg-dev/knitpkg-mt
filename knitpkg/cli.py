@@ -20,7 +20,8 @@ from knitpkg.commands import (
     register,
     whoami,
     yank,
-    info
+    info,
+    telemetry
     # deploy, # Not yet implemented
 )
 
@@ -46,6 +47,7 @@ logout.register(app)
 whoami.register(app)
 yank.register(app)
 info.register(app)
+telemetry.register(app)
 
 @app.callback()
 def main(

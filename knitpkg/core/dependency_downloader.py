@@ -11,8 +11,9 @@ overridden by subclasses.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Tuple
 from dataclasses import dataclass
+from enum import Enum
 
 import shutil
 import git
@@ -41,17 +42,35 @@ from knitpkg.core.exceptions import (
 # ==============================================================
 # TYPE DEFINITIONS
 # ==============================================================
+class ProjectNodeStatus(str, Enum):
+    PENDING = "pending"
+    AVAILABLE = "available"
+    CLEAN = "clean"
+    DIRTY = "dirty"
+    INSTALLED = "installed"
+
+
+class RepoIntegrityStatus(str, Enum):
+    INVALID_REMOTE_URL = "invalid_remote_url"
+    DIRTY = "dirty"
+    CLEAN = "clean"
+    NOT_GIT = "not-git"
+    INVALID = "invalid"
+
 
 @dataclass
 class ProjectNode:
     """Represents a resolved dependency with hierarchy information."""
+    id: Optional[int]
     name: str
     path: Path
     resolved_path: Path  # Canonical path for deduplication
     version: str
     is_root: bool
+    is_private: Optional[bool]
     dependencies: List['ProjectNode']
     parent: Optional['ProjectNode'] = None
+    status: Optional[ProjectNodeStatus] = ProjectNodeStatus.PENDING
 
     def __post_init__(self):
         for child in self.dependencies:
@@ -81,9 +100,9 @@ class ProjectNode:
         """Get all resolved dependency names in tree (including self)."""
         return self._collect_post_order(add_root, lambda x: x.name)
     
-    def resolved_dependencies(self, add_root: bool = False) -> List[tuple[str, Path]]:
+    def resolved_nodes(self, add_root: bool = False) -> List['ProjectNode']:
         """Get all resolved canonical paths in tree (including self)."""
-        return self._collect_post_order(add_root, lambda x: (x.name, x.resolved_path))
+        return self._collect_post_order(add_root, lambda x: (x))
 
 # ==============================================================
 # DEPENDENCY DOWNLOADER CLASS
@@ -144,11 +163,13 @@ class DependencyDownloader(ConsoleAware):
         dependencies = manifest.dependencies or {}
 
         root: ProjectNode = ProjectNode(
+            id=None,
             name=f"@{manifest.organization.lower()}/{manifest.name.lower()}",
             path=self.project_dir,
             resolved_path=self.project_dir.resolve(),
             version=manifest.version,
             is_root=True,
+            is_private=None,
             dependencies=[]
         )
         self._root_node: ProjectNode = root
@@ -163,8 +184,24 @@ class DependencyDownloader(ConsoleAware):
             name = normalize_dep_name(name, manifest.organization)
             self._download_dependency(name, spec, overrides, root)
 
+        root_project_info = self._get_project_info_skip_versions(manifest.organization.lower(), manifest.name.lower())
+        if root_project_info:
+            root.id = root_project_info.get('id', None)
+            root.is_private = root_project_info.get('is_private', None)
+        
+        root.status = DependencyDownloader._get_project_node_status(DependencyDownloader._check_repo_integrity(None, self.project_dir))
+
         return root
     
+    def _get_project_info_skip_versions(self, organization: str, project_name: str) -> Optional[dict]:
+        """Get project ID from registry."""
+        try:
+            registry: Registry = Registry(self.default_registry_base_url, None, False)
+            project_info = registry.get_project_info(self._target, organization, project_name, True)
+            return project_info
+        except:
+            return None
+
     def _get_package_resolve_dist(self, registry_base_url: str, dep_name: str, version_spec: str) -> dict:
         """Resolve project distribution info from registry.
         
@@ -343,11 +380,14 @@ class DependencyDownloader(ConsoleAware):
 
         # Create dependency node
         dep_node = ProjectNode(
+            id=None,
             name=dep_name,
             path=dep_path,
             resolved_path=resolved_path,
             version=version,
             is_root=False,
+            is_private=None,
+            status=ProjectNodeStatus.AVAILABLE,
             dependencies=[]
         )
 
@@ -361,9 +401,9 @@ class DependencyDownloader(ConsoleAware):
         """Handle remote dependency resolution."""
         if dep_name in overrides:
             self.print(f"[bold][yellow]Override[/yellow] {dep_name} → {overrides[dep_name]}")
-            resolved_path = self._download_from_git_remote(dep_name, overrides[dep_name])    
+            resolved_path, dist_info, repo_status = self._download_from_git_remote(dep_name, overrides[dep_name])    
         else:
-            resolved_path = self._download_from_git_remote(dep_name, specifier)
+            resolved_path, dist_info, repo_status = self._download_from_git_remote(dep_name, specifier)
 
         # Load manifest to get version
         try:
@@ -374,11 +414,14 @@ class DependencyDownloader(ConsoleAware):
 
         # Create dependency node
         dep_node = ProjectNode(
+            id=dist_info['project_id'],
             name=dep_name,
             path=resolved_path,
             resolved_path=resolved_path,
             version=version,
             is_root=False,
+            is_private=not dist_info['is_public'],
+            status=DependencyDownloader._get_project_node_status(repo_status),
             dependencies=[]
         )
 
@@ -387,12 +430,22 @@ class DependencyDownloader(ConsoleAware):
             self.log(f"[green]✔[/] {dep_name}")
 
         return resolved_path
+    
+    @staticmethod
+    def _get_project_node_status(repo_status: RepoIntegrityStatus) -> ProjectNodeStatus:
+        """Map RepoIntegrityStatus to ProjectNodeStatus."""
+        if repo_status == RepoIntegrityStatus.CLEAN:
+            return ProjectNodeStatus.CLEAN
+        elif repo_status == RepoIntegrityStatus.DIRTY:
+            return ProjectNodeStatus.DIRTY
+        else:
+            return ProjectNodeStatus.AVAILABLE
 
     def _download_from_git_remote(
         self,
         dep_name: str,
         specifier: str
-    ) -> Path:
+    ) -> Tuple[Path, dict, RepoIntegrityStatus]:
         """
         Download a remote Git dependency.
 
@@ -411,7 +464,7 @@ class DependencyDownloader(ConsoleAware):
 
         dist_info = self._get_package_resolve_dist(registry_base_url, dep_name, version_spec)
 
-        if dist_info['yank']:
+        if dist_info['yanked']:
             self.print(
                 f"[bold yellow]Warning:[/] Dependency '{dep_name}' version "
                 f"'{dist_info['resolved_version']}' has been yanked from the registry."
@@ -419,9 +472,9 @@ class DependencyDownloader(ConsoleAware):
 
         dep_resolved_path = self.project_dir / CACHE_DIR / f"{dep_name.strip().lower().replace('/', '_')}"
         if dep_resolved_path.exists():
-            status = self._check_repo_integrity(dist_info['repo_url'], dep_resolved_path)
+            status = DependencyDownloader._check_repo_integrity(dist_info['repo_url'], dep_resolved_path)
 
-            if status == "dirty":
+            if status == RepoIntegrityStatus.DIRTY:
                 if self.locked_mode:
                     raise DependencyHasLocalChangesError(dep_name)
                 self.print(
@@ -429,7 +482,7 @@ class DependencyDownloader(ConsoleAware):
                     f"— using modified version"
                 )
             
-            elif status == "invalid_remote_url":
+            elif status == RepoIntegrityStatus.INVALID_REMOTE_URL:
                 # Repository exists in cache but remote URL is invalid; clean and download again
                 shutil.rmtree(str(dep_resolved_path.resolve()))
                 self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_resolved_path)
@@ -448,31 +501,34 @@ class DependencyDownloader(ConsoleAware):
                 
         else:
             # Repo cache directory does not exist
+            status = RepoIntegrityStatus.CLEAN
             self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_resolved_path)
             if not self.locked_mode or not lockfile.is_dependency(dep_name):
                 lockfile.update_if_changed(dep_name, specifier, dist_info["resolved_version"], self.default_registry_base_url)
         
-        return dep_resolved_path
+        return dep_resolved_path, dist_info, status
 
-    def _check_repo_integrity(self, repo_url: str, dep_resolved_path: Path) -> str:
+    @staticmethod
+    def _check_repo_integrity(repo_url: Optional[str], dep_resolved_path: Path) -> RepoIntegrityStatus:
         """Check the state of a local repository dependency."""
         try:
             repo: git.Repo = git.Repo(dep_resolved_path, search_parent_directories=True)
             if repo.bare:
                 raise git.InvalidGitRepositoryError
 
-            if not repo.remotes.origin.url or repo.remotes.origin.url != repo_url:
-                return "invalid_remote_url"
+            if repo_url is not None:
+                if not repo.remotes.origin.url or repo.remotes.origin.url != repo_url:
+                    return RepoIntegrityStatus.INVALID_REMOTE_URL
 
             if repo.is_dirty(untracked_files=True):
-                return "dirty"
+                return RepoIntegrityStatus.DIRTY
             
-            return "drifted"
+            return RepoIntegrityStatus.CLEAN
 
         except git.InvalidGitRepositoryError:
-            return "not-git"
+            return RepoIntegrityStatus.NOT_GIT
         except Exception:
-            return "invalid"
+            return RepoIntegrityStatus.INVALID
 
     def _process_recursive_dependencies(
         self,

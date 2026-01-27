@@ -7,6 +7,7 @@ from typing import List, Set, Optional
 
 from knitpkg.core.path_helper import navigate_path
 from knitpkg.core.file_reading import load_knitpkg_manifest, read_source_file_smart
+from knitpkg.core.dependency_downloader import ProjectNodeStatus
 
 from knitpkg.mql.constants import FLAT_DIR, INCLUDE_DIR
 from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType, IncludeMode
@@ -16,8 +17,8 @@ from knitpkg.mql.constants import INCLUDE_DIR
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.dependency_downloader import ProjectNode
 from knitpkg.core.console import Console, ConsoleAware
+from knitpkg.core.telemetry import send_telemetry_data
 
-from knitpkg.core.exceptions import KnitPkgError
 from knitpkg.mql.exceptions import InvalidDirectiveError, IncludeFileNotFoundError
 
 # ==============================================================
@@ -77,10 +78,13 @@ class IncludeModeDelegate(ConsoleAware):
         include_dir.mkdir(parents=True, exist_ok=True)
         total_copied = 0
 
-        resolved_deps: List[tuple[str, Path]] = root_node.resolved_dependencies()
+        resolved_deps = root_node.resolved_nodes()
         self.log(f"[dim]found[/] {len(resolved_deps)} dependency(ies)")
 
-        for dep, dep_path in resolved_deps:
+        for node in resolved_deps:
+            dep = node.name
+            dep_path = node.resolved_path
+
             dep_include_dir = dep_path / "knitpkg" / "include"
             if not dep_include_dir.exists():
                 self.log(f"[dim]no include[/] {dep} → no knitpkg/include/")
@@ -94,6 +98,9 @@ class IncludeModeDelegate(ConsoleAware):
             for src in mqh_files:
                 self._safe_copy_with_conflict_warning(src, include_dir, dep)
                 total_copied += 1
+
+            if node.status == ProjectNodeStatus.CLEAN:
+                node.status = ProjectNodeStatus.INSTALLED
 
         self.log(
             f"[bold green]✔ Include mode:[/] {total_copied} file(s) copied → "
@@ -202,7 +209,7 @@ class FlatModeDelegate(ConsoleAware):
         flat_dir = self.project_dir / FLAT_DIR
         flat_dir.mkdir(parents=True, exist_ok=True)
 
-        resolved_deps: List[tuple[str, Path]] = root_node.resolved_dependencies()
+        resolved_deps: List[ProjectNode] = root_node.resolved_nodes()
 
         for entry in manifest.entrypoints or []:
             src = self.project_dir / entry
@@ -226,6 +233,11 @@ class FlatModeDelegate(ConsoleAware):
             flat_file = flat_dir / f"{src.stem}_flat{src.suffix}"
             flat_file.write_text(content, encoding="utf-8")
             self.log(f"[green]✔[/] {flat_file.name} generated")
+        
+        # Consider all the dependencies installed
+        for node in resolved_deps:
+            if node.status == ProjectNodeStatus.CLEAN:
+                node.status = ProjectNodeStatus.INSTALLED
 
     def _find_include_file_local(
         self,
@@ -243,11 +255,11 @@ class FlatModeDelegate(ConsoleAware):
     def _find_include_file_deps(
         self,
         inc_file: str,
-        resolved_deps: List[tuple[str, Path]]
+        resolved_deps: List[ProjectNode]
     ) -> Path:
         """Search for an #include file in all resolved dependencies."""
 
-        candidates = [(dep_path / INCLUDE_DIR / inc_file).resolve() for _name, dep_path in resolved_deps]
+        candidates = [(node.resolved_path / INCLUDE_DIR / inc_file).resolve() for node in resolved_deps]
 
         for path in candidates:
             if path and path.exists() and path.suffix.lower() in {".mqh", ".mq4", ".mq5"}:
@@ -260,7 +272,7 @@ class FlatModeDelegate(ConsoleAware):
         content: str,
         base_path: Path,
         visited: Set[Path],
-        resolved_deps: List[tuple[str, Path]]
+        resolved_deps: List[ProjectNode]
     ) -> str:
         """Recursively resolve all #include directives, preserving #property lines and avoiding cycles."""
 
@@ -375,24 +387,31 @@ class ProjectInstaller(ConsoleAware):
         self.print("📦 Downloading dependencies...") 
         root_node: ProjectNode = self.downloader.download_all()
         
-        if not root_node:
-            self.log("[dim]No dependencies to install[/]")
-        else:
-            self.log("[green]✔[/] All dependencies downloaded")
+        try:
+            if not root_node:
+                self.log("[dim]No dependencies to install[/]")
+            else:
+                self.log("[green]✔[/] All dependencies downloaded")
 
-        if show_tree and root_node:
-            self._log_dependency_tree(root_node)
+            if show_tree and root_node:
+                self._log_dependency_tree(root_node)
 
-        if effective_mode == IncludeMode.INCLUDE:
-            self.print("📝 Generating include files...") 
-            include_delegate = IncludeModeDelegate(self.project_dir, self.console, self.verbose)
-            include_delegate.process(root_node)
-        else:
-            self.print("📝 Generating flat files...") 
-            flat_processor = FlatModeDelegate(self.project_dir, self.console, self.verbose)
-            flat_processor.process(manifest, root_node)
+            if effective_mode == IncludeMode.INCLUDE:
+                self.print("📝 Generating include files...") 
+                include_delegate = IncludeModeDelegate(self.project_dir, self.console, self.verbose)
+                include_delegate.process(root_node)
+            else:
+                self.print("📝 Generating flat files...") 
+                flat_processor = FlatModeDelegate(self.project_dir, self.console, self.verbose)
+                flat_processor.process(manifest, root_node)
 
-        self._log_completion(root_node, effective_mode)
+            if root_node.status == ProjectNodeStatus.CLEAN:
+                root_node.status = ProjectNodeStatus.INSTALLED
+
+            self._log_completion(root_node, effective_mode)
+
+        finally:
+            send_telemetry_data(root_node, self.project_dir)
 
 
     def _log_install_start(

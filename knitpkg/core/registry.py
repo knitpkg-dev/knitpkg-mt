@@ -7,7 +7,7 @@ import httpx
 import keyring
 import os
 import sys
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from knitpkg.core.exceptions import (
     ProviderNotFoundError,
@@ -162,7 +162,8 @@ class Registry(ConsoleAware):
                 f"{self.base_url}/project/register",
                 json=payload,
                 headers={"Authorization": f"Bearer {token}",
-                        "X-Provider": provider},
+                        "X-Provider": provider,
+                        "User-Agent": "KnitPkg-CLI/1.0.0"},
                 timeout=30.0
             )
             response.raise_for_status()
@@ -178,7 +179,8 @@ class Registry(ConsoleAware):
             response = httpx.get(
                 f"{self.base_url}/auth/whoami",
                 headers={"Authorization": f"Bearer {token}",
-                        "X-Provider": provider},
+                        "X-Provider": provider,
+                        "User-Agent": "KnitPkg-CLI/1.0.0"},
                 timeout=30.0
             )
             response.raise_for_status()
@@ -210,7 +212,8 @@ class Registry(ConsoleAware):
             response = httpx.get(
                 f"{self.base_url}/project/{target}/{org}/{pack_name}/{version_spec}/resolve",
                 headers={"Authorization": f"Bearer {token}",
-                        "X-Provider": provider} if provider and token else None,
+                        "X-Provider": provider,
+                        "User-Agent": "KnitPkg-CLI/1.0.0"} if provider and token else None,
                 timeout=10.0
             )
             response.raise_for_status()
@@ -236,7 +239,8 @@ class Registry(ConsoleAware):
             response = httpx.post(
                 f"{self.base_url}/project/{target}/{organization}/{project_name}/{version}/yank",
                 headers={"Authorization": f"Bearer {token}",
-                        "X-Provider": provider},
+                        "X-Provider": provider,
+                        "User-Agent": "KnitPkg-CLI/1.0.0"},
                 timeout=30.0
             )
             response.raise_for_status()
@@ -244,7 +248,7 @@ class Registry(ConsoleAware):
         except httpx.HTTPStatusError as e:
             raise RegistryError(e)
 
-    def get_project_info(self, target: str, organization: str, project_name: str) -> dict:
+    def get_project_info(self, target: str, organization: str, project_name: str, skip_versions: Optional[bool] = False) -> dict:
         """Get project information from the registry.
         
         Args:
@@ -264,9 +268,10 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.get(
-                f"{self.base_url}/project/{target}/{organization}/{project_name}",
+                f"{self.base_url}/project/{target}/{organization}/{project_name}{'?skip_versions=true' if skip_versions else ''}",
                 headers={"Authorization": f"Bearer {token}",
-                        "X-Provider": provider} if provider and token else None,
+                        "X-Provider": provider,
+                        "User-Agent": "KnitPkg-CLI/1.0.0"} if provider and token else None,
                 timeout=10.0
             )
             response.raise_for_status()
@@ -274,10 +279,25 @@ class Registry(ConsoleAware):
         except httpx.HTTPStatusError as e:
             raise RegistryError(e)
 
+    def record_install(self, project_id: List[int], version: List[str]):
+        """Record project installations for telemetry.
+        """
+        payload = {"project_id": project_id, "version": version}
+
+        try:
+            httpx.post(
+                f"{self.base_url}/telemetry/install",
+                json=payload,
+                headers={"User-Agent": "KnitPkg-CLI/1.0.0"},
+                timeout=10.0
+            )
+        except:
+            ... # ignore
+
     def _fetch_registry_config(self, provider: Optional[str] = None) -> Tuple[str, str, str]:
         """Fetch provider configuration from registry."""
 
-        response = httpx.get(f"{self.base_url}/auth/config")
+        response = httpx.get(f"{self.base_url}/auth/config", headers={"User-Agent": "KnitPkg-CLI/1.0.0"})
         response.raise_for_status()
         config = response.json()
         
@@ -316,7 +336,8 @@ class Registry(ConsoleAware):
         """Exchange authorization code for access token with the registry."""
         response = httpx.post(
             f"{self.base_url}/auth/{provider}/exchange-token",
-            json={"code": code}
+            json={"code": code},
+            headers={"User-Agent": "KnitPkg-CLI/1.0.0"}
         )
         response.raise_for_status()
         return response.json()

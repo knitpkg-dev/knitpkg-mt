@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pathlib import Path
 
 from knitpkg.mql.models import ProjectType, MQLKnitPkgManifest
@@ -8,6 +8,7 @@ from knitpkg.mql.constants import INCLUDE_DIR
 from knitpkg.core.console import Console, ConsoleAware
 
 # Import MQL-specific downloader
+from knitpkg.core.dependency_downloader import ProjectNode
 from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.exceptions import InvalidUsageError
@@ -52,12 +53,12 @@ class AutocompleteGenerator(ConsoleAware):
             raise InvalidUsageError("Command `kp-mt autocomplete` only works on projects with type: package")
 
         # Resolve dependencies (reuse same logic as install)
-        resolved_deps = []
+        resolved_deps: List[ProjectNode] = []
         if manifest.dependencies:
             registry_url = get_registry_url()
             downloader = MQLDependencyDownloader(self.project_dir, registry_url, False, MQLKnitPkgManifest, console=self.console, verbose=self.verbose)
             project_root = downloader.download_all()
-            resolved_deps = project_root.resolved_dependencies()
+            resolved_deps = project_root.resolved_nodes()
         else:
             self.print(
                 "[yellow]⚠️  Warning:[/] No dependencies found in manifest. "
@@ -78,7 +79,8 @@ class AutocompleteGenerator(ConsoleAware):
         ]
 
         seen_paths = set()
-        for _dep_name, dep_path in resolved_deps:
+        for node in resolved_deps:
+            dep_path = node.resolved_path
             include_dir = dep_path / INCLUDE_DIR
             if include_dir.exists():
                 for mqh in include_dir.rglob("*.mqh"):

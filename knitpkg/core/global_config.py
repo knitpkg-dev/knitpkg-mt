@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 import yaml
 
 DEFAULT_PUBLIC_REGISTRY = "https://registry.knitpkg.dev"
@@ -29,6 +29,14 @@ def get_registry_url() -> str:
     return DEFAULT_PUBLIC_REGISTRY
 
 
+def is_global_telemetry() -> bool:
+    config = load_global_config()
+    if config and "telemetry" in config and "enabled" in config["telemetry"]:
+        return config["telemetry"]["enabled"]
+    
+    return False  # Disabled by default
+
+
 def load_global_config() -> Optional[dict]:
     """Load config from ~/.knitpkg/config.yaml"""
     config_path = Path.home() / ".knitpkg" / "config.yaml"
@@ -42,8 +50,8 @@ def load_global_config() -> Optional[dict]:
         return None
 
 
-def set_global_registry(url: str):
-    """Set global registry URL in ~/.knitpkg/config.yaml"""
+def set_global(key, value: Any):
+    """Set global configuration key in ~/.knitpkg/config.yaml"""
     config_path = Path.home() / ".knitpkg" / "config.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -54,9 +62,17 @@ def set_global_registry(url: str):
         config = {}
 
     # Update registry
-    if "registry" not in config:
-        config["registry"] = {}
-    config["registry"]["url"] = url
+    if key not in config:
+        config[key] = {}
+    config[key] = value
 
     # Save
     config_path.write_text(yaml.dump(config, default_flow_style=False))
+
+
+def set_global_registry(url: str):
+    set_global("registry", {"url": url})
+
+def set_global_telemetry(enabled: bool):
+    set_global("telemetry", {"enabled": enabled})
+

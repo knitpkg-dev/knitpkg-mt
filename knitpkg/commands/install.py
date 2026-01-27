@@ -90,6 +90,6 @@ def register(app):
             raise typer.Exit(code=1)
         
         except Exception as e:
-            console_awr.print(f"\nbold red]❌ Unexpected error:[/bold red] {e}")
+            console_awr.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}")
             console_awr.print("")
             raise typer.Exit(code=1)
