@@ -17,6 +17,7 @@ from knitpkg.core.exceptions import InvalidUsageError
 
 from knitpkg.core.models import PROJECT_NAME_RE, ORGANIZATION_RE
 from knitpkg.core.version_handling import validate_version
+from knitpkg.core.settings import Settings
 
 class IndicatorInputType(str, Enum):
     """Indicator data input type."""
@@ -49,6 +50,7 @@ class ProjectInitializer(ConsoleAware):
         # Init options
         self.git_init: bool = False
         self.dry_run: bool = False
+        self.enable_telemetry: bool = False
 
     def validate_project_name(self, name: str) -> bool:
         """Validates if the project name is suitable for a directory name."""
@@ -465,19 +467,28 @@ class ProjectInitializer(ConsoleAware):
         if (project_root / ".git").is_dir():
             self.git_init = False
             return
-        
+
         if git_init is None:
             self.git_init = Confirm.ask("Do you want to initialize a Git repository?", default=True)
         else:
             self.git_init = git_init
 
+    def prompt_enable_telemetry(self, enable_telemetry: Optional[bool]) -> None:
+        """Prompt for telemetry enablement."""
+        if enable_telemetry is None:
+            enable_telemetry = Confirm.ask("Do you want to enable telemetry for this project?", default=True)
+
+        if not enable_telemetry:
+            self.print(
+                "\n[yellow bold]⚠️  Telemetry will be disabled for this project.[/] "
+                "Are you sure? The KnitPkg ecosystem's vitality depends on community participation. "
+                "Without telemetry data, we cannot effectively improve and maintain this critical infrastructure."
+            )
+            enable_telemetry = Confirm.ask("Proceed with disabling telemetry?", default=False)
+
+        self.enable_telemetry = enable_telemetry
+
     def display_summary_and_confirm(self) -> bool:
-        """Display summary and confirm project creation."""
-        self.print("\n[bold magenta]----- 📋 Project summary -----[/bold magenta]")
-        self.print(f"  Type: [cyan]{self.project_type.value}[/cyan]") # type: ignore
-        if self.project_type == MQLProjectType.INDICATOR:
-            self.print(f"  Indicator Input Type: [cyan]{self.indicator_input_type.value}[/cyan]") # type: ignore
-        self.print(f"  Name: [cyan]{self.name}[/cyan]")
         if self.organization:
             self.print(f"  Organization: [cyan]{self.organization}[/cyan]")
         self.print(f"  Version: [cyan]{self.version}[/cyan]")
@@ -574,6 +585,10 @@ class ProjectInitializer(ConsoleAware):
             except Exception as e:
                 self.print(f"[red]✗ Error initializing Git[/red]: {e}")
 
+        if self.enable_telemetry:
+            settings = Settings(project_root)
+            settings.save_if_changed("telemetry", True)
+
         self.print(f"\n🎉[bold green] Project '{self.name}' created successfully in {project_root}[/bold green]")
         self.print("[bold blue]Next steps:[/bold blue]")
         self.print(f"  cd {project_root}")
@@ -595,6 +610,7 @@ class ProjectInitializer(ConsoleAware):
         entrypoints_str: Optional[str],
         location: Optional[Path],
         git_init: Optional[bool],
+        enable_telemetry: Optional[bool],
         indicator_input_type: Optional[IndicatorInputType] = None,
     ) -> None:
         """Execute the project initialization workflow."""
@@ -615,7 +631,8 @@ class ProjectInitializer(ConsoleAware):
         self.select_indicator_input_type(indicator_input_type)
         self.select_include_mode_and_entrypoints(include_mode, entrypoints_str)
         self.prompt_git_init(git_init)
-
+        self.prompt_enable_telemetry(enable_telemetry)
+        
         # Confirmation
         if not self.display_summary_and_confirm():
             raise KeyboardInterrupt()

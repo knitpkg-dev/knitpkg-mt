@@ -52,9 +52,12 @@ def register(app):
 
         try:
             console_awr.print("")
-            register_command(project_dir if project_dir is not None else Path.cwd(), 
+            project_dir = project_dir if project_dir is not None else Path.cwd()
+            register_command(project_dir, 
                             console=console, 
                             verbose=True if verbose else False)
+            from knitpkg.core.telemetry import print_telemetry_warning
+            print_telemetry_warning(project_dir)
             console_awr.print("")
         
         except KeyboardInterrupt:

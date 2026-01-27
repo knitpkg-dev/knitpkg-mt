@@ -23,6 +23,7 @@ def init_command(project_type: MQLProjectType,
     entrypoints_str: str,
     location: Path,
     git_init: bool,
+    enable_telemetry: bool,
     dry_run: bool,
     console: Console
     ):
@@ -43,6 +44,7 @@ def init_command(project_type: MQLProjectType,
         entrypoints_str=entrypoints_str,
         location=location,
         git_init=git_init,
+        enable_telemetry=enable_telemetry,
     )
 
 def register(app):
@@ -87,6 +89,7 @@ def register(app):
             None, "--location", "-l", help="Directory where the project will be created."
         ),
         git_init: bool = typer.Option(None, "--git-init", help="Initialize a Git repository."),
+        enable_telemetry: bool = typer.Option(None, "--enable-telemetry/--disable-telemetry", help="Enables telemetry for this project."),
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
@@ -112,6 +115,7 @@ def register(app):
                 entrypoints_str,
                 location,
                 git_init,
+                enable_telemetry,
                 dry_run,
                 console
             )

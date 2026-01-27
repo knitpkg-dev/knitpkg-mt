@@ -68,6 +68,8 @@ def register(app):
         try:
             console_awr.print("")
             install_command(project_dir, locked, not no_tree, console, verbose) # type: ignore
+            from knitpkg.core.telemetry import print_telemetry_warning
+            print_telemetry_warning(project_dir)
             console_awr.print("")
 
         except KeyboardInterrupt:

@@ -50,6 +50,9 @@ def register(app):
         try:
             console_awr.print("")
             whoami_command(console_awr, verbose)
+            from knitpkg.core.telemetry import print_telemetry_warning
+            from pathlib import Path
+            print_telemetry_warning(Path.cwd())
             console_awr.print("")
 
         except KeyboardInterrupt:

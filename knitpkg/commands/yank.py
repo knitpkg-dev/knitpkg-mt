@@ -50,6 +50,9 @@ def register(app):
                 raise KnitPkgError("No organization specified")
             
             yank_command(target.value, organization, name, version, console_awr, verbose)
+            from knitpkg.core.telemetry import print_telemetry_warning
+            from pathlib import Path
+            print_telemetry_warning(Path.cwd())
             console_awr.print("")
 
         except KeyboardInterrupt:

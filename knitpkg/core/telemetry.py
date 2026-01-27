@@ -13,18 +13,21 @@ def _telemetry_enabled(project_dir: Path):
     
     return Settings(project_dir).get("telemetry", False)
 
+def print_telemetry_warning(project_dir: Path):
+    if _telemetry_enabled(project_dir):
+        return
+    
+    from rich.console import Console
+    console = Console(log_path=False)
+    console.print(
+        "\n[yellow bold]Telemetry remains disabled[/]. Please consider enabling it. "
+        "The KnitPkg ecosystem's vitality depends on community participation. "
+        "Enable telemetry with [cyan]`kp-mt telemetry on`[/] to sustain this critical infrastructure."
+    )
+
 def send_telemetry_data(root_node: ProjectNode, project_dir: Path):
     """Send telemetry data about the project's dependencies."""
-
     if not _telemetry_enabled(project_dir):
-        from rich.console import Console
-        console = Console(log_path=False)
-        console.print(
-            "\n[yellow bold]Telemetry remains disabled[/]. Please consider enabling it. "
-            "The KnitPkg ecosystem's vitality depends on community participation. "
-            "Enable telemetry with [cyan]`kp-mt telemetry on`[/] to sustain this critical infrastructure."
-        )
-
         return
 
     installed_nodes: List[ProjectNode] = [n for n in root_node.resolved_nodes(True) \

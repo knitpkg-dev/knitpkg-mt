@@ -125,6 +125,8 @@ def register(app):
                         True if compile_only else False, 
                         console,
                         True if verbose else False)
+            from knitpkg.core.telemetry import print_telemetry_warning
+            print_telemetry_warning(project_dir)
             console_awr.print("")
 
         except KeyboardInterrupt:

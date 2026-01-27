@@ -58,6 +58,8 @@ def register(app):
         try:
             console_awr.print("")
             autocomplete_command(project_dir, console, True if verbose else False)
+            from knitpkg.core.telemetry import print_telemetry_warning
+            print_telemetry_warning(project_dir)
             console_awr.print("")
             
         except KeyboardInterrupt:
