@@ -294,6 +294,55 @@ class Registry(ConsoleAware):
         except:
             ... # ignore
 
+    def search_projects(self, target: str, q: Optional[str] = None, org: Optional[str] = None, type: Optional[str] = None, page: int = 1, page_size: int = 20, sort_by: str = "name", sort_order: str = "asc") -> dict:
+        """Search for projects in the registry.
+        
+        Args:
+            target: Target platform (e.g., 'MQL5')
+            q: General search term (name, description, keywords)
+            org: Filter by organization name
+            type: Filter by project type (e.g., 'expert', 'indicator', 'library')
+            page: Page number for pagination
+            page_size: Number of results per page
+            sort_by: Field to sort by (e.g., 'name', 'created_at', ...)
+            sort_order: Sort order ('asc' or 'desc')
+            
+        Returns:
+            Dict containing search results with pagination metadata
+        """
+        try:
+            provider, token = self._get_credentials()
+        except TokenNotFoundError:
+            # If no token found, proceed without auth (for public search)
+            provider = None
+            token = None
+
+        params = {
+            "q": q,
+            "type": type,
+            "org": org,
+            "page": page,
+            "page_size": page_size,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+        }
+        # Remove None values from params
+        params = {k: v for k, v in params.items() if v is not None}
+
+        try:
+            response = httpx.get(
+                f"{self.base_url}/projects/{target}/search",
+                params=params,
+                headers={"Authorization": f"Bearer {token}",
+                        "X-Provider": provider,
+                        "User-Agent": "KnitPkg-CLI/1.0.0"} if provider and token else {"User-Agent": "KnitPkg-CLI/1.0.0"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise RegistryError(e)
+
     def _fetch_registry_config(self, provider: Optional[str] = None) -> Tuple[str, str, str]:
         """Fetch provider configuration from registry."""
 

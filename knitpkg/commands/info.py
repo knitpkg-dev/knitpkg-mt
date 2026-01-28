@@ -22,19 +22,21 @@ def info_command(target: str, organization: str, project_name: str, console_awr:
 
     project_info = registry.get_project_info(target, organization, project_name)
 
-    console_awr.print("📦 [bold cyan]Project Information[/bold cyan]\n")
-    console_awr.print(f"  Name: [cyan]{project_info.get('name')}[/cyan]")
-    console_awr.print(f"  Organization: [cyan]{project_info.get('organization')}[/cyan]")
+    console_awr.print("🔍 [bold cyan]Project Information[/bold cyan]\n")
+
+    console_awr.print(f"📦 [bold magenta]@{project_info.get('organization')}/{project_info.get('name')}[/bold magenta]")
     console_awr.print(f"  Target: [cyan]{project_info.get('target')}[/cyan]")
     console_awr.print(f"  Type: [cyan]{project_info.get('type')}[/cyan]")
     console_awr.print(f"  Description: [cyan]{project_info.get('description') or 'No description'}[/cyan]")
-    console_awr.print(f"  Provider: [cyan]{project_info.get('provider')}[/cyan]")
-    if project_info.get('repo_url'):
-        console_awr.print(f"  Repository: [cyan]{project_info.get('repo_url')}[/cyan]")
-    console_awr.print(f"  Private: [cyan]{'Yes' if project_info.get('is_private') else 'No'}[/cyan]")
+    keywords = project_info.get('keywords')
+    if keywords:
+        console_awr.print(f"  Keywords: [cyan]{[k.strip() for k in keywords.split(',') if k.strip()]}[/cyan]")
+    console_awr.print(f"  Private: {'[yellow]Yes[/]' if project_info.get('is_private') else '[cyan]No[/]'}")
     published_at = project_info.get('published_at')
     published_at = datetime.datetime.fromisoformat(published_at.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S') if published_at else ''
     console_awr.print(f"  Published: [cyan]{published_at}[/cyan]")
+    if project_info.get('repo_url'):
+        console_awr.print(f"  Repository: [cyan]{project_info.get('repo_url')}[/cyan]")
 
     versions = project_info.get('versions', [])
     if versions:

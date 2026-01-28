@@ -18,6 +18,7 @@ from knitpkg.commands import (
     logout,
     global_config,
     register,
+    search,
     whoami,
     yank,
     info,
@@ -43,6 +44,7 @@ global_config.register(app)
 
 login.register(app)
 register.register(app)
+search.register(app)
 logout.register(app)
 whoami.register(app)
 yank.register(app)
