@@ -260,7 +260,15 @@ class ProjectRegister(ConsoleAware):
             self.print("✅ [bold green]Project registered successfully![/bold green]")
         if "project" in response_data:
             pkg = response_data["project"]
-            self.print(pkg)
+            self.print("\n--- Registered Project Details ---")
+            self.print(f"  Target: [bold]{pkg['target']}[/bold]")
+            self.print(f"  Organization: [bold]{pkg['organization']}[/bold]")
+            self.print(f"  Name: [bold]{pkg['name']}[/bold]")
+            self.print(f"  Version: [bold]{pkg['version']}[/bold]")
+            self.print(f"  Private: [bold]{pkg['is_private']}[/bold]")
+            self.print(f"  Repository URL: [bold]{pkg['repo_url']}[/bold]")
+            self.print(f"  Commit Hash: [bold]{pkg['commit_hash']}[/bold]")
+            self.print("----------------------------------")
         self.print('')
 
         return response_data

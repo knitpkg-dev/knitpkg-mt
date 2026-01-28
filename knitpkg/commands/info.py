@@ -57,7 +57,7 @@ def register(app):
 
     @app.command()
     def info(
-        target: Target = typer.Argument(..., help="MetaTrader platform target (MQL4 or MQL5)."),
+        target: Target = typer.Argument(..., help="Platform target (MQL4, MQL5, ...)."),
         specifier: str = typer.Argument(..., help="@organization/project_name"),
         verbose: bool = typer.Option(
             False,
