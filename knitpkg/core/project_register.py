@@ -1,13 +1,12 @@
 # knitpkg/commands/register.py
 from typing import Optional, Type, TypeVar
-import typer
 from pathlib import Path
 import git
 
 from knitpkg.core.console import ConsoleAware
 from knitpkg.core.registry import Registry
 from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.core.exceptions import KnitPkgError, RegistryError
+from knitpkg.core.exceptions import KnitPkgError
 from knitpkg.core.models import KnitPkgManifest
 from knitpkg.core.path_helper import is_local_path
 

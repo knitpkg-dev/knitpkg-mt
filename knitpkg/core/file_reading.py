@@ -64,7 +64,7 @@ def load_knitpkg_manifest(
     manifest_class: Type[T] = KnitPkgManifest
 ) -> T:
     """
-    Load knitpkg.json OR knitpkg.yaml (YAML takes precedence if both exist).
+    Load knitpkg.yaml OR knitpkg.yml OR knitpkg.json (YAML takes precedence if both exist).
 
     Args:
         path:
@@ -116,7 +116,7 @@ def load_knitpkg_manifest(
 
     if yaml_path and yaml_path.exists():
         return _load_from_yaml(yaml_path, manifest_class)
-    if yml_path and yml_path.exists():
+    elif yml_path and yml_path.exists():
         return _load_from_yaml(yml_path, manifest_class)
     elif json_path and json_path.exists():
         return _load_from_json(json_path, manifest_class)
@@ -124,7 +124,7 @@ def load_knitpkg_manifest(
         raise FileNotFoundError(
             f"No manifest file found in {path}"
         )
-
+    
 def _load_from_yaml(path: Path, manifest_class: Type[T]) -> T:
     """Load and parse a knitpkg.yaml manifest file."""
     try:

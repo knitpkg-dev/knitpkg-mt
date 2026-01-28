@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 
 from knitpkg.commands import (
+    add,
     init,
     install,
     autocomplete,
@@ -34,6 +35,7 @@ app = typer.Typer(
 )
 
 # Register commands
+add.register(app)
 init.register(app)
 install.register(app)
 autocomplete.register(app)
