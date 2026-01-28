@@ -29,16 +29,18 @@ class ProjectManager(ConsoleAware):
         self._load_knitpkg_manifest()
         manifest: dict = self.loaded_manifest # type: ignore
 
-        dependencies = manifest.get('dependencies', {})
-        if dep_spec.lower() in dependencies:
-            self.print(f"⚠️  [bold yellow]Dependency already exists:[/] {dep_spec.lower()} : {dependencies[dep_spec.lower()]}")
-            return
-
         target: str = manifest.get('target') # type: ignore
         org, name = parse_project_name(dep_spec.lower())
         if not org:
             org: str = manifest.get('organization') # type: ignore
             org = org.lower()
+
+        dependencies = manifest.get('dependencies')
+        if not dependencies:
+            dependencies = {}
+        if normalize_dep_name(dep_spec.lower(), org) in [normalize_dep_name(dep_name, org) for dep_name in dependencies.keys()]:
+            self.print(f"⚠️  [bold yellow]Dependency already exists:[/] {dep_spec.lower()}")
+            return
 
         dep_info = self.registry.resolve_package(target, org, name, verspec)
 
@@ -52,7 +54,7 @@ class ProjectManager(ConsoleAware):
 
         self._save_knitpkg_manifest()
 
-        self.print(f"✅ [bold green]Added dependency:[/] {dep_spec.lower()} : {resolved_version}")
+        self.print(f"✅ [bold green]Added dependency[/] → {dep_spec.lower()} : {resolved_version}")
         
 
     def _save_knitpkg_manifest(self):
