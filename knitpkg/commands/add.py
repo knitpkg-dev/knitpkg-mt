@@ -12,7 +12,7 @@ from knitpkg.core.exceptions import KnitPkgError, RegistryError
 # COMMAND WRAPPER
 # ==============================================================
 
-def add_command(project_name: str, verspec: str, project_dir: Path, console: Console, verbose: bool):
+def add_command(project_name: str, verspec: Optional[str], project_dir: Path, console: Console, verbose: bool):
     """Command wrapper for add command."""
 
     project_path = Path(project_dir).resolve()
@@ -33,8 +33,10 @@ def register(app):
             ...,
             help="Name of the project to add as a dependency"
         ),
-        verspec: str = typer.Argument(
-            "*",
+        verspec: Optional[str] = typer.Option(
+            '*',
+            "--verspec",
+            "-v",
             help="Version specifier for the dependency"
         ),
         project_dir: Optional[Path] = typer.Option(

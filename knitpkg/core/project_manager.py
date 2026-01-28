@@ -1,5 +1,6 @@
 from typing import Optional, TypeVar, Type, Union
 from pathlib import Path
+import semver
 import json
 from ruamel.yaml import YAML
 yaml = YAML()
@@ -10,6 +11,7 @@ from knitpkg.core.registry import Registry
 from knitpkg.core.models import KnitPkgManifest
 from knitpkg.core.resolve_helper import parse_project_name, normalize_dep_name
 from knitpkg.core.exceptions import InvalidUsageError, ManifestLoadError
+from knitpkg.core.version_handling import validate_version_specifier
 
 T = TypeVar('T', bound=KnitPkgManifest)
 
@@ -23,7 +25,7 @@ class ProjectManager(ConsoleAware):
         self.resolved_manifest_path: Optional[Path] = None
         self.loaded_manifest: Optional[dict] = None
 
-    def add_dependency(self, dep_spec: str, verspec: str):
+    def add_dependency(self, dep_spec: str, verspec: Optional[str]):
         self.log(f"Adding dependency: {dep_spec} : {verspec}")
         
         self._load_knitpkg_manifest()
@@ -42,14 +44,26 @@ class ProjectManager(ConsoleAware):
             self.print(f"⚠️  [bold yellow]Dependency already exists:[/] {dep_spec.lower()}")
             return
 
-        dep_info = self.registry.resolve_package(target, org, name, verspec)
-
-        resolved_version = dep_info.get('resolved_version')
-        dep_spec_normalized = normalize_dep_name(name, org)
-        if not resolved_version:
-            raise InvalidUsageError(f"Could not resolve version {verspec} for package {dep_spec_normalized}")
+        if not verspec:
+            verspec = "*"
+        else:
+            if not validate_version_specifier(verspec):
+                raise InvalidUsageError(f'Invalid version specifier: `{verspec}`')
         
-        dependencies[dep_spec.lower()] = f"^{resolved_version}"
+        dep_info = self.registry.resolve_package(target, org, name, verspec)
+        resolved_version = dep_info.get('resolved_version')
+        if not resolved_version:
+            dep_spec_normalized = normalize_dep_name(name, org)
+            raise InvalidUsageError(f"Could not resolve to any version `{verspec}` for package {dep_spec_normalized}")
+
+        if verspec in ['*', 'x', 'X']:
+            # In this case the registry will never resolve to a pre-release, it is safe to add the caret.
+            resolved_version = f"^{resolved_version}"
+        else:
+            # verspec is resolving to a valid version; use it as specifier.
+            resolved_version = verspec
+                
+        dependencies[dep_spec.lower()] = resolved_version
         manifest['dependencies'] = dependencies
 
         self._save_knitpkg_manifest()
