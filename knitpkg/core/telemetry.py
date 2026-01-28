@@ -29,6 +29,9 @@ def send_telemetry_data(root_node: ProjectNode, project_dir: Path):
     """Send telemetry data about the project's dependencies."""
     if not _telemetry_enabled(project_dir):
         return
+    
+    if not root_node:
+        return
 
     installed_nodes: List[ProjectNode] = [n for n in root_node.resolved_nodes(True) \
                                           if n.id is not None and n.status == ProjectNodeStatus.INSTALLED]

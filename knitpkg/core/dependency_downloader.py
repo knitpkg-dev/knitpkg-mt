@@ -35,6 +35,7 @@ from knitpkg.core.exceptions import (
     DependencyHasLocalChangesError,
     LocalDependencyManifestError,
     GitCloneError,
+    GitFetchError,
     GitCommitNotFoundError,
     KnitPkgError
 )
@@ -56,6 +57,8 @@ class RepoIntegrityStatus(str, Enum):
     CLEAN = "clean"
     NOT_GIT = "not-git"
     INVALID = "invalid"
+    INVALID_COMMIT_HASH = "invalid_commit_hash"
+
 
 
 @dataclass
@@ -185,11 +188,14 @@ class DependencyDownloader(ConsoleAware):
             self._download_dependency(name, spec, overrides, root)
 
         root_project_info = self._get_project_info_skip_versions(manifest.organization.lower(), manifest.name.lower())
+        root_project_info_commit = None
         if root_project_info:
             root.id = root_project_info.get('id', None)
             root.is_private = root_project_info.get('is_private', None)
+            root_project_info_commit = root_project_info.get('commit_hash', None)
         
-        root.status = DependencyDownloader._get_project_node_status(DependencyDownloader._check_repo_integrity(None, self.project_dir))
+        root.status = DependencyDownloader._get_project_node_status( \
+            DependencyDownloader._check_repo_integrity(None, self.project_dir, root_project_info_commit))
 
         return root
     
@@ -244,17 +250,21 @@ class DependencyDownloader(ConsoleAware):
             GitCloneError: If clone fails
             GitCommitNotFoundError: If commit hash doesn't exist or checkout fails
         """
+        cache_path.mkdir(parents=True, exist_ok=True)
         try:
-            cache_path.mkdir(parents=True, exist_ok=True)
-            repo = git.Repo.clone_from(git_url, cache_path, depth=1, no_checkout=True)
+            git.Repo.clone_from(git_url, cache_path, depth=1, no_checkout=True)
         except Exception as e:
+            # Workaround to mql5forge repository issue, see https://codeberg.org/forgejo/forgejo/issues/2809
+            # Second attempt succeeds if user is authorized.
+            if 'forge.mql5.io/' in git_url:
+                try:
+                    git.Repo.clone_from(git_url, cache_path, depth=1, no_checkout=True)
+                except Exception as e2:
+                    raise GitCloneError(git_url, str(e2))
+                
             raise GitCloneError(git_url, str(e))
         
-        try:
-            repo.git.fetch('origin', commit_hash, depth=1)
-            repo.git.checkout(commit_hash)
-        except Exception as e:
-            raise GitCommitNotFoundError(commit_hash, str(e))
+        self._checkout_shallow_to_commit(commit_hash, cache_path)
 
     def _checkout_shallow_to_commit(self, commit_hash: str, cache_path: Path) -> None:
         """Checkout existing repository to specific commit (shallow).
@@ -266,9 +276,23 @@ class DependencyDownloader(ConsoleAware):
         Raises:
             GitCommitNotFoundError: If commit hash doesn't exist or checkout fails
         """
+        repo = git.Repo(cache_path)
+        git_url = repo.remotes.origin.url
+        
         try:
-            repo = git.Repo(cache_path)
             repo.git.fetch('origin', commit_hash, depth=1)
+        except Exception as e:
+            # Workaround to mql5forge repository issue, see https://codeberg.org/forgejo/forgejo/issues/2809
+            # Second attempt succeeds if user is authorized.
+            if 'forge.mql5.io/' in git_url:
+                try:
+                    repo.git.fetch('origin', commit_hash, depth=1)
+                except Exception as e2:
+                    raise GitFetchError(git_url, str(e2))
+                
+            raise GitFetchError(git_url, str(e))
+
+        try:
             repo.git.checkout(commit_hash)
         except Exception as e:
             raise GitCommitNotFoundError(commit_hash, str(e))
@@ -488,6 +512,7 @@ class DependencyDownloader(ConsoleAware):
                 self._clone_shallow_to_commit(dist_info['repo_url'], dist_info['commit_hash'], dep_resolved_path)
                 if not self.locked_mode or not lockfile.is_dependency(dep_name):
                     lockfile.update_if_changed(dep_name, specifier, dist_info["resolved_version"], self.default_registry_base_url)
+                status = RepoIntegrityStatus.CLEAN
 
             else:
                 # Repository exists in cache and remote URL is correct
@@ -498,6 +523,7 @@ class DependencyDownloader(ConsoleAware):
                 self._checkout_shallow_to_commit(dist_info["commit_hash"], dep_resolved_path)
                 if not self.locked_mode or not lockfile.is_dependency(dep_name):
                     lockfile.update_if_changed(dep_name, specifier, dist_info["resolved_version"], self.default_registry_base_url)
+                status = RepoIntegrityStatus.CLEAN
                 
         else:
             # Repo cache directory does not exist
@@ -509,7 +535,7 @@ class DependencyDownloader(ConsoleAware):
         return dep_resolved_path, dist_info, status
 
     @staticmethod
-    def _check_repo_integrity(repo_url: Optional[str], dep_resolved_path: Path) -> RepoIntegrityStatus:
+    def _check_repo_integrity(repo_url: Optional[str], dep_resolved_path: Path, commit_hash: Optional[str] = None) -> RepoIntegrityStatus:
         """Check the state of a local repository dependency."""
         try:
             repo: git.Repo = git.Repo(dep_resolved_path, search_parent_directories=True)
@@ -523,6 +549,10 @@ class DependencyDownloader(ConsoleAware):
             if repo.is_dirty(untracked_files=True):
                 return RepoIntegrityStatus.DIRTY
             
+            if commit_hash is not None:
+                if repo.head.commit.hexsha != commit_hash:
+                    return RepoIntegrityStatus.INVALID_COMMIT_HASH
+                
             return RepoIntegrityStatus.CLEAN
 
         except git.InvalidGitRepositoryError:

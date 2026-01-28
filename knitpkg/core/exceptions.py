@@ -58,14 +58,26 @@ class LocalDependencyManifestError(DependencyError):
             f"Cannot load manifest for local dependency '{name}' at {path}"
         )
 
-class GitCloneError(DependencyError):
+# Git clone/fetch or checkout error
+class GitError(DependencyError):
+    """Raised when a git operation fails."""
+    pass
+
+class GitCloneError(GitError):
     """Raised when git clone fails."""
     def __init__(self, git_url: str, details: str):
         self.git_url = git_url
         self.details = details
         super().__init__(f"Git clone failed for {git_url}: {details}")
 
-class GitCommitNotFoundError(DependencyError):
+class GitFetchError(GitError):
+    """Raised when git fetch fails."""
+    def __init__(self, git_url: str, details: str):
+        self.git_url = git_url
+        self.details = details
+        super().__init__(f"Git fetch failed for {git_url}: {details}")
+
+class GitCommitNotFoundError(GitError):
     """Raised when commit hash doesn't exist or checkout fails."""
     def __init__(self, commit_hash: str, details: str):
         self.commit_hash = commit_hash
