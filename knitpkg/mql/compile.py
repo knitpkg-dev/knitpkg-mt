@@ -60,7 +60,7 @@ class CompilationResult:
 class MQLCompiler(ConsoleAware):
     """Handles MQL4/MQL5 source code compilation."""
 
-    def __init__(self, project_dir: Path, inplace: bool, console: Console, verbose: bool):
+    def __init__(self, project_dir: Path, inplace: bool, console: Optional[Console], verbose: bool):
         super().__init__(console, verbose)
 
         self.project_dir: Path = project_dir

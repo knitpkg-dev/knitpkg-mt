@@ -345,7 +345,7 @@ class ProjectInstaller(ConsoleAware):
     and output generation.
     """
 
-    def __init__(self, project_dir: Path, locked_mode: bool, console: Console, verbose: bool):
+    def __init__(self, project_dir: Path, locked_mode: bool, console: Optional[Console], verbose: bool):
         super().__init__(console, verbose)
 
         self.project_dir = project_dir

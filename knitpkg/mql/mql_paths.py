@@ -1,7 +1,30 @@
-from pathlib import Path
 import os
-from .models import Target
-from typing import List
+from typing import List, Optional
+from knitpkg.mql.models import Target
+from pathlib import Path
+
+def is_valid_target_path(target_path: Path) -> bool:
+    """Check if a path is a valid MQL path with all required subdirectories."""
+    required_dirs = ["Include", "Experts", "Indicators", "Scripts", "Libraries"]
+    return all((target_path / dir_name).is_dir() for dir_name in required_dirs)
+
+def get_mql_target_paths(target: Target, base_path: Path) -> List[Path]:
+    target_paths = []
+    if not base_path.exists():
+        return target_paths
+
+    # Iterate through subfolders (e.g., "D0E8209F77C15E0B37B07412A6190423")
+    # Using os.walk to ensure we only go one level deep in the terminal folders
+    for root, dirs, _ in os.walk(base_path):
+        for d in dirs:
+            terminal_id_path = Path(root) / d
+            mql_path = terminal_id_path / target.value
+            if is_valid_target_path(mql_path):
+                target_paths.append(mql_path)
+        # Only search one level deep in Terminal folders
+        break
+
+    return target_paths
 
 def find_mql_paths(target: Target) -> List[Path]:
     """
@@ -43,31 +66,13 @@ def find_mql_paths(target: Target) -> List[Path]:
         )
 
     found_mql_paths: List[Path] = []
-    target_folder_name = target.value # MQL5 or MQL4
 
     for base_path in possible_paths:
-        if not base_path.exists():
-            continue
-
-        # Iterate through subfolders (e.g., "D0E8209F77C15E0B37B07412A6190423")
-        # Using os.walk to ensure we only go one level deep in the terminal folders
-        for root, dirs, _ in os.walk(base_path):
-            for d in dirs:
-                terminal_id_path = Path(root) / d
-                mql_path = terminal_id_path / target_folder_name
-                include_path = mql_path / "Include"
-                experts_path = mql_path / "Experts"
-                indicators_path = mql_path / "Indicators"
-                scripts_path = mql_path / "Scripts"
-                libraries_path = mql_path / "Libraries"
-                if include_path.is_dir() and \
-                    experts_path.is_dir() and \
-                    indicators_path.is_dir() and \
-                    scripts_path.is_dir() and \
-                    libraries_path.is_dir():
-                    
-                    found_mql_paths.append(mql_path)
-            # Only search one level deep in Terminal folders
-            break 
+        target_path = get_mql_target_paths(target, base_path)
+        if target_path:
+            found_mql_paths.extend(target_path)
 
     return found_mql_paths
+
+if __name__ == '__main__':
+    print(find_mql_paths(Target.MQL5))

@@ -17,6 +17,7 @@ from enum import Enum
 
 import shutil
 import git
+from git.exc import GitCommandError
 
 from knitpkg.core.registry import Registry
 from knitpkg.core.lockfile import LockFile
@@ -253,15 +254,17 @@ class DependencyDownloader(ConsoleAware):
         cache_path.mkdir(parents=True, exist_ok=True)
         try:
             git.Repo.clone_from(git_url, cache_path, depth=1, no_checkout=True)
-        except Exception as e:
+        except GitCommandError as e:
             # Workaround to mql5forge repository issue, see https://codeberg.org/forgejo/forgejo/issues/2809
             # Second attempt succeeds if user is authorized.
-            if 'forge.mql5.io/' in git_url:
+            if 'forge.mql5.io/' in git_url and 'Retry your command' in e.stderr and e.status==128:
                 try:
                     git.Repo.clone_from(git_url, cache_path, depth=1, no_checkout=True)
-                except Exception as e2:
-                    raise GitCloneError(git_url, str(e2))
-                
+                except Exception as e:
+                    raise GitCloneError(git_url, str(e))
+            else:
+                raise GitCloneError(git_url, str(e))
+        except Exception as e:
             raise GitCloneError(git_url, str(e))
         
         self._checkout_shallow_to_commit(commit_hash, cache_path)
@@ -277,19 +280,21 @@ class DependencyDownloader(ConsoleAware):
             GitCommitNotFoundError: If commit hash doesn't exist or checkout fails
         """
         repo = git.Repo(cache_path)
-        git_url = repo.remotes.origin.url
+        git_url = repo.remotes.origin.url        
         
         try:
             repo.git.fetch('origin', commit_hash, depth=1)
-        except Exception as e:
+        except GitCommandError as e:
             # Workaround to mql5forge repository issue, see https://codeberg.org/forgejo/forgejo/issues/2809
             # Second attempt succeeds if user is authorized.
-            if 'forge.mql5.io/' in git_url:
+            if 'forge.mql5.io/' in git_url and 'Retry your command' in e.stderr and e.status==128:
                 try:
                     repo.git.fetch('origin', commit_hash, depth=1)
-                except Exception as e2:
-                    raise GitFetchError(git_url, str(e2))
-                
+                except Exception as e:
+                    raise GitCloneError(git_url, str(e))
+            else:
+                raise GitCloneError(git_url, str(e))
+        except Exception as e:
             raise GitFetchError(git_url, str(e))
 
         try:

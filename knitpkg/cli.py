@@ -14,6 +14,7 @@ from knitpkg.commands import (
     autocomplete,
     compile,
     build,
+    get,
     config,
     login,
     logout,
@@ -23,7 +24,7 @@ from knitpkg.commands import (
     whoami,
     yank,
     info,
-    telemetry
+    telemetry,
     # deploy, # Not yet implemented
 )
 
@@ -41,6 +42,7 @@ install.register(app)
 autocomplete.register(app)
 compile.register(app)
 build.register(app)
+get.register(app)
 config.register(app)
 global_config.register(app)
 
