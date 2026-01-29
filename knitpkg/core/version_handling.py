@@ -34,10 +34,10 @@ _VERSPEC_PATTERN = (
         r"" + _WILDCARD_PART + r"\." + _NUMERIC_PART + r"\." + _WILDCARD_PART + r"" # x.1.x
     r")" +
     r"|"
-    # 5. Range operators (e.g., ">=1.0.0", "<2.0.0", ">=1.0.0 <2.0.0")
+    # 5. Range operators (e.g., ">=1.0.0", "<2.0.0", ">=1.0.0 <2.0.0", ">=1.0.0 !=1.2.1")
     r"(?:"
-        r"(?:[<>=~^]+)\s*" + _SEMVER_CORE_PATTERN +
-        r"(?:\s+(?:[<>=~^]+)\s*" + _SEMVER_CORE_PATTERN + r")*"
+        r"(?:[<>!]=?|=)\s*" + _SEMVER_CORE_PATTERN +
+        r"(?:\s*(?:[<>!]=?|=)\s*" + _SEMVER_CORE_PATTERN + r")*"
     r")"
     r")"
     r"\s*$"  # Allows trailing spaces
