@@ -9,6 +9,7 @@ import json
 from knitpkg.core.exceptions import (
     LocalDependencyNotFoundError,
     LockedWithLocalDependencyError,
+    ManifestLoadError
 )
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.mql.models import MQLKnitPkgManifest
@@ -22,6 +23,8 @@ def test_local_dependency_not_found(tmp_path: Path):
 
     manifest_data = {
         "name": "test",
+        "organization": "acme",
+        "description": "blah",
         "version": "1.0.0",
         "type": "expert",
         "target": "MQL5",
@@ -33,13 +36,33 @@ def test_local_dependency_not_found(tmp_path: Path):
     (d / "knitpkg.json").write_text(json.dumps(manifest_data))
 
     manifest = load_knitpkg_manifest(d, manifest_class=MQLKnitPkgManifest)
-    downloader = MQLDependencyDownloader(Console(), Path.cwd(), "http://localhost:8000")
+    downloader = MQLDependencyDownloader(d, "http://localhost:8000", False, MQLKnitPkgManifest, Console(), False)
 
     with pytest.raises(LocalDependencyNotFoundError) as exc:
-        downloader.download_all(manifest.dependencies, "MQL5", locked_mode=False)
+        downloader.download_all()
 
-    assert exc.value.name == "missing"
+    assert exc.value.name == "@acme/missing"
     assert "nonexistent" in str(exc.value)
+
+def test_local_missing_fields(tmp_path: Path):
+    """Test LocalDependencyNotFoundError is raised for missing local paths."""
+    d = tmp_path / "project"
+    d.mkdir()
+
+    manifest_data = {
+        "name": "test",
+        "description": "blah",
+        "version": "1.0.0",
+        "type": "expert",
+        "target": "MQL5",
+        "entrypoints": ["Test.mq5"]
+    }
+    (d / "knitpkg.json").write_text(json.dumps(manifest_data))
+
+    with pytest.raises(ManifestLoadError) as exc:
+        load_knitpkg_manifest(d, manifest_class=MQLKnitPkgManifest)
+
+    assert "Missing required fields" in str(exc.value) and "'organization'" in str(exc.value)
 
 def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     """Test LocalDependencyNotGitError is raised for non-git deps with --locked."""
@@ -52,6 +75,8 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     dep_dir.mkdir()
     dep_manifest = {
         "name": "local-dep",
+        "organization": "nullsoft",
+        "description": "blah",
         "version": "1.0.0",
         "type": "package",
         "target": "MQL5"
@@ -61,6 +86,8 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     # Main project depends on local dep
     main_manifest = {
         "name": "test",
+        "organization": "acme",
+        "description": "blah",
         "version": "1.0.0",
         "type": "expert",
         "target": "MQL5",
@@ -72,10 +99,10 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     (main_dir / "knitpkg.json").write_text(json.dumps(main_manifest))
 
     manifest = load_knitpkg_manifest(main_dir, manifest_class=MQLKnitPkgManifest)
-    downloader = MQLDependencyDownloader(Console(), Path.cwd(), "http://localhost:8000")
+    downloader = MQLDependencyDownloader(main_dir, "http://localhost:8000", True, MQLKnitPkgManifest, Console(), False)
 
     with pytest.raises(LockedWithLocalDependencyError) as exc:
-        downloader.download_all(manifest.dependencies, "MQL5", locked_mode=True)
+        downloader.download_all()
 
-    assert exc.value.name == "local-dep"
+    assert exc.value.name == "@acme/local-dep"
     assert "--locked" in str(exc.value)

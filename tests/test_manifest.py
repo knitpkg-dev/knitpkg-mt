@@ -7,6 +7,7 @@ import pytest
 
 from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType, Target
 from knitpkg.core.file_reading import load_knitpkg_manifest
+from knitpkg.core.exceptions import ManifestLoadError
 
 # --------------------------------------------------------------------------- #
 # Fixtures
@@ -20,6 +21,7 @@ def sample_dir(tmp_path: Path) -> Path:
     manifest_data = {
         "name": "super-rsi-alert",
         "version": "2.4.1",
+        "organization": "acme",
         "description": "RSI with visual, sound and Telegram alerts",
         "author": "João Trader <joao@tradingpro.com>",
         "license": "MIT",
@@ -27,18 +29,9 @@ def sample_dir(tmp_path: Path) -> Path:
         "type": "indicator",
         "entrypoints": ["SuperRSI_Alert.mq5"],
         "dependencies": {
-            "json.mql": "https://github.com/fxdss/json.mql.git#v1.8.2",
-            "telegram": "git@github.com:fabiuz/telegram.mql.git#branch=main",
-            "utils": "https://gitlab.com/mql-libs/utils.git#v3.1.0"
-        },
-        "knitpkg": {
-            "pro": {
-                "private": True,
-                "oauth_provider": "github"
-            },
-            "enterprise": {
-                "proxy_url": "https://knitpkg-proxy.bankcorp.com"
-            }
+            "json": "^1.2.3",
+            "telegram": "1.3.4",
+            "utils": "~1.2.4"
         }
     }
 
@@ -54,6 +47,8 @@ def package_project(tmp_path: Path) -> Path:
 
     data = {
         "name": "math-advanced",
+        "organization": "nullsoft",
+        "description": "test",
         "version": "1.0.0",
         "type": "package",
         "target": "MQL5",
@@ -84,16 +79,9 @@ def test_load_valid_manifest(sample_dir: Path):
 
     # dependencies
     assert len(manifest.dependencies) == 3
-    assert manifest.dependencies["json.mql"] == "https://github.com/fxdss/json.mql.git#v1.8.2"
-    assert manifest.dependencies["telegram"] == "git@github.com:fabiuz/telegram.mql.git#branch=main"
+    assert manifest.dependencies["json"] == "^1.2.3"
+    assert manifest.dependencies["telegram"] == "1.3.4"
 
-    # knitpkg section
-    assert manifest.knitpkg is not None
-    assert manifest.knitpkg.pro is not None
-    assert manifest.knitpkg.pro.private is True
-    assert manifest.knitpkg.pro.oauth_provider.value == "github"
-    assert manifest.knitpkg.enterprise is not None
-    assert str(manifest.knitpkg.enterprise.proxy_url) == "https://knitpkg-proxy.bankcorp.com/"
 
 def test_package_has_no_entrypoint(package_project: Path):
     """Ensure package projects are accepted without entrypoints"""
@@ -103,12 +91,12 @@ def test_package_has_no_entrypoint(package_project: Path):
     assert manifest.type == MQLProjectType.PACKAGE
     assert manifest.entrypoints is None or manifest.entrypoints == []
 
-def test_missing_entrypoint_for_flat_mode(tmp_path: Path):
-    """flat mode projects must have entrypoints"""
+def test_missing_description(tmp_path: Path):
     d = tmp_path / "missing-entrypoint"
     d.mkdir()
     data = {
         "name": "no-entry",
+        "organization": "bublesoft",
         "type": "script",
         "version": "1.0.0",
         "include_mode": "flat",
@@ -116,32 +104,13 @@ def test_missing_entrypoint_for_flat_mode(tmp_path: Path):
     }
     (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ManifestLoadError) as exc:
         load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
-    assert "Include mode 'flat' requires at least one entrypoint" in str(exc.value)
+    error = str(exc.value)
+    assert "Missing required field" in str(exc.value)
+    assert "'description'" in str(exc.value)
 
-def test_invalid_git_url(tmp_path: Path):
-    """Malformed dependency URL should fail"""
-    d = tmp_path / "bad-dep"
-    d.mkdir()
-    data = {
-        "name": "bad",
-        "version": "1.0.0",
-        "type": "script",
-        "target": "MQL5",
-        "entrypoints": ["Test.mq5"],
-        "dependencies": {
-            "badlib": "https://github.com/user/lib"  # ← missing .git
-        }
-    }
-    (d / "knitpkg.json").write_text(json.dumps(data))
-
-    with pytest.raises(ValueError) as exc:
-        load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
-
-    error_msg = str(exc.value)
-    assert "Invalid dependency 'badlib'" in error_msg or "Error reading knitpkg." in error_msg
 
 def test_invalid_semver(tmp_path: Path):
     """Version not following SemVer"""
@@ -149,17 +118,19 @@ def test_invalid_semver(tmp_path: Path):
     d.mkdir()
     data = {
         "name": "bad",
-        "version": "1.2",  # ← missing patch
+        "version": "1.2", 
+        "organization": "acme",
+        "description": "test",
         "type": "indicator",
         "target": "MQL5",
         "entrypoints": ["X.mq5"],
     }
     (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ManifestLoadError) as exc:
         load_knitpkg_manifest(d / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
-    assert "version must follow SemVer format" in str(exc.value)
+    assert "Version must follow SemVer format" in str(exc.value)
 
 def test_file_not_found():
     """knitpkg.json not found"""

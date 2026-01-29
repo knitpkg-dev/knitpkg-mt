@@ -12,6 +12,7 @@ import yaml
 from pathlib import Path
 from typing import Optional, Union, Type, TypeVar
 import chardet
+from pydantic import ValidationError
 
 from .models import KnitPkgManifest
 from .exceptions import ManifestLoadError
@@ -133,6 +134,11 @@ def _load_from_yaml(path: Path, manifest_class: Type[T]) -> T:
         if data is None:
             raise ManifestLoadError(str(path), "Manifest file is empty")
         return manifest_class(**data)
+    except ValidationError as e:
+        missing_fields = [error["loc"][0] for error in e.errors() if error["type"] == "missing"]
+        if missing_fields:
+            raise ManifestLoadError(str(path), f"Missing required fields: {missing_fields}")
+        raise ManifestLoadError(str(path), str(e))
     except Exception as e:
         raise ManifestLoadError(str(path), str(e))
 
@@ -143,5 +149,10 @@ def _load_from_json(path: Path, manifest_class: Type[T]) -> T:
         if data is None:
             raise ManifestLoadError(str(path), "Manifest file is empty")
         return manifest_class(**data)
+    except ValidationError as e:
+        missing_fields = [error["loc"][0] for error in e.errors() if error["type"] == "missing"]
+        if missing_fields:
+            raise ManifestLoadError(str(path), f"Missing required fields: {missing_fields}")
+        raise ManifestLoadError(str(path), str(e))
     except Exception as e:
         raise ManifestLoadError(str(path), str(e))
