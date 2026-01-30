@@ -32,7 +32,7 @@ def search_command(target: str, q: Optional[str], org: Optional[str], type: Opti
             org_name = result.get('organization', {}).get('name', 'Unknown')
             name = result.get('name', 'Unknown')
             description = result.get('description', 'No description')
-            keywords = result.get('keywords')
+            keywords = result.get('keywords', 'None')
             project_type = result.get('type', 'Unknown')
             is_private = result.get('is_private', False)
             published_at = result.get('published_at', '')
@@ -42,8 +42,7 @@ def search_command(target: str, q: Optional[str], org: Optional[str], type: Opti
             console_awr.print(f"  Target: [cyan]{target}[/cyan]")
             console_awr.print(f"  Type: [cyan]{project_type}[/cyan]")
             console_awr.print(f"  Description: [cyan]{description}[/cyan]")
-            if keywords:
-                console_awr.print(f"  Keywords: [cyan]{[k.strip() for k in keywords.split(',') if k.strip()]}[/cyan]")
+            console_awr.print(f"  Keywords: [cyan]{keywords}[/cyan]")
             console_awr.print(f"  Private: {'[yellow]Yes[/yellow]' if is_private else '[cyan]No[/cyan]'}")
             console_awr.print(f"  Published: [cyan]{published_at}[/cyan]")
             if result.get('repo_url'):
