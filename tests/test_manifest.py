@@ -48,7 +48,7 @@ def package_project(tmp_path: Path) -> Path:
     data = {
         "name": "math-advanced",
         "organization": "nullsoft",
-        "description": "test",
+        "description": "A test description that is long enough for validation",
         "version": "1.0.0",
         "type": "package",
         "target": "MQL5",
@@ -118,9 +118,9 @@ def test_invalid_semver(tmp_path: Path):
     d.mkdir()
     data = {
         "name": "bad",
-        "version": "1.2", 
+        "version": "1.2",
         "organization": "acme",
-        "description": "test",
+        "description": "A test description that is long enough for validation",
         "type": "indicator",
         "target": "MQL5",
         "entrypoints": ["X.mq5"],

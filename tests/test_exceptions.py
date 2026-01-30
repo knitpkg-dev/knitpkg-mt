@@ -24,7 +24,7 @@ def test_local_dependency_not_found(tmp_path: Path):
     manifest_data = {
         "name": "test",
         "organization": "acme",
-        "description": "blah",
+        "description": "A test description that is long enough for validation",
         "version": "1.0.0",
         "type": "expert",
         "target": "MQL5",
@@ -51,7 +51,7 @@ def test_local_missing_fields(tmp_path: Path):
 
     manifest_data = {
         "name": "test",
-        "description": "blah",
+        "description": "A test description that is long enough for validation purposes",
         "version": "1.0.0",
         "type": "expert",
         "target": "MQL5",
@@ -76,7 +76,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     dep_manifest = {
         "name": "local-dep",
         "organization": "nullsoft",
-        "description": "blah",
+        "description": "A test description that is long enough for validation requirements",
         "version": "1.0.0",
         "type": "package",
         "target": "MQL5"
@@ -87,7 +87,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
     main_manifest = {
         "name": "test",
         "organization": "acme",
-        "description": "blah",
+        "description": "A test description that is long enough for validation checks",
         "version": "1.0.0",
         "type": "expert",
         "target": "MQL5",

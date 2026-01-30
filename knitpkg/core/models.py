@@ -74,13 +74,14 @@ class KnitPkgManifest(BaseModel):
     name: str = Field(
         ...,
         min_length=1,
-        max_length=100,
+        max_length=50,
         pattern=PROJECT_NAME_PATTERN,
         description="Project name (alphanumeric, hyphens, underscores, dots only)"
     )
 
     description: str = Field(
         ...,
+        min_length=10,
         max_length=500,
         description="Short project description"
     )
@@ -152,6 +153,15 @@ class KnitPkgManifest(BaseModel):
             )
         return v
 
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, v: str) -> str:
+        """Validate description has up to 50 words, ignoring punctuation."""
+        words = re.findall(r'\w+', v)
+        if len(words) > 50:
+            raise ValueError("description cannot have more than 50 words")
+        return v
+
     @field_validator("dependencies", mode="before")
     @classmethod
     def validate_dependencies(cls, v: Any) -> Dict[str, str]:
@@ -205,22 +215,51 @@ class KnitPkgManifest(BaseModel):
             return {}
         if not isinstance(v, dict):
             raise ValueError("overrides must be a dictionary")
-        
+
         for dep_name, version in v.items():
             if not isinstance(version, str):
                 raise ValueError(f"Override '{dep_name}' must be a string")
             version = version.strip()
             if not version:
                 raise ValueError(f"Override '{dep_name}' is empty")
-            
+
             if not DEP_NAME_RE.fullmatch(dep_name):
                 raise ValueError(
                     f"Override name '{dep_name}' must follow 'package-name' or '@organization/package-name' format"
                 )
-            
+
             if not validate_version(version):
                 raise ValueError(
                     f"Override '{dep_name}' must use SemVer format (e.g. 1.2.3)"
                 )
-        
+
         return v
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def validate_keywords(cls, v: Any) -> Optional[List[str]]:
+        """Validate keywords field: up to 10 words, alphanumeric and dash only, separated by comma or spaces."""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            words = v
+        elif isinstance(v, str):
+            if ',' in v:
+                words = [w.strip() for w in v.split(',')]
+            else:
+                words = v.split()
+            # Filter out empty strings
+            words = [w for w in words if w]
+        else:
+            raise ValueError("keywords must be a list or string")
+
+        if len(words) > 10:
+            raise ValueError("keywords cannot have more than 10 words")
+
+        word_pattern = re.compile(r'^[a-zA-Z0-9\-]+$')
+
+        for word in words:
+            if not word_pattern.match(word):
+                raise ValueError(f"keyword '{word}' contains invalid characters. Only alphanumeric and dash '-' allowed")
+
+        return words
