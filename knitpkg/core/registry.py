@@ -296,7 +296,7 @@ class Registry(ConsoleAware):
 
     def search_projects(self, target: str, q: Optional[str] = None, org: Optional[str] = None, type: Optional[str] = None, page: int = 1, page_size: int = 20, sort_by: str = "name", sort_order: str = "asc") -> dict:
         """Search for projects in the registry.
-        
+
         Args:
             target: Target platform (e.g., 'MQL5')
             q: General search term (name, description, keywords)
@@ -306,7 +306,7 @@ class Registry(ConsoleAware):
             page_size: Number of results per page
             sort_by: Field to sort by (e.g., 'name', 'created_at', ...)
             sort_order: Sort order ('asc' or 'desc')
-            
+
         Returns:
             Dict containing search results with pagination metadata
         """
@@ -336,6 +336,19 @@ class Registry(ConsoleAware):
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
                         "User-Agent": "KnitPkg-CLI/1.0.0"} if provider and token else {"User-Agent": "KnitPkg-CLI/1.0.0"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise RegistryError(e)
+
+    def info(self) -> dict:
+        """Get general information from the registry."""
+        try:
+            response = httpx.get(
+                f"{self.base_url}/info",
+                headers={"User-Agent": "KnitPkg-CLI/1.0.0"},
                 timeout=10.0
             )
             response.raise_for_status()

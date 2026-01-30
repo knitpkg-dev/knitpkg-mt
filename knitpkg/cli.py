@@ -24,6 +24,7 @@ from knitpkg.commands import (
     whoami,
     yank,
     info,
+    status,
     telemetry,
     # deploy, # Not yet implemented
 )
@@ -49,6 +50,7 @@ global_config.register(app)
 login.register(app)
 register.register(app)
 search.register(app)
+status.register(app)
 logout.register(app)
 whoami.register(app)
 yank.register(app)
