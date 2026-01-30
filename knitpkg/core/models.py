@@ -122,7 +122,7 @@ class KnitPkgManifest(BaseModel):
         description="List of source files to compile (relative to project root)"
     )
 
-    dependencies: Dict[str, str] = Field(
+    dependencies: Optional[Dict[str, str]] = Field(
         default_factory=dict,
         description="Dependencies with Git URLs or local paths and version constraints"
     )
@@ -241,25 +241,15 @@ class KnitPkgManifest(BaseModel):
         """Validate keywords field: up to 10 words, alphanumeric and dash only, separated by comma or spaces."""
         if v is None:
             return None
-        if isinstance(v, list):
-            words = v
-        elif isinstance(v, str):
-            if ',' in v:
-                words = [w.strip() for w in v.split(',')]
-            else:
-                words = v.split()
-            # Filter out empty strings
-            words = [w for w in words if w]
-        else:
+        if not isinstance(v, list):
             raise ValueError("keywords must be a list or string")
-
-        if len(words) > 10:
+        if len(v) > 10:
             raise ValueError("keywords cannot have more than 10 words")
 
         word_pattern = re.compile(r'^[a-zA-Z0-9\-]+$')
 
-        for word in words:
+        for word in v:
             if not word_pattern.match(word):
                 raise ValueError(f"keyword '{word}' contains invalid characters. Only alphanumeric and dash '-' allowed")
 
-        return words
+        return v
