@@ -29,6 +29,8 @@ def info_command(target: str, organization: str, project_name: str, console_awr:
     console_awr.print(f"  Type: [cyan]{project_info.get('type')}[/cyan]")
     console_awr.print(f"  Description: [cyan]{project_info.get('description') or 'No description'}[/cyan]")
     console_awr.print(f"  Keywords: [cyan]{project_info.get('keywords', 'None')}[/cyan]")
+    console_awr.print(f"  Author: [cyan]{project_info.get('author') or 'None'}[/cyan]")
+    console_awr.print(f"  License: [cyan]{project_info.get('license') or 'None'}[/cyan]")
     console_awr.print(f"  Private: {'[yellow]Yes[/]' if project_info.get('is_private') else '[cyan]No[/]'}")
     published_at = project_info.get('published_at')
     published_at = datetime.datetime.fromisoformat(published_at.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S') if published_at else ''

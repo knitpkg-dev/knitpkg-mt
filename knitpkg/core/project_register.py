@@ -74,9 +74,10 @@ class ProjectRegister(ConsoleAware):
         if self.manifest.organization != self.manifest.organization.lower():
             raise KnitPkgError(f"Organization name '{self.manifest.organization}' must be lowercase. Please update your manifest.")
 
-        for dep_name, dep_spec in self.manifest.dependencies.items():
-            if is_local_path(dep_spec):
-                raise KnitPkgError(f"Dependency '{dep_name}' uses a local path. Local path dependencies are not allowed for registration. Please specify a registered version.")
+        if self.manifest.dependencies:
+            for dep_name, dep_spec in self.manifest.dependencies.items():
+                if is_local_path(dep_spec):
+                    raise KnitPkgError(f"Dependency '{dep_name}' uses a local path. Local path dependencies are not allowed for registration. Please specify a registered version.")
         self.log("✔ Manifest name and dependencies validated.")
 
     def _check_for_remote_origin(self):
@@ -246,6 +247,8 @@ class ProjectRegister(ConsoleAware):
             "target": self.manifest.target,
             "type": self.manifest.type,
             "description": self.manifest.description,
+            "author": self.manifest.author,
+            "license": self.manifest.license,
             "version": self.manifest.version,
             "repo_url": self.remote_url,
             "commit_hash": commit_hash,

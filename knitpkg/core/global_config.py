@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, Any
 import yaml
 
-DEFAULT_PUBLIC_REGISTRY = "https://registry.knitpkg.dev"
+DEFAULT_PUBLIC_REGISTRY = "https://api.registry.knitpkg.dev"
 DEFAULT_AUTH_CALLBACK_PORT = 8789
 
 def get_registry_url() -> str:
