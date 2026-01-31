@@ -1,6 +1,7 @@
 # knitpkg/commands/info.py
 
 import typer
+from typing import Optional
 from rich.console import Console
 
 from knitpkg.core.registry import Registry
@@ -57,7 +58,7 @@ def register(app):
 
     @app.command()
     def info(
-        target: Target = typer.Argument(..., help="Platform target (MQL4, MQL5, ...)."),
+        target: str = typer.Argument(..., help="Platform target (MQL4, MQL5, ...)."),
         specifier: str = typer.Argument(..., help="@organization/project_name"),
         verbose: bool = typer.Option(
             False,
@@ -73,8 +74,14 @@ def register(app):
             organization, name = parse_project_name(specifier)
             if not organization:
                 raise KnitPkgError("No organization specified")
-            
-            info_command(target.value, organization, name, console_awr, verbose)
+            target_t: Optional[Target] = None
+            for t in Target:
+                if t.lower() == target.lower():
+                    target_t = t
+                    break
+            if not target_t:
+                raise KnitPkgError(f"Unsupported target platform: {target}")
+            info_command(target_t.value, organization, name, console_awr, verbose)
             from knitpkg.core.telemetry import print_telemetry_warning
             from pathlib import Path
             print_telemetry_warning(Path.cwd())

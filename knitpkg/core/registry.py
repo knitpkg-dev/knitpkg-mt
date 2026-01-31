@@ -294,7 +294,7 @@ class Registry(ConsoleAware):
         except:
             ... # ignore
 
-    def search_projects(self, target: str, q: Optional[str] = None, org: Optional[str] = None, type: Optional[str] = None, page: int = 1, page_size: int = 20, sort_by: str = "name", sort_order: str = "asc") -> dict:
+    def search_projects(self, target: str, q: Optional[str] = None, org: Optional[str] = None, type: Optional[str] = None, author: Optional[str] = None, license: Optional[str] = None, page: int = 1, page_size: int = 20, sort_by: str = "name", sort_order: str = "asc") -> dict:
         """Search for projects in the registry.
 
         Args:
@@ -321,6 +321,8 @@ class Registry(ConsoleAware):
             "q": q,
             "type": type,
             "org": org,
+            "author": author,
+            "license": license,
             "page": page,
             "page_size": page_size,
             "sort_by": sort_by,

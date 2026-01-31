@@ -14,13 +14,13 @@ import datetime
 # COMMAND WRAPPER
 # ==============================================================
 
-def search_command(target: str, q: Optional[str], org: Optional[str], type: Optional[str], page: int, page_size: int, sort_by: str, sort_order: str, console_awr: ConsoleAware, verbose: bool):
+def search_command(target: str, q: Optional[str], org: Optional[str], type: Optional[str], author: Optional[str], license: Optional[str], page: int, page_size: int, sort_by: str, sort_order: str, console_awr: ConsoleAware, verbose: bool):
     """Command wrapper for search command."""
 
     registry_url = get_registry_url()
     registry: Registry = Registry(registry_url, console=console_awr.console, verbose=verbose)
 
-    search_results = registry.search_projects(target, q, org, type, page, page_size, sort_by, sort_order)
+    search_results = registry.search_projects(target, q, org, type, author, license, page, page_size, sort_by, sort_order)
 
     console_awr.print("🔍 [bold cyan]Search Results[/bold cyan]\n")
     console_awr.print(f"  Total results: [cyan]{search_results.get('total_results', 0)}[/cyan]")
@@ -61,7 +61,7 @@ def register(app):
 
     @app.command()
     def search(
-        target: Target = typer.Argument(..., help="Target platform (MQL5, MQL4, ...)."),
+        target: str = typer.Argument(..., help="Target platform (MQL5, MQL4, ...)."),
         q: Optional[str] = typer.Option(
             None,
             "--query",
@@ -78,7 +78,31 @@ def register(app):
             None,
             "--type",
             "-t",
-            help="Filter by project type (e.g., 'expert', 'indicator', 'library')"
+            help="Filter by project type (e.g., 'expert', 'indicator', 'library', etc)"
+        ),
+        author: Optional[str] = typer.Option(
+            None,
+            "--author",
+            "-a",
+            help="Filter by author name"
+        ),
+        license: Optional[str] = typer.Option(
+            None,
+            "--license",
+            "-l",
+            help="Filter by license type"
+        ),
+        sortby: Optional[str] = typer.Option(
+            "published_at",
+            "--sort-by",
+            "-S",
+            help="Sort by order. Use `relevance` with `q` or any Project field (e.g., 'name', 'published_at', ...)"
+        ),
+        sortorder: Optional[str] = typer.Option(
+            "desc",
+            "--sort-order",
+            "-O",
+            help="Sort order ('asc' or 'desc')"
         ),
         page: int = typer.Option(
             1,
@@ -107,7 +131,15 @@ def register(app):
 
         try:
             console_awr.print("")
-            search_command(target.value, q, org, type, page, page_size, 'published_at', 'desc', console_awr, True if verbose else False)
+            target_t: Optional[Target] = None
+            for t in Target:
+                if t.lower() == target.lower():
+                    target_t = t
+                    break
+            if not target_t:
+                raise KnitPkgError(f"Unsupported target platform: {target}")
+            
+            search_command(target_t.value, q, org, type, author, license, page, page_size, sortby or 'published_at', sortorder or 'desc', console_awr, True if verbose else False)
             from knitpkg.core.telemetry import print_telemetry_warning
             print_telemetry_warning(Path.cwd())
             console_awr.print("")
