@@ -19,7 +19,7 @@ from knitpkg.core.exceptions import KnitPkgError, RegistryError
 # ==============================================================
 def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool) -> None:
     """
-    Main logic for the `kp-mt build` command.
+    Main logic for the `kp build` command.
 
     Loads the project manifest and executes the correct sequence of commands
     (autocomplete, install, compile) based on the `manifest.type`.

@@ -22,7 +22,7 @@ def print_telemetry_warning(project_dir: Path):
     console.print(
         "\n[yellow bold]Telemetry remains disabled[/]. Please consider enabling it. "
         "The KnitPkg ecosystem's vitality depends on community participation. "
-        "Enable telemetry with [cyan]`kp-mt telemetry on`[/] to sustain this critical infrastructure."
+        "Enable telemetry with [cyan]`kp telemetry on`[/] to sustain this critical infrastructure."
     )
 
 def send_telemetry_data(root_node: ProjectNode, project_dir: Path):

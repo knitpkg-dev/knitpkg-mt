@@ -55,7 +55,7 @@ poetry install
 poetry shell
 
 # You're ready!
-kp-mt --version
+kp --version
 ```
 
 ### Free Edition — Already More Powerful Than Anything Else Available
@@ -63,8 +63,8 @@ kp-mt --version
 | Feature                         | Status | Description                                                    |
 |---------------------------------|--------|----------------------------------------------------------------|
 | Dependency resolution           | Done   | Local and remote (Git) dependencies with full SemVer support   |
-| `kp-mt install` / `build`  | Done   | Reproducible, lockfile-based installs                          |
-| `kp-mt autocomplete`       | Done   | Full IntelliSense during development                           |
+| `kp install` / `build`  | Done   | Reproducible, lockfile-based installs                          |
+| `kp autocomplete`       | Done   | Full IntelliSense during development                           |
 | **KnitPkg Build Directives**      | Done   | Revolutionary development-time includes                        |
 | Flat and Include modes          | Done   | One-click clean builds                                         |
 
@@ -146,14 +146,14 @@ or a bank running thousands of strategies —
 **Free today. Powerful forever.**
 
 ```bash
-kp-mt init include      # start your first library
-kp-mt autocomplete      # code with joy
+kp init include      # start your first library
+kp autocomplete      # code with joy
 ```
 
 **In your EA/indicator:**
 
 ```bash
-kp-mt install             # all dependencies solved
+kp install             # all dependencies solved
 ```
 
 ### KnitPkg Manifest Specification

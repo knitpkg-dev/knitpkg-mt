@@ -282,7 +282,7 @@ class MQLCompiler(ConsoleAware):
             )
             self.print(
                 f"[yellow]💡 Hint:[/] To specify a particular data folder, "
-                f"use 'kp-mt config --{self.manifest.target.lower()}-data-folder-path <path>'."
+                f"use 'kp config --{self.manifest.target.lower()}-data-folder-path <path>'."
             )
 
         return found_mql_paths[0]

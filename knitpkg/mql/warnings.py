@@ -100,7 +100,7 @@ def warn_mql_dependency_manifest(manifest, console: Optional[ConsoleAware] = Non
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )
         console.log(
-            f"    → target is '{manifest.target.value}', but `kp-mt install` only "
+            f"    → target is '{manifest.target.value}', but `kp install` only "
             f"supports '{Target.mql4.value}' or '{Target.mql5.value}' projects."
         )
 
@@ -112,7 +112,7 @@ def warn_mql_dependency_manifest(manifest, console: Optional[ConsoleAware] = Non
             f"[red]Error:[/] Invalid dependency {manifest.name} v{manifest.version}"
         )
         console.log(
-            f"    → type is '{manifest.type.value}', but `kp-mt install` only "
+            f"    → type is '{manifest.type.value}', but `kp install` only "
             f"supports 'package' projects."
         )
 

@@ -49,7 +49,7 @@ class CompilerNotFoundError(MQLCompilationError):
     def __init__(self, compiler_path: str, target: str):
         self.compiler_path = compiler_path
         self.target = target
-        super().__init__(f"Compiler not found: {compiler_path}. Hint: configure compiler path with `kp-mt config --{target.lower()}-compiler-path <path-to-MetaEditor.exe>`")
+        super().__init__(f"Compiler not found: {compiler_path}. Hint: configure compiler path with `kp config --{target.lower()}-compiler-path <path-to-MetaEditor.exe>`")
 
 
 class UnsupportedTargetError(MQLCompilationError):

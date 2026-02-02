@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "knitpkg-mt"
-version = "0.1.0"
+version = "1.0.0-alpha.1"
 description = "KnitPkg for MetaTrader – Professional package manager for MQL5/MQL4"
 authors = ["Douglas Rechia <rechia@gmail.com>"]
 license = "MIT"
@@ -44,4 +44,4 @@ watch = "pytest-watch -- -xvs"
 manifest = "pytest tests/test_manifest.py -v"
 
 [tool.poetry.scripts]
-kp-mt = "knitpkg.cli:app"
+kp = "knitpkg.cli:app"
