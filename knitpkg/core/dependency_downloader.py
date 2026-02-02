@@ -311,7 +311,7 @@ class DependencyDownloader(ConsoleAware):
         Validate a dependency manifest.
 
         Override this method in platform-specific downloaders to enforce
-        platform-specific constraints (e.g., MQL5 can only depend on MQL5 packages).
+        platform-specific constraints (e.g., mql5 can only depend on mql5 packages).
 
         Args:
             manifest: Loaded KnitPkgManifest object

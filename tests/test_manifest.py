@@ -25,7 +25,7 @@ def sample_dir(tmp_path: Path) -> Path:
         "description": "RSI with visual, sound and Telegram alerts",
         "author": "João Trader <joao@tradingpro.com>",
         "license": "MIT",
-        "target": "MQL5",
+        "target": "mql5",
         "type": "indicator",
         "entrypoints": ["SuperRSI_Alert.mq5"],
         "dependencies": {
@@ -51,7 +51,7 @@ def package_project(tmp_path: Path) -> Path:
         "description": "A test description that is long enough for validation",
         "version": "1.0.0",
         "type": "package",
-        "target": "MQL5",
+        "target": "mql5",
         "dependencies": {}
     }
 
@@ -71,7 +71,7 @@ def test_load_valid_manifest(sample_dir: Path):
     assert manifest.description == "RSI with visual, sound and Telegram alerts"
     assert manifest.author == "João Trader <joao@tradingpro.com>"
     assert manifest.license == "MIT"
-    assert manifest.target == Target.MQL5
+    assert manifest.target == Target.mql5
 
     # MQL-specific fields
     assert manifest.type == MQLProjectType.INDICATOR
@@ -87,7 +87,7 @@ def test_package_has_no_entrypoint(package_project: Path):
     """Ensure package projects are accepted without entrypoints"""
     manifest = load_knitpkg_manifest(package_project / "knitpkg.json", manifest_class=MQLKnitPkgManifest)
 
-    assert manifest.target == Target.MQL5
+    assert manifest.target == Target.mql5
     assert manifest.type == MQLProjectType.PACKAGE
     assert manifest.entrypoints is None or manifest.entrypoints == []
 
@@ -100,7 +100,7 @@ def test_missing_description(tmp_path: Path):
         "type": "script",
         "version": "1.0.0",
         "include_mode": "flat",
-        "target": "MQL5",
+        "target": "mql5",
     }
     (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")
 
@@ -122,7 +122,7 @@ def test_invalid_semver(tmp_path: Path):
         "organization": "acme",
         "description": "A test description that is long enough for validation",
         "type": "indicator",
-        "target": "MQL5",
+        "target": "mql5",
         "entrypoints": ["X.mq5"],
     }
     (d / "knitpkg.json").write_text(json.dumps(data), encoding="utf-8")

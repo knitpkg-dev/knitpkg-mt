@@ -99,7 +99,7 @@ class ProjectInitializer(ConsoleAware):
         # Create UnitTests
         tests_dir = project_root / "tests"
         tests_dir.mkdir(parents=True, exist_ok=True)
-        unit_file_name = "UnitTests.mq5" if self.target == Target.MQL5 else "UnitTests.mq4"
+        unit_file_name = "UnitTests.mq5" if self.target == Target.mql5 else "UnitTests.mq4"
         unit_path = tests_dir / unit_file_name
         self.compile.append("tests/UnitTests.mq5")
 
@@ -130,7 +130,7 @@ class ProjectInitializer(ConsoleAware):
         self.create_project_files('Expert Advisor', templates.TEMPLATE_EXPERT, templates.TEMPLATE_EXPERT_GETTING_STARTED)
 
     def create_indicator_files(self) -> None:
-        if self.target == Target.MQL4:
+        if self.target == Target.mql4:
             template = templates.TEMPLATE_INDICATOR_BARS_MQL4
         else:
             template = templates.TEMPLATE_INDICATOR_BARS_MQL5 \
@@ -174,7 +174,7 @@ class ProjectInitializer(ConsoleAware):
             project_includes = ['// Add here your includes to the resolved dependencies, something like:',
                                 '// #include "../knitpkg/include/Path/to/header.mqh"']
 
-        file_ext = ".mq5" if self.target == Target.MQL5 else ".mq4"
+        file_ext = ".mq5" if self.target == Target.mql5 else ".mq4"
         file_name = f"{self.name}{file_ext}"
         expert_path = src_dir / file_name
 
@@ -223,7 +223,7 @@ class ProjectInitializer(ConsoleAware):
         if self.project_type != MQLProjectType.INDICATOR:
             return
         
-        if self.target == Target.MQL4:
+        if self.target == Target.mql4:
             self.indicator_input_type = IndicatorInputType.OHLC
             return
 
@@ -320,7 +320,7 @@ class ProjectInitializer(ConsoleAware):
             target_input = Prompt.ask(
                 "MetaTrader platform target",
                 choices=[t.value for t in Target],
-                default=Target.MQL5.value,
+                default=Target.mql5.value,
             )
             self.target = Target(target_input)
         else:
@@ -350,7 +350,7 @@ class ProjectInitializer(ConsoleAware):
                     raise InvalidUsageError(f"Invalid include mode '{include_mode}'. Choose from {', '.join([im.value for im in IncludeMode])}.")
 
             if self.include_mode == IncludeMode.FLAT:
-                mql_ext = '.mq5' if self.target == Target.MQL5 else '.mq4'
+                mql_ext = '.mq5' if self.target == Target.mql5 else '.mq4'
 
                 entrypoints_raw = []
                 if entrypoints_str is None:

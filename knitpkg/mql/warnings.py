@@ -93,7 +93,7 @@ def warn_mql_dependency_manifest(manifest, console: Optional[ConsoleAware] = Non
     accept = True
 
     # Check target
-    accept_target = manifest.target in (Target.MQL4, Target.MQL5)
+    accept_target = manifest.target in (Target.mql4, Target.mql5)
     accept = accept and accept_target
     if not accept_target and console:
         console.log(
@@ -101,7 +101,7 @@ def warn_mql_dependency_manifest(manifest, console: Optional[ConsoleAware] = Non
         )
         console.log(
             f"    → target is '{manifest.target.value}', but `kp-mt install` only "
-            f"supports '{Target.MQL4.value}' or '{Target.MQL5.value}' projects."
+            f"supports '{Target.mql4.value}' or '{Target.mql5.value}' projects."
         )
 
     # Check type

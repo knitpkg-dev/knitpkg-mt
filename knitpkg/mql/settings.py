@@ -26,16 +26,16 @@ class MQLSettings(Settings):
     
     def get_compiler_path(self, target: Target) -> str:
         """Get compiler path for specified MQL version."""
-        if target == Target.MQL4:
+        if target == Target.mql4:
             return self.get("mql4-compiler-path", DEFAULT_MQL4_COMPILER)
-        elif target == Target.MQL5:
+        elif target == Target.mql5:
             return self.get("mql5-compiler-path", DEFAULT_MQL5_COMPILER)
         else:
             raise UnsupportedTargetError(target)
     
     def set_compiler_path(self, path: str, target: Target):
         """Set compiler path for specified MQL version."""
-        if target == Target.MQL4:
+        if target == Target.mql4:
             compiler_path: Path = Path(path)
             if compiler_path.is_dir():
                 compiler_path = compiler_path / "metaeditor.exe"
@@ -43,7 +43,7 @@ class MQLSettings(Settings):
                 raise FileNotFoundError(f"Compiler not found at {compiler_path}")
             self.save_if_changed("mql4-compiler-path", str(compiler_path))
         
-        elif target == Target.MQL5:
+        elif target == Target.mql5:
             compiler_path: Path = Path(path)
             if compiler_path.is_dir():
                 compiler_path = compiler_path / "MetaEditor64.exe"
@@ -56,10 +56,10 @@ class MQLSettings(Settings):
 
     def get_data_folder_path(self, target: Target) -> Optional[str]:
         """Get compiler path for specified MQL version."""
-        if target == Target.MQL4:
+        if target == Target.mql4:
             return self.get("mql4-data-folder-path")
         
-        elif target == Target.MQL5:
+        elif target == Target.mql5:
             return self.get("mql5-data-folder-path")
         
         else:
@@ -67,10 +67,10 @@ class MQLSettings(Settings):
     
     def set_data_folder_path(self, path: str, target: Target):
         """Set compiler path for specified MQL version."""
-        if target == Target.MQL4:
+        if target == Target.mql4:
             self.save_if_changed("mql4-data-folder-path", str(path))
         
-        elif target == Target.MQL5:
+        elif target == Target.mql5:
             self.save_if_changed("mql5-data-folder-path", str(path))
         
         else:

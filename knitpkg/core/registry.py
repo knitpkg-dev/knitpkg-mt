@@ -159,7 +159,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.post(
-                f"{self.base_url}/project/register",
+                f"{self.base_url}/v1/project/register",
                 json=payload,
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
@@ -177,7 +177,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.get(
-                f"{self.base_url}/auth/whoami",
+                f"{self.base_url}/v1/auth/whoami",
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
                         "User-Agent": "KnitPkg-CLI/1.0.0"},
@@ -210,7 +210,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.get(
-                f"{self.base_url}/project/{target}/{org}/{pack_name}/{version_spec}/resolve",
+                f"{self.base_url}/v1/project/{target}/{org}/{pack_name}/{version_spec}/resolve",
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
                         "User-Agent": "KnitPkg-CLI/1.0.0"} if provider and token else None,
@@ -237,7 +237,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.post(
-                f"{self.base_url}/project/{target}/{organization}/{project_name}/{version}/yank",
+                f"{self.base_url}/v1/project/{target}/{organization}/{project_name}/{version}/yank",
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
                         "User-Agent": "KnitPkg-CLI/1.0.0"},
@@ -268,7 +268,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.get(
-                f"{self.base_url}/project/{target}/{organization}/{project_name}{'?skip_versions=true' if skip_versions else ''}",
+                f"{self.base_url}/v1/project/{target}/{organization}/{project_name}{'?skip_versions=true' if skip_versions else ''}",
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
                         "User-Agent": "KnitPkg-CLI/1.0.0"} if provider and token else None,
@@ -286,7 +286,7 @@ class Registry(ConsoleAware):
 
         try:
             httpx.post(
-                f"{self.base_url}/telemetry/install",
+                f"{self.base_url}/v1/telemetry/install",
                 json=payload,
                 headers={"User-Agent": "KnitPkg-CLI/1.0.0"},
                 timeout=10.0
@@ -298,7 +298,7 @@ class Registry(ConsoleAware):
         """Search for projects in the registry.
 
         Args:
-            target: Target platform (e.g., 'MQL5')
+            target: Target platform (e.g., 'mql5')
             q: General search term (name, description, keywords)
             org: Filter by organization name
             type: Filter by project type (e.g., 'expert', 'indicator', 'library')
@@ -333,7 +333,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.get(
-                f"{self.base_url}/projects/{target}/search",
+                f"{self.base_url}/v1/projects/{target}/search",
                 params=params,
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
@@ -361,7 +361,7 @@ class Registry(ConsoleAware):
     def _fetch_registry_config(self, provider: Optional[str] = None) -> Tuple[str, str, str]:
         """Fetch provider configuration from registry."""
 
-        response = httpx.get(f"{self.base_url}/auth/config", headers={"User-Agent": "KnitPkg-CLI/1.0.0"})
+        response = httpx.get(f"{self.base_url}/v1/auth/config", headers={"User-Agent": "KnitPkg-CLI/1.0.0"})
         response.raise_for_status()
         config = response.json()
         
@@ -399,7 +399,7 @@ class Registry(ConsoleAware):
     def _exchange_code_for_token(self, provider: str, code: str) -> Optional[dict]:
         """Exchange authorization code for access token with the registry."""
         response = httpx.post(
-            f"{self.base_url}/auth/{provider}/exchange-token",
+            f"{self.base_url}/v1/auth/{provider}/exchange-token",
             json={"code": code},
             headers={"User-Agent": "KnitPkg-CLI/1.0.0"}
         )

@@ -29,7 +29,7 @@ def register(app):
 
     @app.command()
     def get(
-        target: Target = typer.Argument(..., help="Platform target (MQL4, MQL5, ...)."),
+        target: Target = typer.Argument(..., help="Platform target."),
         proj_specifier: str = typer.Argument(
             ...,
             help="Specifier of the project to get: @organization/project_name"

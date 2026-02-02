@@ -45,13 +45,13 @@ def config_command(
 
     # Set compiler paths
     if mql5_compiler_path:
-        settings.set_compiler_path(str(mql5_compiler_path.resolve()), Target.MQL5)
+        settings.set_compiler_path(str(mql5_compiler_path.resolve()), Target.mql5)
         console_awr.print(
             f"🔧 [green]MQL5 compiler path set[/green] → "
             f"[cyan]{mql5_compiler_path.resolve()}[/cyan]"
         )
     if mql4_compiler_path:
-        settings.set_compiler_path(str(mql4_compiler_path.resolve()), Target.MQL4)
+        settings.set_compiler_path(str(mql4_compiler_path.resolve()), Target.mql4)
         console_awr.print(
             f"🔧 [green]MQL4 compiler path set[/green] → "
             f"[cyan]{mql4_compiler_path.resolve()}[/cyan]"
@@ -59,13 +59,13 @@ def config_command(
 
     # Set MQL data folder paths
     if mql5_data_folder_path:
-        settings.set_data_folder_path(str(mql5_data_folder_path.resolve()), Target.MQL5)
+        settings.set_data_folder_path(str(mql5_data_folder_path.resolve()), Target.mql5)
         console_awr.print(
             f"📁 [green]MQL5 data folder path set[/green] → "
             f"[cyan]{mql5_data_folder_path.resolve()}[/cyan]"
         )
     if mql4_data_folder_path:
-        settings.set_data_folder_path(str(mql4_data_folder_path.resolve()), Target.MQL4)
+        settings.set_data_folder_path(str(mql4_data_folder_path.resolve()), Target.mql4)
         console_awr.print(
             f"📁 [green]MQL4 data folder path set[/green] → "
             f"[cyan]{mql4_data_folder_path.resolve()}[/cyan]"
@@ -80,12 +80,12 @@ def config_command(
         console_awr.print("")
         
         # Display compiler paths
-        mql5_path = settings.get_compiler_path(Target.MQL5) or "[dim]Not set[/]"
-        mql4_path = settings.get_compiler_path(Target.MQL4) or "[dim]Not set[/]"
+        mql5_path = settings.get_compiler_path(Target.mql5) or "[dim]Not set[/]"
+        mql4_path = settings.get_compiler_path(Target.mql4) or "[dim]Not set[/]"
         
         # Display data folder paths
-        mql5_data = settings.get_data_folder_path(Target.MQL5) or "[dim]Not set[/]"
-        mql4_data = settings.get_data_folder_path(Target.MQL4) or "[dim]Not set[/]"
+        mql5_data = settings.get_data_folder_path(Target.mql5) or "[dim]Not set[/]"
+        mql4_data = settings.get_data_folder_path(Target.mql4) or "[dim]Not set[/]"
         
         console_awr.print(f"  mql5-compiler-path:     {mql5_path}")
         console_awr.print(f"  mql4-compiler-path:     {mql4_path}")

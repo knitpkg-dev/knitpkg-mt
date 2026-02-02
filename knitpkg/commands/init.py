@@ -58,7 +58,7 @@ def register(app):
         project_type: MQLProjectType = typer.Option(
             None, "--type", help="Project type (package, expert, indicator, library, service)."
         ),
-        target: Target = typer.Option(None, "--target", "-t", help="MetaTrader platform target (MQL4 or MQL5)."),
+        target: Target = typer.Option(None, "--target", "-t", help="MetaTrader platform target (mql4 or mql5)."),
         name: str = typer.Option(
             None,
             "--name",

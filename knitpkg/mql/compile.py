@@ -164,7 +164,7 @@ class MQLCompiler(ConsoleAware):
             Path to the MetaEditor executable
 
         Raises:
-            UnsupportedTargetError: If manifest target is not MQL4 or MQL5
+            UnsupportedTargetError: If manifest target is not mql4 or mql5
             CompilerNotFoundError: If the compiler executable does not exist
         """
         settings: MQLSettings = MQLSettings(self.project_dir)
@@ -269,7 +269,7 @@ class MQLCompiler(ConsoleAware):
 
         # 2. Fallback to auto-detection logic
         found_mql_paths: List[Path] = find_mql_paths(Target(self.manifest.target))
-        target_folder_name = self.manifest.target # MQL5 or MQL4
+        target_folder_name = self.manifest.target.upper() # MQL5 or MQL4
 
         if not found_mql_paths:
             raise MQLIncludePathNotFoundError(target_folder_name)
@@ -486,7 +486,7 @@ class MQLCompiler(ConsoleAware):
         if not result.file_path:
             return
 
-        compiled_file_ext = ".ex5" if self.manifest.target == Target.MQL5 else ".ex4"
+        compiled_file_ext = ".ex5" if self.manifest.target == Target.mql5 else ".ex4"
 
         # Only move files that were actually compiled (not skipped)
         if result.status in (CompilationStatus.SUCCESS, CompilationStatus.SUCCESS_WITH_WARNINGS):

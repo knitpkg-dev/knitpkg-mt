@@ -18,7 +18,7 @@ def get_mql_target_paths(target: Target, base_path: Path) -> List[Path]:
     for root, dirs, _ in os.walk(base_path):
         for d in dirs:
             terminal_id_path = Path(root) / d
-            mql_path = terminal_id_path / target.value
+            mql_path = terminal_id_path / target.value.upper()
             if is_valid_target_path(mql_path):
                 target_paths.append(mql_path)
         # Only search one level deep in Terminal folders
@@ -39,12 +39,12 @@ def find_mql_paths(target: Target) -> List[Path]:
     Parameters
     ----------
     target : Target
-        The MetaTrader target platform (Target.MQL5 or Target.MQL4).
+        The MetaTrader target platform (Target.mql5 or Target.mql4).
 
     Returns
     -------
     List[Path]
-        A list of absolute Path objects, each pointing to a valid MQL5 or MQL4
+        A list of absolute Path objects, each pointing to a valid mql5 or mql4
         data folder. The list may be empty if no suitable directories are found.
 
     Notes
@@ -56,11 +56,11 @@ def find_mql_paths(target: Target) -> List[Path]:
         Path.home() / "AppData" / "Roaming" / "MetaQuotes" / "Terminal",
     ]
 
-    if target == Target.MQL5:
+    if target == Target.mql5:
         possible_paths.append(
             Path("C:/Program Files/MetaTrader 5/Terminal"), # Common default for MQL5
         )
-    elif target == Target.MQL4:
+    elif target == Target.mql4:
         possible_paths.append(
             Path("C:/Program Files (x86)/MetaTrader 4/Terminal"),
         )
@@ -75,4 +75,4 @@ def find_mql_paths(target: Target) -> List[Path]:
     return found_mql_paths
 
 if __name__ == '__main__':
-    print(find_mql_paths(Target.MQL5))
+    print(find_mql_paths(Target.mql5))

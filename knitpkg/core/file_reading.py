@@ -86,7 +86,7 @@ def load_knitpkg_manifest(
     Example:
         >>> from knitpkg.mql.models import MQLKnitPkgManifest
         >>> manifest = load_knitpkg_manifest("path/to/project", MQLKnitPkgManifest)
-        >>> print(manifest.target)  # Target.MQL5
+        >>> print(manifest.target)  # Target.mql5
     """
     if manifest_class is None:
         manifest_class = KnitPkgManifest

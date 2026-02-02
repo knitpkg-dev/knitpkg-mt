@@ -31,7 +31,7 @@ def register(app):
 
     @app.command()
     def yank(
-        target: Target = typer.Argument(..., help="MetaTrader platform target (MQL4 or MQL5)."),
+        target: Target = typer.Argument(..., help="Platform target"),
         specifier: str = typer.Argument(..., help="@organization/project_name"),
         version: str = typer.Argument(..., help="Version to yank"),
         verbose: bool = typer.Option(

@@ -61,7 +61,7 @@ def register(app):
 
     @app.command()
     def search(
-        target: str = typer.Argument(..., help="Target platform (MQL5, MQL4, ...)."),
+        target: str = typer.Argument(..., help="Target platform."),
         q: Optional[str] = typer.Option(
             None,
             "--query",

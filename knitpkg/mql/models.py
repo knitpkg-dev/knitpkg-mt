@@ -20,8 +20,8 @@ from knitpkg.core.models import KnitPkgManifest, ProjectType
 
 class Target(str, Enum):
     """MetaTrader target platforms."""
-    MQL4 = "MQL4"
-    MQL5 = "MQL5"
+    mql4 = "mql4"
+    mql5 = "mql5"
 
 class MQLProjectType(str, Enum):
     """
@@ -49,7 +49,7 @@ class MQLKnitPkgManifest(KnitPkgManifest):
     """
     MQL-specific manifest extending the base KnitPkgManifest.
 
-    Adds MetaTrader-specific fields: target (MQL4/MQL5), type (project types),
+    Adds MetaTrader-specific fields: target (mql4/mql5), type (project types),
     include_mode, and entrypoints.
     """
 

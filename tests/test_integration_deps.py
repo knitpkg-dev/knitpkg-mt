@@ -80,7 +80,7 @@ class MockConsole:
     def set_quiet(self, quiet: bool):
         self.is_quiet = quiet
 
-# --- Conteúdo dos arquivos MQL5 para cada projeto ---
+# --- Conteúdo dos arquivos mql5 para cada projeto ---
 
 # Level 4 (Leaf)
 DEP_E_MQH_CONTENT = """
@@ -103,7 +103,7 @@ name: DepE
 organization: NullSolutions
 version: 1.0.0
 type: package
-target: MQL5
+target: mql5
 description: Dependency E package
 """
 
@@ -177,7 +177,7 @@ name: DepD
 organization: Acme
 version: 1.0.0
 type: package
-target: MQL5
+target: mql5
 description: Dependency D package
 dependencies:
   DepA: ../DepA
@@ -229,7 +229,7 @@ name: DepC
 organization: Acme
 version: 1.0.0
 type: package
-target: MQL5
+target: mql5
 description: Dependency C package
 dependencies:
   DepA: ../DepA
@@ -256,7 +256,7 @@ name: DepB
 organization: Acme
 version: 1.0.0
 type: package
-target: MQL5
+target: mql5
 description: Dependency B package
 """
 
@@ -280,7 +280,7 @@ name: DepA
 organization: Acme
 version: 1.0.0
 type: package
-target: MQL5
+target: mql5
 description: Dependency A package
 """
 
@@ -405,7 +405,7 @@ name: ExpertTest
 organization: NullSolutions
 version: 1.0.0
 type: expert
-target: MQL5
+target: mql5
 description: Expert Advisor Test Project
 include_mode: flat
 entrypoints:
@@ -423,7 +423,7 @@ name: ExpertTest
 organization: Acme
 version: 1.0.0
 type: expert
-target: MQL5
+target: mql5
 description: Expert Advisor Test Project
 include_mode: flat
 entrypoints:
@@ -439,7 +439,7 @@ name: ExpertTest
 organization: NullSolutions
 version: 1.0.0
 type: expert
-target: MQL5
+target: mql5
 description: Expert Advisor Test Project
 include_mode: include
 compile:

@@ -27,7 +27,7 @@ def test_local_dependency_not_found(tmp_path: Path):
         "description": "A test description that is long enough for validation",
         "version": "1.0.0",
         "type": "expert",
-        "target": "MQL5",
+        "target": "mql5",
         "entrypoints": ["Test.mq5"],
         "dependencies": {
             "missing": "./nonexistent/path"
@@ -54,7 +54,7 @@ def test_local_missing_fields(tmp_path: Path):
         "description": "A test description that is long enough for validation purposes",
         "version": "1.0.0",
         "type": "expert",
-        "target": "MQL5",
+        "target": "mql5",
         "entrypoints": ["Test.mq5"]
     }
     (d / "knitpkg.json").write_text(json.dumps(manifest_data))
@@ -79,7 +79,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
         "description": "A test description that is long enough for validation requirements",
         "version": "1.0.0",
         "type": "package",
-        "target": "MQL5"
+        "target": "mql5"
     }
     (dep_dir / "knitpkg.json").write_text(json.dumps(dep_manifest))
 
@@ -90,7 +90,7 @@ def test_local_dependency_not_git_in_locked_mode(tmp_path: Path):
         "description": "A test description that is long enough for validation checks",
         "version": "1.0.0",
         "type": "expert",
-        "target": "MQL5",
+        "target": "mql5",
         "entrypoints": ["Test.mq5"],
         "dependencies": {
             "local-dep": f"file://{dep_dir}"

@@ -58,7 +58,7 @@ def register(app):
 
     @app.command()
     def info(
-        target: str = typer.Argument(..., help="Platform target (MQL4, MQL5, ...)."),
+        target: str = typer.Argument(..., help="Platform target."),
         specifier: str = typer.Argument(..., help="@organization/project_name"),
         verbose: bool = typer.Option(
             False,
