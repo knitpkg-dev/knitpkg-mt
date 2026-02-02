@@ -248,6 +248,7 @@ class ProjectRegister(ConsoleAware):
             "type": self.manifest.type,
             "description": self.manifest.description,
             "version_description": self.manifest.version_description,
+            "keywords": self.manifest.keywords,
             "author": self.manifest.author,
             "license": self.manifest.license,
             "version": self.manifest.version,
