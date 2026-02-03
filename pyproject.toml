@@ -30,6 +30,7 @@ pytest-mock = "^3.15.1"
 pytest-xdist = "^3.8.0"
 pytest-sugar = "^1.1.1"
 taskipy = "^1.14.1"
+nuitka = "^2.5.5"
 
 [build-system]
 requires = ["poetry-core"]
@@ -42,6 +43,7 @@ cov = "pytest --cov=knitpkg --cov-report=term-missing --cov-report=html:htmlcov"
 ci = "pytest --junitxml=reports/junit.xml --cov=knitpkg --cov-report=xml"
 watch = "pytest-watch -- -xvs"
 manifest = "pytest tests/test_manifest.py -v"
+build-exe = "python -m nuitka --onefile --output-filename=kp.exe knitpkg/cli.py"
 
 [tool.poetry.scripts]
 kp = "knitpkg.cli:app"

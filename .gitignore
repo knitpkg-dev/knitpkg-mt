@@ -44,3 +44,9 @@ coverage.xml
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Nuitka build-exe
+cli.build/
+cli.dist/
+cli.onefile-build/
+kp.exe
