@@ -333,7 +333,7 @@ class Registry(ConsoleAware):
 
         try:
             response = httpx.get(
-                f"{self.base_url}/v1/projects/{target}/search",
+                f"{self.base_url}/v1/search/{target}",
                 params=params,
                 headers={"Authorization": f"Bearer {token}",
                         "X-Provider": provider,
