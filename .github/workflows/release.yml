@@ -25,7 +25,7 @@ jobs:
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python -
-          echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+          echo "$HOME/AppData/Roaming/Python/Scripts" >> $GITHUB_PATH
           poetry config virtualenvs.in-project true
 
       - name: Install dependencies
