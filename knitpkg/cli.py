@@ -29,8 +29,13 @@ from knitpkg.commands import (
     # deploy, # Not yet implemented
 )
 
+import importlib.metadata
+import pathlib
+import sys
+import tomllib
+
 app = typer.Typer(
-    name="KnitPkg for MetaTrader", 
+    name="KnitPkg for MetaTrader",
     help="KnitPkg for MetaTrader - Professional package manager for MQL5/MQL4",
     add_completion=False,
     no_args_is_help=True,
@@ -57,6 +62,34 @@ yank.register(app)
 info.register(app)
 telemetry.register(app)
 
+# Auxiliary function to get the version of the package
+def get_package_version():
+    package_name = "knitpkg-mt" # The name of your package as per pyproject.toml
+
+    # 1. Try to get the version from an installed package
+    try:
+        return importlib.metadata.version(package_name)
+    except importlib.metadata.PackageNotFoundError:
+        pass # The package is not installed, try reading from pyproject.toml
+
+    # 2. If not installed, try reading directly from pyproject.toml
+    # Assume that cli.py is in knitpkg/cli.py and pyproject.toml is in the project root
+    project_root = pathlib.Path(__file__).parent.parent.parent
+    pyproject_path = project_root / "pyproject.toml"
+
+    if pyproject_path.exists() and tomllib:
+        try:
+            with open(pyproject_path, "rb") as f: # "rb" for tomllib
+                pyproject_data = tomllib.load(f)
+            # The version is in [tool.poetry] for Poetry projects
+            return pyproject_data.get("tool", {}).get("poetry", {}).get("version", "unknown")
+        except Exception as e:
+            # In case of error reading the TOML
+            print(f"Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
+            return "unknown"
+
+    return "unknown" # Final fallback if nothing works
+
 @app.callback()
 def main(
     version: bool = typer.Option(
@@ -73,12 +106,11 @@ def main(
     """
     pass
 
-
 def _version_callback(value: bool):
     if value:
         console = Console(log_path=False)
-        # TODO: Get version from pyproject.toml
-        console.print("[bold green]KnitPkg for MetaTrader[/] version [cyan]0.1.0[/]")
+        current_version = get_package_version()
+        console.print(f"[bold green]KnitPkg for MetaTrader[/] version [cyan]{current_version}[/]")
         raise typer.Exit()
 
 if __name__ == "__main__":

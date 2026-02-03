@@ -1,0 +1,84 @@
+name: Release Workflow
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+          echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+          poetry config virtualenvs.in-project true
+
+      - name: Install dependencies
+        run: poetry install --no-root --sync
+
+      - name: Get version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(poetry version --short)
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Got version: $VERSION"
+
+      - name: Verify tag matches version
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          # Remove o prefixo 'v' da tag para comparar com a versão do Poetry
+          CLEAN_TAG_VERSION="${TAG_VERSION#v}"
+          if [ "$CLEAN_TAG_VERSION" != "${{ env.PACKAGE_VERSION }}" ]; then
+            echo "Error: Git tag version ($CLEAN_TAG_VERSION) does not match pyproject.toml version (${{ env.PACKAGE_VERSION }})."
+            exit 1
+          fi
+          echo "Tag version matches pyproject.toml version: ${{ env.PACKAGE_VERSION }}"
+
+      - name: Build executable
+        run: poetry run task build-exe
+
+      - name: Upload executable to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/kp.exe
+          name: Release ${{ env.PACKAGE_VERSION }}
+          body: |
+            ## KnitPkg for MetaTrader v${{ env.PACKAGE_VERSION }}
+
+            This release includes the latest features and bug fixes.
+
+            ### Download
+            - [kp.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp.exe)
+
+            ### Changelog
+            (ADD YOUR CHANGELOG HERE)
+          draft: false
+          prerelease: ${{ contains(env.PACKAGE_VERSION, 'alpha') || contains(env.PACKAGE_VERSION, 'beta') || contains(env.PACKAGE_VERSION, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PyPI (Optional)
+        if: success() && !contains(env.PACKAGE_VERSION, 'alpha') && !contains(env.PACKAGE_VERSION, 'beta') && !contains(env.PACKAGE_VERSION, 'rc') # Publica apenas versões estáveis
+        run: |
+          poetry build
+          poetry publish --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
+        env:
+          # PYPI_USERNAME: __token__ # Already included in publish command
+          # PYPI_PASSWORD: ${{ secrets.PYPI_API_TOKEN }} # Already included in publish command
+          # Configure PYPI_API_TOKEN as a secret in your GitHub repository with a API token 
+          # from PyPI.
