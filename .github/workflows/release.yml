@@ -2,6 +2,8 @@ name: Release Workflow
 
 on:
   push:
+    branches:
+      - feature/test-release-workflow
     tags:
       - 'v*.*.*'
 
@@ -52,7 +54,7 @@ jobs:
 
       - name: Upload executable to GitHub Releases
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && github.ref_name != 'feature/test-release-workflow'
         with:
           files: |
             dist/kp.exe
