@@ -124,13 +124,13 @@ class IncludeModeDelegate(ConsoleAware):
                     directive = self.resolve_include_pattern.directive
                     replace_path = self.resolve_include_pattern.directive_path
 
-                    if directive == 'include' and replace_path is not None:
+                    if directive == 'include' and replace_path is not None: # handles @knitpkg:include directive
                         lines[i] = (
                             f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
                             f'/*** ← dependence added by KnitPkg ***/'
                         )
                         modified = True
-                    elif include_path is not None and '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix():
+                    elif include_path is not None and '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix(): # neutralize autocomplete
                         if log_neutralize:
                             self.log(
                                 f"[dim]neutralizing[/] autocomplete includes in copied files..."
@@ -141,6 +141,8 @@ class IncludeModeDelegate(ConsoleAware):
                             f"/*** ← disabled by KnitPkg install (dev helper) ***/"
                         )
                         modified = True
+                    elif include_path is not None: # normal #include, let it go
+                        pass
                     else:
                         raise InvalidDirectiveError(line)
 

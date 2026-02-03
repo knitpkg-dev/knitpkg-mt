@@ -48,7 +48,11 @@ def register(app):
             organization, name = parse_project_name(specifier)
             if not organization:
                 raise KnitPkgError("No organization specified")
-            
+
+            confirmation = typer.prompt(f"Type '@{organization}/{name}' to confirm yanking @{organization}/{name}: {version} for {target.value}. This action cannot be reverted")
+            if confirmation != f"@{organization}/{name}":
+                raise KnitPkgError("Cancelled by user.")
+
             yank_command(target.value, organization, name, version, console_awr, verbose)
             from knitpkg.core.telemetry import print_telemetry_warning
             from pathlib import Path
