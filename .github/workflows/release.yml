@@ -74,13 +74,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to PyPI (Optional)
-        if: success() && !contains(env.PACKAGE_VERSION, 'alpha') && !contains(env.PACKAGE_VERSION, 'beta') && !contains(env.PACKAGE_VERSION, 'rc') # Publica apenas versões estáveis
+      - name: Publish to PyPI (Disabled)
+        if: false && success() && !contains(env.PACKAGE_VERSION, 'alpha') && !contains(env.PACKAGE_VERSION, 'beta') && !contains(env.PACKAGE_VERSION, 'rc') && github.ref_name != 'feature/test-release-workflow'
         run: |
           poetry build
           poetry publish --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
         env:
-          # PYPI_USERNAME: __token__ # Already included in publish command
-          # PYPI_PASSWORD: ${{ secrets.PYPI_API_TOKEN }} # Already included in publish command
+          PYPI_USERNAME: __token__ # Already included in publish command
+          PYPI_PASSWORD: ${{ secrets.PYPI_API_TOKEN }} # Already included in publish command
           # Configure PYPI_API_TOKEN as a secret in your GitHub repository with a API token 
           # from PyPI.
