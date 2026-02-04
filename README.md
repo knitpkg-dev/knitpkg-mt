@@ -107,6 +107,27 @@ While KnitPkg supports both MQL5 and MQL4 projects, it encourages a consistent l
 
 ---
 
+## Explore Seed Projects (Examples by the Author)
+
+If you want real-world examples of how KnitPkg projects and reusable packages can be structured, you can explore the author’s public “seed” projects in the registry.
+
+**MQL5 seeds:**
+
+```bash
+kp search mql5 -o douglasrechia
+```
+
+**MQL4 seeds:**
+
+```bash
+kp search mql5 -o douglasrechia
+```
+
+From the results, you can inspect details with `kp info`, or fetch and compile a project locally with `kp get`.
+
+
+---
+
 ## Support the Project
 
 KnitPkg aims to strengthen the MQL ecosystem with better tooling. You can help keep the CLI and the **public registry** running by:
