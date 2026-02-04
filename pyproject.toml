@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "knitpkg-mt"
-version = "1.0.0a5"
+version = "1.0.0a6"
 description = "KnitPkg for MetaTrader – Professional package manager for MQL5/MQL4"
 authors = ["Douglas Rechia <rechia@gmail.com>"]
 license = "MIT"
@@ -43,7 +43,7 @@ cov = "pytest --cov=knitpkg --cov-report=term-missing --cov-report=html:htmlcov"
 ci = "pytest --junitxml=reports/junit.xml --cov=knitpkg --cov-report=xml"
 watch = "pytest-watch -- -xvs"
 manifest = "pytest tests/test_manifest.py -v"
-build-exe = "python -m nuitka --mode=onefile --output-dir=./dist --output-file=kp.exe --assume-yes-for-downloads knitpkg/cli.py"
+build-exe = "python -m nuitka --mode=onefile --follow-imports --include-package=knitpkg --output-dir=./dist --output-file=kp.exe --assume-yes-for-downloads knitpkg/cli.py"
 
 [tool.poetry.scripts]
 kp = "knitpkg.cli:app"
