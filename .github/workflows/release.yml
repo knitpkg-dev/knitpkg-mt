@@ -61,11 +61,14 @@ jobs:
       - name: Build executable
         uses: Nuitka/Nuitka-Action@main
         with:
-          nuitka-version: 2.5.5
+          nuitka-version: 2.8.10
           mode: onefile
           output-dir: ./dist
           output-file: kp.exe
           script-name: knitpkg/cli.py
+          options:
+            --follow-imports
+            --include-package=knitpkg
 
       - name: Upload executable to GitHub Releases
         uses: softprops/action-gh-release@v1
