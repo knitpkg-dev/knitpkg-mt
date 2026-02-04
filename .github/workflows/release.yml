@@ -66,7 +66,7 @@ jobs:
           output-dir: ./dist
           output-file: kp.exe
           script-name: knitpkg/cli.py
-          include-package: knitpkg
+          include-package: typer
 
       - name: Upload executable to GitHub Releases
         uses: softprops/action-gh-release@v1
