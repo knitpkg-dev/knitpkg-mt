@@ -1,5 +1,5 @@
 name: Release Workflow
-
+    
 on:
   push:
     branches:
@@ -9,6 +9,10 @@ on:
 
 jobs:
   release:
+    defaults:
+      run:
+        shell: bash
+
     runs-on: windows-latest
 
     steps:
@@ -23,12 +27,10 @@ jobs:
           python-version: '3.13'
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python -
-          echo "$env:APPDATA\Python\Scripts" >> $GITHUB_PATH
-
-      - name: Poetry config virtualenvs
-        run: poetry config virtualenvs.in-project true
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
 
       - name: Install dependencies
         run: poetry install --no-root --sync
