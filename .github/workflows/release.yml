@@ -17,16 +17,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
+      - name: Set up Python and Install Poetry
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          cache: 'poetry'
+          poetry-version: 'latest'
 
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python -
-          echo "$env:APPDATA\Python\Scripts" >> $GITHUB_PATH
-          poetry config virtualenvs.in-project true
+      - name: Configure Poetry virtualenvs
+        run: poetry config virtualenvs.in-project true
 
       - name: Install dependencies
         run: poetry install --no-root --sync
