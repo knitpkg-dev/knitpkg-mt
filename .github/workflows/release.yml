@@ -59,8 +59,9 @@ jobs:
           echo "Tag version matches pyproject.toml version: ${{ env.PACKAGE_VERSION }}"
 
       - name: Build executable
-        uses: Nuitka/Nuitka-Action@v2.5.5
+        uses: Nuitka/Nuitka-Action@main
         with:
+          nuitka-version: 2.5.5
           mode: onefile
           output-dir: ./dist
           output-file: kp.exe
