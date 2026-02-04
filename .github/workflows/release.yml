@@ -25,16 +25,15 @@ jobs:
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python -
-          echo "$env:APPDATA\Python\Scripts" >> $GITHUB_PATH
-          poetry config virtualenvs.in-project true
+          $env:APPDATA\Python\Scripts\poetry config virtualenvs.in-project true
 
       - name: Install dependencies
-        run: poetry install --no-root --sync
+        run: $env:APPDATA\Python\Scripts\poetry install --no-root --sync
 
       - name: Get version from pyproject.toml
         id: get_version
         run: |
-          VERSION=$(poetry version --short)
+          VERSION=$($env:APPDATA\Python\Scripts\poetry version --short)
           echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Got version: $VERSION"
 
@@ -50,7 +49,7 @@ jobs:
           echo "Tag version matches pyproject.toml version: ${{ env.PACKAGE_VERSION }}"
 
       - name: Build executable
-        run: poetry run task build-exe
+        run: $env:APPDATA\Python\Scripts\poetry run task build-exe
 
       - name: Upload executable to GitHub Releases
         uses: softprops/action-gh-release@v1
@@ -77,8 +76,8 @@ jobs:
       - name: Publish to PyPI (Disabled)
         if: false && success() && !contains(env.PACKAGE_VERSION, 'alpha') && !contains(env.PACKAGE_VERSION, 'beta') && !contains(env.PACKAGE_VERSION, 'rc') && github.ref_name != 'feature/test-release-workflow'
         run: |
-          poetry build
-          poetry publish --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
+          $env:APPDATA\Python\Scripts\poetry build
+          $env:APPDATA\Python\Scripts\poetry publish --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
         env:
           PYPI_USERNAME: __token__ # Already included in publish command
           PYPI_PASSWORD: ${{ secrets.PYPI_API_TOKEN }} # Already included in publish command
