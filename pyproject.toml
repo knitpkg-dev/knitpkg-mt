@@ -43,7 +43,7 @@ cov = "pytest --cov=knitpkg --cov-report=term-missing --cov-report=html:htmlcov"
 ci = "pytest --junitxml=reports/junit.xml --cov=knitpkg --cov-report=xml"
 watch = "pytest-watch -- -xvs"
 manifest = "pytest tests/test_manifest.py -v"
-build-exe = "python -m nuitka --onefile --output-filename=kp.exe knitpkg/cli.py"
+build-exe = "python -m nuitka --onefile --output-dir=./dist --output-filename=kp.exe knitpkg/cli.py"
 
 [tool.poetry.scripts]
 kp = "knitpkg.cli:app"
