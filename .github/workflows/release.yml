@@ -43,6 +43,7 @@ jobs:
           echo "Got version: $VERSION"
 
       - name: Verify tag matches version
+        if: github.ref_name != 'feature/test-release-workflow'
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           # Remove o prefixo 'v' da tag para comparar com a versão do Poetry
