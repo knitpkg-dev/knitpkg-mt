@@ -1,165 +1,120 @@
-# KnitPkg — The Modern Dependency Manager for MQL5
+# KnitPkg for MetaTrader (`kp`)
 
-**Free • Open-source • MIT Licensed • Built for 2026**
+**A modern package & project manager for MQL5/MQL4 — built for real-world MetaTrader development.**
 
+KnitPkg brings **npm-like dependency workflows** to MetaTrader while staying true to how MQL projects are actually built and shared: **Git repositories + reproducible installs + automation**.
 
-### Why KnitPkg Exists
+- Main page: [knitpkg.dev](https://knitpkg.dev)  
+- Documentation: [docs.knitpkg.dev](https://docs.knitpkg.dev)
+- Registry: [registry.knitpkg.dev](https://registry.knitpkg.dev)
 
-For over 20 years, MQL5 developers have suffered from the same painful workflow:
+---
 
-- Manual `#include` chaos across dozens of files  
-- Copy-pasting headers between projects (and praying nothing breaks)  
-- Impossible to implement truly reusable, component-based architecture  
-- Extremely hard to maintain clean architectural organization in large projects with multiple developers  
-- No reproducible builds — "works on my machine" syndrome  
-- No version pinning — silent breaking changes from updated libraries  
+## Why KnitPkg
 
-**KnitPkg was born to end this suffering — once and for all.**
+### Ship faster with reproducible builds
+- **SemVer + ranges (npm-style)**: `^ ~ < > * !=` with **pre-releases** support.
+- **Lockfile for reproducibility**: get the *same* dependency graph across machines and time.
+- **Yank support**: yanked versions stop being resolved by ranges (without breaking existing builds).
 
-It brings the modern development practices that Node.js, Rust, Go, and Python developers take for granted — but built from the ground up for the reality of algorithmic trading and the MetaTrader ecosystem.
+### Dependencies that feel effortless
+- **One-command install**: resolve the full dependency tree and download everything ready-to-use.
+- **Composable packages**: build packages that reuse other packages (clean dependency trees).
+- **Dependency overrides**: take full control by overriding indirect dependency versions (like npm `overrides`).
+- **Local path dependencies**: develop packages locally before publishing them.
 
-With KnitPkg, you finally get:
+### Built for MQL ergonomics (not generic C/C++)
+- **Standardized MQL project structure** (`src/`, `bin/`, manifest, etc).
+- **Automatic compilation** from the CLI.
+- **Autocomplete helpers** for MetaEditor to make composed packages pleasant to work with.
+- **`@knitpkg:include` directive**: include headers from other packages and have them resolved at install time.
 
-- Clean, modular, maintainable codebases  
-- Real component reusability across projects  
-- Team-friendly architecture that scales  
-- **Reproducible builds** — identical results on every machine  
-- **True Semantic Versioning** — `^1.2.0`, `~2.3.4`, `>=1.0.0 <2.0.0`, pre-releases, build metadata — all fully supported  
-- Full confidence in every deployment  
-- Professional-grade tooling — **100% free**
+### Public registry (metadata-first)
+- KnitPkg uses a public registry to store **project metadata from manifests** (not source code or binaries).
+- Supports projects hosted on **Mql5Forge, GitHub, GitLab, and Bitbucket**.
+- Installing **public** projects doesn’t require authentication.
 
-**KnitPkg doesn’t just solve dependency management.**  
-**It enables professional MQL5 development at scale.**
+---
 
-
-### Installation
-
-**Tip**: _We strongly recommend Poetry — it guarantees the exact same environment across 
-all machines_.
-
-#### Prerequisites
-- Python 3.13+
-- [Poetry](https://python-poetry.org/docs/#installation)
-
-#### Install with Poetry
+## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/knitpkg-dev/knitpkg-mt.git
-cd knitpkg-mt
+# Create a new project (wizard-style)
+kp init
 
-# Install with Poetry (creates isolated environment)
-poetry install
+# Add a dependency to your project
+kp add @organization/package-name
 
-# Enter the virtual environment
-poetry shell
+# Install dependencies
+kp install
 
-# You're ready!
-kp --version
+# Compile MQL sources
+kp compile
+
+# One-shot: install + compile
+kp build
 ```
 
-### Free Edition — Already More Powerful Than Anything Else Available
+## (Some) Supported Commands
 
-| Feature                         | Status | Description                                                    |
-|---------------------------------|--------|----------------------------------------------------------------|
-| Dependency resolution           | Done   | Local and remote (Git) dependencies with full SemVer support   |
-| `kp install` / `build`  | Done   | Reproducible, lockfile-based installs                          |
-| `kp autocomplete`       | Done   | Full IntelliSense during development                           |
-| **KnitPkg Build Directives**      | Done   | Revolutionary development-time includes                        |
-| Flat and Include modes          | Done   | One-click clean builds                                         |
+- `kp init` — initialize a new KnitPkg project (wizard)
+- `kp add` — add a dependency to the current project
+- `kp install` — resolve and download dependencies
+- `kp compile` — compile MQL source files via CLI
+- `kp build` — install + compile in one step
+- `kp search` — search the KnitPkg public registry
+- `kp info` — show details about a registry project
+- `kp get` — query the registry for the project metadata, download and build it directly to your MetaTrader instalation
+- `kp login` / `kp logout` — manage registry authentication (needed for publishing; not required for installing public projects)
+- `kp register` - register a new project or a version of an existing project to the registry (requires registry authentication)
 
+(run `kp --help` for the complete commands list)
 
-### The Crown Jewel: **KnitPkg Build Directives**
+---
 
-The most loved feature in the KnitPkg ecosystem — and for good reason.
+## Suggested Project Structure (typical)
 
-**KnitPkg Build Directives** are designed exclusively for **include-type projects** — the true reusable components of the MQL5 world.
+While KnitPkg supports both MQL5 and MQL4 projects, it encourages a consistent layout:
 
-These libraries (examples: `knitpkg-bar`, `knitpkg-calc`, `knitpkg-logger`) are meant to be shared across dozens of EAs, indicators, and scripts. And that’s exactly where traditional `#include` workflows collapse: **broken builds, endless path hell.**
+- `src/` — MQL sources for Expert advisors, indicators, etc
+- `bin/` — compiled artifacts
+- `knitpkg/` — installed dependency headers made available to your project
+- `knitpkg.yaml` — project metadata + dependencies
 
-KnitPkg fixes this forever — with pure elegance.
+(See the docs for the authoritative structure and examples.)
 
-#### While developing an include library (e.g. `Calc.mqh` in `knitpkg-calc`, which depends on `Bar.mqh` in `knitpkg-bar`):
+---
+## Installation
 
-```mql5
-#include "../../autocomplete/autocomplete.mqh"   
+### Prerequisites
 
-/* @knitpkg:include "knitpkg/include/Bar/Bar.mqh" */
-/* @knitpkg:include "knitpkg/include/Math/Utils.mqh" */
-```
+1. **(Updated) Windows Terminal**  
+   Windows 11 already includes it. On older Windows versions, you may need the newer terminal to correctly render the CLI’s UTF-8 symbols and formatting.  
+   - Microsoft Store: [https://aka.ms/terminal](https://aka.ms/terminal)  
+   - Other install methods: [https://github.com/microsoft/terminal](https://github.com/microsoft/terminal)
 
-You get:
+2. **Git client**  
+   KnitPkg *leverages Git* for MetaTrader package & project management, so a Git client is essential.  
+   - Download: [https://git-scm.com/](https://git-scm.com/)
 
-- **Perfect IntelliSense** — every class, method, and constant appears instantly  
-- **Zero friction** — code as if all dependencies were already included  
-- Full control with `@knitpkg:include` for extra headers when needed
+### Install `kp`
 
+- **GitHub Releases (Windows)**  
+  Download `kp.exe` from the repository [Releases](https://github.com/knitpkg-dev/knitpkg-mt/releases) and add it to your `PATH`.
 
-**After `knitpkg install` - in the final EA/indicator:**
+- **PyPI (coming soon)**  
+  Distribution via `pip` is in progress. This section will be expanded once the package is published and stabilized.
 
-```mql5
-// ──────────────────────────────────────────────────────────────────
-// Dependency includes — resolved and optimized by KnitPkg
-// ──────────────────────────────────────────────────────────────────
-#include "knitpkg/include/Calc/Calc.mqh"      // Provides SMA, ATR, etc. → automatically pulls Bar via dependency chain
-#include "knitpkg/include/Math/Utils.mqh"     // Reusable math utilities — shared across multiple projects
+---
 
-// Clean • Correct • Fast • No traces of autocomplete
-```
+## Support the Project
 
-The placeholder and directives vanish.
+KnitPkg aims to strengthen the MQL ecosystem with better tooling. You can help keep the CLI and the **public registry** running by:
 
-Only pure, professional, production-ready code remains.
+- Giving the repo a **GitHub star**
+- Donating via **GitHub Sponsors / Donations**
 
-**No other tool in the MQL5 ecosystem even attempts this.**
-
-KnitPkg doesn’t just make it possible — it makes it beautiful.
-
-**This is how reusable components should feel in 2026.**
-
-It’s not magic.
-It’s **engineering elegance**.
-
-
-### Pro & Enterprise — The Future (2026)
-| Feature | Edition | Description |
-|---------|---------|-------------|
-| Private Git repositories | Pro | GitHub, GitLab, Bitbucket, Azure DevOps |
-| SSO / OAuth login | Pro | No more personal access tokens |
-| knitpkg package | Pro | Create distributable .zip packages (recursively) |
-| knitpkg deploy | Pro | One-click deployment to MT5 terminals |
-| KnitPkg Proxy & Audit Trail | Enterprise | Full visibility: who downloaded what, when |
-| Compliance & Policy Engine | Enterprise | Block unapproved packages, enforce 2FA |
-| On-premise / air-gapped | Enterprise | For banks and high-security environments |
-
-
-### Join the Revolution
-KnitPkg is not just a tool.
-
-It’s the foundation of the next generation of professional MQL5 development.
-
-Whether you're a solo trader building your edge, a prop firm managing 50+ developers,
-or a bank running thousands of strategies —  
-
-**KnitPkg scales with you.**
-
-**Free today. Powerful forever.**
-
-```bash
-kp init include      # start your first library
-kp autocomplete      # code with joy
-```
-
-**In your EA/indicator:**
-
-```bash
-kp install             # all dependencies solved
-```
-
-### KnitPkg Manifest Specification
-Interactive documentation: [knitpkg-manifest.html](docs/knitpkg-manifest.html)
-
-**KnitPkg — Because you deserve modern tools.**
+---
 
 **KnitPkg — The dependency manager MQL5 always needed.**
 
@@ -169,8 +124,18 @@ MIT Licensed — Forever free for the community
 
 GitHub: https://github.com/knitpkg-dev/knitpkg-mt.git
 
-Documentation: https://knitpkg.dev
+Documentation: https://docs.knitpkg.dev
 
-Discord: https://discord.gg/knitpkgWelcome to the future.
+Discord: (link here when channel is available) to the future.
 
 **KnitPkg – The future of MQL5 development**
+
+---
+
+## Beta Disclaimer (No Warranty / No Liability)
+
+The current version of **KnitPkg** is a **beta release**.
+
+**DISCLAIMER:**  
+THE SOFTWARE IS PROVIDED **"AS IS"**, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
