@@ -62,7 +62,7 @@ jobs:
         uses: Nuitka/Nuitka-Action@main
         with:
           nuitka-version: main
-          mode: app
+          mode: onefile
           output-dir: ./dist
           output-file: kp.exe
           script-name: knitpkg/cli.py
