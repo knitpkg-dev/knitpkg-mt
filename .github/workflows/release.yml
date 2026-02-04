@@ -1,16 +1,20 @@
 name: Release Workflow
-    
+
 on:
   push:
     tags:
       - 'v*.*.*'
+        # Version must follow PEP 440 normalized format. 
+        # Here are some examples of PEP 440 for some SemVer valid versions:
+        #   1.0.0-alpha.1 > 1.0.0a1 
+        #   1.0.0-beta.1 > 1.0.0b1 
+        #   1.0.0-rc.1 > 1.0.0rc1 
 
 jobs:
   release:
     defaults:
       run:
         shell: bash
-
     runs-on: windows-latest
 
     steps:
@@ -32,6 +36,9 @@ jobs:
 
       - name: Install dependencies
         run: poetry install --no-root --sync
+
+      - name: Run Unit Tests
+        run: poetry run pytest
 
       - name: Get version from pyproject.toml
         id: get_version
@@ -77,12 +84,12 @@ jobs:
             ### Changelog
             (ADD YOUR CHANGELOG HERE)
           draft: false
-          prerelease: ${{ contains(env.PACKAGE_VERSION, 'alpha') || contains(env.PACKAGE_VERSION, 'beta') || contains(env.PACKAGE_VERSION, 'rc') }}
+          prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to PyPI (Disabled)
-        if: false && success() && !contains(env.PACKAGE_VERSION, 'alpha') && !contains(env.PACKAGE_VERSION, 'beta') && !contains(env.PACKAGE_VERSION, 'rc')
+        if: false && success() && !contains(env.PACKAGE_VERSION, 'a') && !contains(env.PACKAGE_VERSION, 'b') && !contains(env.PACKAGE_VERSION, 'rc')
         run: |
           poetry build
           poetry publish --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
