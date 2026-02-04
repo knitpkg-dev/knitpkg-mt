@@ -60,7 +60,7 @@ jobs:
           nuitka-version: main
           mode: app
           output-dir: ./dist
-          output-filename: kp.exe
+          output-file: kp.exe
           script-name: knitpkg/cli.py
 
       - name: Upload executable to GitHub Releases
