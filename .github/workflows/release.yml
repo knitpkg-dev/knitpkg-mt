@@ -2,8 +2,6 @@ name: Release Workflow
     
 on:
   push:
-    branches:
-      - feature/test-release-workflow
     tags:
       - 'v*.*.*'
 
@@ -43,10 +41,8 @@ jobs:
           echo "Got version: $VERSION"
 
       - name: Verify tag matches version
-        if: github.ref_name != 'feature/test-release-workflow'
         run: |
           TAG_VERSION="${{ github.ref_name }}"
-          # Remove o prefixo 'v' da tag para comparar com a versão do Poetry
           CLEAN_TAG_VERSION="${TAG_VERSION#v}"
           if [ "$CLEAN_TAG_VERSION" != "${{ env.PACKAGE_VERSION }}" ]; then
             echo "Error: Git tag version ($CLEAN_TAG_VERSION) does not match pyproject.toml version (${{ env.PACKAGE_VERSION }})."
@@ -65,7 +61,7 @@ jobs:
 
       - name: Upload executable to GitHub Releases
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/') && github.ref_name != 'feature/test-release-workflow'
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             dist/kp.exe
@@ -86,7 +82,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to PyPI (Disabled)
-        if: false && success() && !contains(env.PACKAGE_VERSION, 'alpha') && !contains(env.PACKAGE_VERSION, 'beta') && !contains(env.PACKAGE_VERSION, 'rc') && github.ref_name != 'feature/test-release-workflow'
+        if: false && success() && !contains(env.PACKAGE_VERSION, 'alpha') && !contains(env.PACKAGE_VERSION, 'beta') && !contains(env.PACKAGE_VERSION, 'rc')
         run: |
           poetry build
           poetry publish --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
