@@ -147,7 +147,7 @@ dependencies:
 
 ### `dependencies` (optional)
 
-- **Type:** map/dictionary of `dependency -> versionRange`
+- **Type:** map/dictionary of `dependency -> version_range` or `dependency -> local_path`
 - **Meaning:** Declares the direct dependencies required by this project.
 
     **Dependency key format**
@@ -170,8 +170,18 @@ dependencies:
 
     **Version range format**
 
-    - Values are SemVer ranges (npm-style operators such as `^`, `~`, `<`, `>`, `*`, `!=`, etc.), as supported by KnitPkg.
-    - See: [Version ranges](version-ranges.md).
+    - Values are SemVer ranges (npm-style operators such as `^`, `~`, `<`, `>`, `*`, `!=`, etc.), as supported by KnitPkg. See: [Version ranges](version-ranges.md).
+
+    **Local path**
+
+    - Local paths are accepted in the place of the version range. In this case, KnitPkg resolves to a local project
+        instead of fetching from the registry. This is useful for development and testing. Once the dependency
+        is published to the registry, replace the local path with the correct version specifier.
+
+        ```yaml
+        dependencies:
+            '@acme/utils': ../acme_utils
+        ```
 
 ---
 

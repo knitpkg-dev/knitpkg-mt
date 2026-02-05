@@ -39,6 +39,8 @@ nav:
   - Core Concepts: 
     - Overview: concepts/overview.md
     - Manifest: concepts/manifest.md
+    - KnitPkg Directives: concepts/directives.md
+    - Install and Compile: concepts/install-and-compile.md
 #    - Packages: concepts/packages.md
 #    - Projects: concepts/projects.md
 #    - Registry: concepts/registry.md
