@@ -9,7 +9,7 @@ When you run `kp install`, KnitPkg performs (conceptually) the following steps:
 
 See below how the terminal looks like after you run `kp install`:
 
-![alt text](images/terminal-install.png)
+![alt text](images/terminal-install-sma.png)
 
 Inside `knitpkg/flat/KnitPkgSMA_flat.mqh` we have the class TimeSeriesArray and the SMA function used by the indicator:
 
@@ -50,7 +50,11 @@ double SMA(douglasrechia::ITimeSeries<double> &series, int period, int shift = 0
 
 As we can see, that generated file is a “flattened” (`flat`) header that contains all the dependency code the indicator needs. After it exists, the main file `src/KnitPkgSMA.mq5` can include it and compilation works normally. What if we try `kp compile`?
 
-![alt text](images/terminal-compile.png)
+![alt text](images/terminal-compile-sma.png)
 
 Voilá—thanks to KnitPkg, the project compiles all the sources declared in the manifest `compile` entry and the indicator is ready to use!
 
+!!! note "About the compiler"
+    `kp compile` calls the standard MetaEditor compiler from the command line. You can still compile normally from the MetaEditor IDE if you prefer.
+
+    The nice extra: by default, `kp compile` moves the generated binary into the `bin/` directory, keeping compiled artifacts and source files neatly separated. Try `kp compile --help` for other options.

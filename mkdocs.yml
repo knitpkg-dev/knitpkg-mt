@@ -41,8 +41,9 @@ nav:
     - Manifest: concepts/manifest.md
     - KnitPkg Directives: concepts/directives.md
     - Install and Compile: concepts/install-and-compile.md
-#    - Packages: concepts/packages.md
-#    - Projects: concepts/projects.md
+    - Include vs Flat Modes: concepts/include-vs-flat-modes.md
+    - Projects vs Packages: concepts/projects-vs-packages.md
+    - Composite packages: concepts/composite-packages.md
 #    - Registry: concepts/registry.md
 #    - Git First: concepts/git-first.md
 #  - User Guide:

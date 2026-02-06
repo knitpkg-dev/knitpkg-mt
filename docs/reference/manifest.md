@@ -1,6 +1,11 @@
-# Manifest (`knitpkg.yaml`) Reference
+# Manifest Reference (`knitpkg.yaml`)
 
 This page documents the fields accepted by KnitPkg in the project manifest file: `knitpkg.yaml`.
+
+!!! note "Manifest file names"
+    The most common manifest file name is `knitpkg.yaml`, but `knitpkg.yml` is also accepted.
+
+    JSON is supported as well. In that case, the manifest must be named `knitpkg.json`.
 
 !!! note
     The manifest is intentionally forward-compatible. Unknown fields are allowed, so the format can evolve over time (and you can keep custom metadata in your manifest).
@@ -38,8 +43,6 @@ compile:
 dependencies:
   '@douglasrechia/calc': ^1.0.0
 ```
-
----
 
 ## Top-level fields (core)
 
