@@ -1,6 +1,6 @@
 site_name: 'KnitPkg Documentation'
 site_description: 'A modern package & project manager for MQL5/MQL4'
-site_url: 'https://your-username.github.io/knitpkg/'
+site_url: 'https://docs.knitpkg.dev/'
 
 theme:
   name: 'material'
@@ -11,27 +11,19 @@ theme:
     - navigation.footer
     - search.highlight
     - search.share
-    - content.code.copy # Adds a copy button to code blocks
+    - content.code.copy
   palette:
     # Dark Mode
     - scheme: slate
       toggle:
         icon: material/weather-sunny
         name: Dark mode
-      #primary: green
-      #accent: deep purple
 
     # Light Mode
     - scheme: default
       toggle:
         icon: material/weather-night
         name: Light mode
-      #primary: blue
-      #accent: deep orange
-  icon:
-    logo: fontawesome/solid/cubes
-    # logo: assets/logo.png
-    # favicon: assets/favicon.ico
 
 nav:
   - Overview: index.md
@@ -44,8 +36,10 @@ nav:
     - Include vs Flat Modes: concepts/include-vs-flat-modes.md
     - Projects vs Packages: concepts/projects-vs-packages.md
     - Composite packages: concepts/composite-packages.md
-#    - Registry: concepts/registry.md
-#    - Git First: concepts/git-first.md
+    - Unit tests: concepts/unit-tests.md
+    - Registry: concepts/registry.md
+    - Git First: concepts/git-first.md
+    - Telemetry: concepts/telemetry.md
 #  - User Guide:
 #    - user-guide/index.md
 #    - Creating Packages: user-guide/creating-packages.md
@@ -57,12 +51,13 @@ nav:
   - Reference:
     - Manifest: reference/manifest.md
     - Version Ranges: reference/version-ranges.md
-#    - KnitPkg Directives: reference/knitpkg-directives.md
-#    - Project Layout: reference/project-layout.md
-#    - CLI Reference: reference/cli.md
+    - CLI Reference: reference/cli.md
 #    - Glossary: reference/glossary.md
-#  - Troubleshooting & FAQ: troubleshooting.md
-#  - Contributing: contributing.md
+#    - Troubleshooting & FAQ: troubleshooting.md
+#    - Contributing: contributing.md
+  - Terms of Service:
+    - Telemetry: terms-of-service/telemetry.md
+    - Registry: terms-of-service/registry.md
 
 markdown_extensions:
   - admonition
@@ -78,8 +73,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
-  - attr_list # Allows adding attributes to Markdown elements
-  - md_in_html # Allows Markdown inside HTML blocks
+  - attr_list
+  - md_in_html
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg

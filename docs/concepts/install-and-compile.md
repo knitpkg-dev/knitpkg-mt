@@ -11,23 +11,9 @@ See below how the terminal looks like after you run `kp install`:
 
 ![alt text](images/terminal-install-sma.png)
 
-Inside `knitpkg/flat/KnitPkgSMA_flat.mqh` we have the class TimeSeriesArray and the SMA function used by the indicator:
+Inside `knitpkg/flat/KnitPkgSMA_flat.mqh` we have the SMA function and the class TimeSeriesArray used by the indicator:
 
-```mql5  linenums="188" title="douglasrechia::TimeSeriesArray class in KnitPkgSMA_flat.mqh"
-//+------------------------------------------------------------------+
-//| SeriesArray — wraps arrays as ISeries<T>
-//+------------------------------------------------------------------+
-namespace douglasrechia
-{
-
-template<typename T>
-class TimeSeriesArray : public ITimeSeries<T>
-  {
-private:
-   T                 m_array[];
-```
-
-```mql5  linenums="135" title="douglasrechia::SMA function in KnitPkgSMA_flat.mqh"
+```mql5 title="douglasrechia::SMA function in KnitPkgSMA_flat.mqh" linenums="135" hl_lines="7"
 //+------------------------------------------------------------------+
 namespace douglasrechia
 {
@@ -47,6 +33,19 @@ double SMA(douglasrechia::ITimeSeries<double> &series, int period, int shift = 0
   }
 ```
 
+```mql5 title="douglasrechia::TimeSeriesArray class in KnitPkgSMA_flat.mqh" linenums="188" hl_lines="8"
+//+------------------------------------------------------------------+
+//| SeriesArray — wraps arrays as ISeries<T>
+//+------------------------------------------------------------------+
+namespace douglasrechia
+{
+
+template<typename T>
+class TimeSeriesArray : public ITimeSeries<T>
+  {
+private:
+   T                 m_array[];
+```
 
 As we can see, that generated file is a “flattened” (`flat`) header that contains all the dependency code the indicator needs. After it exists, the main file `src/KnitPkgSMA.mq5` can include it and compilation works normally. What if we try `kp compile`?
 
