@@ -58,3 +58,24 @@ Voilá—thanks to KnitPkg, the project compiles all the sources declared in the
     `kp compile` calls the standard MetaEditor compiler from the command line. You can still compile normally from the MetaEditor IDE if you prefer.
 
     The nice extra: by default, `kp compile` moves the generated binary into the `bin/` directory, keeping compiled artifacts and source files neatly separated. Try `kp compile --help` for other options.
+
+## Lock files and reproducible builds
+
+By default, every time you run `kp install`, KnitPkg queries the registry for each dependency and resolves the latest version that satisfies the configured version ranges. The exact version selected for each dependency is then written to the lock file: `knitpkg/lock.json`.
+
+This lock file is what makes installs deterministic across machines and across time.
+
+### Installing with the lock file (--locked)
+For reproducible builds, use:
+
+```bash 
+kp install --locked 
+```
+
+When --locked is used, KnitPkg installs the exact versions recorded in knitpkg/lock.json, regardless of:
+
+- the version ranges declared in knitpkg.yaml, or
+- newer versions of any dependency being published later.
+
+!!! tip "Reproducible builds" 
+    KnitPkg guarantees reproducible builds as long as you keep the lock file and install with `kp install --locked`.    

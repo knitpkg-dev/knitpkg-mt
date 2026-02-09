@@ -49,8 +49,8 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace
         console_awr.print("\n[cyan]▶️  Installing dependencies...[/cyan]")
         install_command(project_dir, locked_mode, show_tree, console, verbose)
 
-        console_awr.print("\n[cyan]▶️  Compiling project...[/cyan]")
-        compile_command(project_dir, inplace, entrypoints_only, compile_only, console, verbose)
+    console_awr.print("\n[cyan]▶️  Compiling project...[/cyan]")
+    compile_command(project_dir, inplace, entrypoints_only, compile_only, console, verbose)
 
     console_awr.print("[bold green]✅ Build completed successfully![/bold green]")
 

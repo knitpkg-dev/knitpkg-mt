@@ -370,12 +370,20 @@ class ProjectInstaller(ConsoleAware):
         )
 
         effective_mode = (
-            IncludeMode.FLAT
-            if manifest.type == MQLProjectType.PACKAGE
-            else manifest.include_mode
+            IncludeMode.INCLUDE
+            if manifest.include_mode == IncludeMode.INCLUDE
+            else IncludeMode.FLAT
         )
 
-        self._log_install_start(manifest, effective_mode)
+        if manifest.type == MQLProjectType.PACKAGE:
+            self.print(
+                "[yellow]⚠️  Warning:[/] Package-type projects are not intended for installation. "
+                "The install command is deprecated for package projects and will fail in future releases. "
+                "Please use `kp autocomplete` or `kp checkinstall` instead. Exiting..."
+            )
+            return
+
+        self._log_install_start(manifest)
 
         # Validate main project structure
         warn_mql_project_structure(
@@ -419,18 +427,12 @@ class ProjectInstaller(ConsoleAware):
 
     def _log_install_start(
         self,
-        manifest: MQLKnitPkgManifest,
-        effective_mode: IncludeMode
+        manifest: MQLKnitPkgManifest
     ) -> None:
         self.print(  
             f"📦 [bold magenta]Install[/] → [cyan]@{manifest.organization}/{manifest.name}[/] : "
             f"{manifest.version} ({manifest.type})"
         )
-        if effective_mode != manifest.include_mode:
-            self.log(
-                f"       (project type '{manifest.type}' enforces "
-                f"[bold yellow]'{effective_mode.value}'[/] mode)"
-            )
 
     def _prepare_output_directories(self, manifest: MQLKnitPkgManifest) -> None:
         self.print("📁 Preparing knitpkg package directories...")  
