@@ -7,7 +7,7 @@ import typer
 from knitpkg.core.console import ConsoleAware
 
 from knitpkg.commands.install import install_command
-from knitpkg.commands.autocomplete import autocomplete_command
+from knitpkg.commands.checkinstall import checkinstall_command
 from knitpkg.commands.compile import compile_command
 
 from knitpkg.core.file_reading import load_knitpkg_manifest
@@ -22,7 +22,7 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace
     Main logic for the `kp build` command.
 
     Loads the project manifest and executes the correct sequence of commands
-    (autocomplete, install, compile) based on the `manifest.type`.
+    (checkinstall, install, compile) based on the `manifest.type`.
 
     Parameters
     ----------
@@ -43,14 +43,14 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace
     # 2. Execute commands based on project type
     project_type = MQLProjectType(manifest.type) # Assumes `manifest.type` is an Enum and has `.value`
     if project_type == MQLProjectType.PACKAGE:
-        console_awr.print("\n[cyan]▶️  Generating autocomplete...[/cyan]")
-        autocomplete_command(project_dir, console, verbose) # Invokes the function directly
+        console_awr.print("\n[cyan]▶️  Checking package install...[/cyan]")
+        checkinstall_command(project_dir, False, console, verbose) # Invokes the function directly
     else:
         console_awr.print("\n[cyan]▶️  Installing dependencies...[/cyan]")
         install_command(project_dir, locked_mode, show_tree, console, verbose)
 
-    console_awr.print("\n[cyan]▶️  Compiling project...[/cyan]")
-    compile_command(project_dir, inplace, entrypoints_only, compile_only, console, verbose)
+        console_awr.print("\n[cyan]▶️  Compiling project...[/cyan]")
+        compile_command(project_dir, inplace, entrypoints_only, compile_only, console, verbose)
 
     console_awr.print("[bold green]✅ Build completed successfully![/bold green]")
 
