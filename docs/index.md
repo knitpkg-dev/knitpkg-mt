@@ -12,7 +12,7 @@ KnitPkg is built around a **Git-first** model:
 - KnitPkg acts as a **metadata registry** that indexes projects via their manifests (it does **not** host your source or binaries).
 - A **CLI tool** installs dependencies, resolves versions (SemVer + ranges), generates reproducible installs via a lock file, and can automate compilation.
 
-The public registry API is available and currently operational. <sources>[1]</sources>
+The public registry API is available and currently operational.
 
 ## Packages vs Projects
 
@@ -42,9 +42,22 @@ This site is structured to take you from “first install” to “deep referenc
 - **Core Concepts**: packages vs projects, the registry, and the Git-first workflow
 - **User Guide**: day-to-day workflows (init, add, install, get, publish, search)
 - **Reference**: exact specs (manifest format, directives, SemVer rules, layouts, CLI)
-- **Troubleshooting & FAQ**: common pitfalls and how to fix them
 - **Contributing**: how to participate in the CLI and ecosystem
 
 ---
 
-Now that you understand what KnitPkg is and why it exists, you’re ready for the next step: **installing the KnitPkg CLI**.
+**KnitPkg — The dependency manager MQL5 always needed.**
+
+Made with passion
+
+MIT Licensed — Forever free for the community
+
+GitHub: [https://github.com/knitpkg-dev/knitpkg-mt.git](https://github.com/knitpkg-dev/knitpkg-mt.git)
+
+Discord: [https://discord.gg/hCbmYtkn](https://discord.gg/hCbmYtkn) to the future.
+
+Contact: [contact@knitpkg.dev](mailto:contact@knitpkg.dev)
+
+**KnitPkg – The future of MQL5 development**
+
+---

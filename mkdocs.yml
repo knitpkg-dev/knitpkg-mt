@@ -35,8 +35,8 @@ nav:
     - Install and Compile: concepts/install-and-compile.md
     - Include vs Flat Modes: concepts/include-vs-flat-modes.md
     - Projects vs Packages: concepts/projects-vs-packages.md
-    - Composite packages: concepts/composite-packages.md
-    - Unit tests: concepts/unit-tests.md
+    - Composite Packages: concepts/composite-packages.md
+    - Unit Tests: concepts/unit-tests.md
     - Registry: concepts/registry.md
     - Git First: concepts/git-first.md
     - Telemetry: concepts/telemetry.md

@@ -11,13 +11,15 @@ The registry exists so the CLI can reliably discover projects and resolve depend
 
 ## What the registry is
 
-The registry stores **manifest metadata** for KnitPkg-managed projects (such as target, project type, organization, name, published versions, and repository information).
+The registry stores **manifest metadata** for KnitPkg-managed projects (such as target, project type, organization, name, published versions, and repository information). 
 
 It is a web service used by the KnitPkg CLI to:
 
 - search and query public projects,
 - resolve dependency version ranges into a concrete version, and
 - locate the exact source revision (commit) corresponding to that resolved version.
+
+Anyone willing to register a project into the registry must agree with the [KnitPkg Registry Terms of Service & Privacy Policy](../terms-of-service/registry.md).
 
 ---
 

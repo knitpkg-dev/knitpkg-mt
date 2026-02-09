@@ -45,6 +45,8 @@ def register(app):
         This command opens a browser for OAuth login with the specified provider
         and stores the resulting access token securely using the system keyring.
         The token enables subsequent operations like publishing packages.
+
+        Run `kp status` to see the list of available providers.
         """
         console = Console(log_path=False)
         from knitpkg.core.console import ConsoleAware

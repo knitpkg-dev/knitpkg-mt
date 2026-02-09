@@ -143,11 +143,14 @@ Made with passion
 
 MIT Licensed — Forever free for the community
 
-GitHub: https://github.com/knitpkg-dev/knitpkg-mt.git
+Documentation: [https://docs.knitpkg.dev](https://docs.knitpkg.dev)
 
-Documentation: https://docs.knitpkg.dev
+GitHub: [https://github.com/knitpkg-dev/knitpkg-mt.git](https://github.com/knitpkg-dev/knitpkg-mt.git)
 
-Discord: (link here when channel is available) to the future.
+Discord: [https://discord.gg/hCbmYtkn](https://discord.gg/hCbmYtkn) to the future.
+
+Contact: [contact@knitpkg.dev](mailto:contact@knitpkg.dev)
+
 
 **KnitPkg – The future of MQL5 development**
 
