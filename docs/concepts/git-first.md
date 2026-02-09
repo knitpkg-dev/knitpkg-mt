@@ -68,6 +68,7 @@ KnitPkg encourages simple, high-impact practices that contribute to a high Healt
 - Never change the visibility of a public project.
 - Never change the Git URL of a project.
 - Never remove a Git repository that has been registered in the registry.
+- Never **delete, rename, move, or repoint** any `knitpkg-registry/*` tags. They are required to preserve the registry's immutability guarantees.
 - Version correctly using SemVer and maintain a robust testing process, so published package APIs remain stable and consumers aren’t surprised by breaking changes.
 
 ## Community goal

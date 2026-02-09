@@ -75,7 +75,7 @@ Resolving @douglasrechia/bar with the specifier ^1.0.0 returns a response like:
 
 The important detail is that the registry does not return code. It returns metadata (including repo_url and commit_hash) so the CLI can fetch the correct revision.
 
-## Version immutability and yanking
+## Version immutability
 
 In the registry, a published version is immutable. Once a version is published, it will:
 
@@ -83,6 +83,16 @@ In the registry, a published version is immutable. Once a version is published, 
 - never be deleted.
 
 This is a guarantee provided by the registry.
+
+!!! note "Registry tags keep version commits from becoming orphaned" 
+
+     For versions to be truly immutable, the commit hash associated with a published version must never become unreachable (orphaned) in the upstream Git repository.
+
+     To ensure this, when you register a project in the registry, KnitPkg creates a Git tag under the reserved namespace **`knitpkg-registry`** for each registered version. These tags act as permanent anchors so the corresponding commits remain available.
+
+     Maintainers must **never delete, rename, move, or repoint** any `knitpkg-registry/*` tags. They are created for KnitPkg’s internal use and are required to preserve the registry’s immutability guarantees.
+
+## Version yanking 
 
 As a contingency measure, a project owner may mark a version as yanked. Yanked versions are not removed, but are treated as withdrawn to discourage new usage while preserving stability for existing builds. This should not break the ecosystem thanks to the [version ranges](reference/version-ranges.md) system, which enables dependency resolution to move away from yanked releases without forcing a hard break.
 
@@ -98,6 +108,8 @@ Typically you interact with the registry through KnitPkg commands:
 - `kp whoami` — Show information about the currently authenticated user
 - `kp register` — Register a project in the registry
 - `kp yank` — Yank a package version from the registry
+
+See the [CLI reference](../reference/cli.md) for more details.
 
 ## Registry and reproducible builds
 By default, `kp install` uses the registry to resolve each dependency range to the latest compatible release. 
