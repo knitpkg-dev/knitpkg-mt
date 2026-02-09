@@ -1,10 +1,8 @@
-# knitpkg/commands/autocomplete.py
+# knitpkg/commands/checkinstall.py
 
 """
-KnitPkg for MetaTrader autocomplete command — generates autocomplete files.
-
-This module handles the generation of MQL include files that provide
-autocomplete functionality for KnitPkg-managed packages within MetaEditor.
+KnitPkg for MetaTrader checkinstall command — checks if a package can be 
+successfully installed.
 """
 from pathlib import Path
 from typing import Optional
@@ -18,20 +16,25 @@ from knitpkg.core.exceptions import KnitPkgError, RegistryError
 # COMMAND WRAPPER
 # ==============================================================
 
-def autocomplete_command(project_dir: Path, console: Console, verbose: bool):
+def checkinstall_command(project_dir: Path, skip_autocomplete: bool, console: Console, verbose: bool):
     """Command wrapper"""
     generator = AutocompleteTools(project_dir, console, verbose)
-    generator.generate_autocomplete()
+    generator.check_install(skip_autocomplete)
 
 # ==============================================================
 # CLI REGISTRATION
 # ==============================================================
 
 def register(app):
-    """Register the autocomplete command with the Typer app."""
+    """Register the checkinstall command with the Typer app."""
 
     @app.command()
-    def autocomplete(
+    def checkinstall(
+        skip_autocomplete: Optional[bool] = typer.Option(
+            False,
+            "--skip-autocomplete",
+            help="Skip autocomplete (check install only)"
+        ),
         project_dir: Optional[Path] = typer.Option(
             None,
             "--project-dir",
@@ -44,7 +47,7 @@ def register(app):
             help="Show detailed output"
         )
     ):
-        """Generate autocomplete.mqh for MetaEditor for package development."""
+        """Checks all the directives to verify if the package can be successfully installed."""
         if project_dir is None:
             project_dir = Path.cwd()
         else:
@@ -57,13 +60,13 @@ def register(app):
         
         try:
             console_awr.print("")
-            autocomplete_command(project_dir, console, True if verbose else False)
+            checkinstall_command(project_dir, skip_autocomplete or False, console, True if verbose else False)
             from knitpkg.core.telemetry import print_telemetry_warning
             print_telemetry_warning(project_dir)
             console_awr.print("")
             
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠️  Autocomplete generation cancelled by user.[/bold yellow]")
+            console_awr.print("\n[bold yellow]⚠️  Check install cancelled by user.[/bold yellow]")
             console_awr.print("")
             raise typer.Exit(code=1)
 
@@ -77,7 +80,7 @@ def register(app):
             raise typer.Exit(code=1)
         
         except KnitPkgError as e:
-            console_awr.print(f"\n[bold red]❌ Autocomplete generation failed:[/bold red] {e}")
+            console_awr.print(f"\n[bold red]❌ Check install failed:[/bold red] {e}")
             console_awr.print("")
             raise typer.Exit(code=1)
         

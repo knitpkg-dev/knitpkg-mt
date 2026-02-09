@@ -11,9 +11,9 @@ from knitpkg.core.version_handling import validate_version_specifier
 from knitpkg.mql.models import MQLProjectType
 from knitpkg.mql.models import MQLKnitPkgManifest
 from knitpkg.core.file_reading import load_knitpkg_manifest
-from knitpkg.mql.autocomplete import AutocompleteGenerator
+from knitpkg.mql.autocomplete import AutocompleteTools
 from knitpkg.mql.install import ProjectInstaller
-from knitpkg.mql.compile import MQLCompiler
+from knitpkg.mql.compile import MQLProjectCompiler
 from git.exc import GitCommandError
 from knitpkg.mql.settings import MQLSettings
 from knitpkg.mql.models import Target
@@ -115,15 +115,15 @@ class ProjectGet(ConsoleAware):
         project_type = MQLProjectType(manifest.type) # Assumes `manifest.type` is an Enum and has `.value`
         if project_type == MQLProjectType.PACKAGE:
             self.print("\n[cyan]▶️  Generating autocomplete...[/cyan]")
-            generator = AutocompleteGenerator(project_dir, self.console, self.verbose)
-            generator.generate()
+            generator = AutocompleteTools(project_dir, self.console, self.verbose)
+            generator.generate_autocomplete()
         else:
             self.print("\n[cyan]▶️  Installing dependencies...[/cyan]")
             installer = ProjectInstaller(project_dir, True, self.console, self.verbose)
             installer.install(True)
 
         self.print("\n[cyan]▶️  Compiling project...[/cyan]")
-        compiler = MQLCompiler(project_dir, False, self.console, self.verbose)
+        compiler = MQLProjectCompiler(project_dir, False, self.console, self.verbose)
         compiler.compile(False, False)
 
         self.print("[bold green]✅ Build completed successfully![/bold green]")        

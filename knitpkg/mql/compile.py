@@ -55,9 +55,9 @@ class CompilationResult:
 
 
 # ==============================================================
-# MQL COMPILER CLASS
+# MQL PROJECT COMPILER CLASS
 # ==============================================================
-class MQLCompiler(ConsoleAware):
+class MQLProjectCompiler(ConsoleAware):
     """Handles MQL4/MQL5 source code compilation."""
 
     def __init__(self, project_dir: Path, inplace: bool, console: Optional[Console], verbose: bool):

@@ -1,25 +1,49 @@
-from typing import Optional, List
+from typing import Optional, List, override
 from pathlib import Path
+import shutil
 
 from knitpkg.mql.models import ProjectType, MQLKnitPkgManifest
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.core.path_helper import navigate_path
-from knitpkg.mql.constants import INCLUDE_DIR
 from knitpkg.core.console import Console, ConsoleAware
 from knitpkg.core.telemetry import send_telemetry_data
 from knitpkg.core.dependency_downloader import ProjectNodeStatus
-
-# Import MQL-specific downloader
-from knitpkg.core.dependency_downloader import ProjectNode
-from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
+from knitpkg.core.exceptions import InvalidUsageError
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.exceptions import InvalidUsageError
+from knitpkg.core.dependency_downloader import ProjectNode
+
+# Import MQL-specific downloader and IncludeModeDelegate
+from knitpkg.mql.dependency_downloader import MQLDependencyDownloader
+from knitpkg.mql.install import IncludeModeDelegate
+from knitpkg.mql.constants import INCLUDE_DIR
+from knitpkg.mql.compile import MQLProjectCompiler
+
+class MQLAutocompleteCompiler(MQLProjectCompiler):
+    """Compiler for checking if the autocomplete headers can be successfully compiled."""
+
+    def __init__(self, project_dir: Path, compile_files: List[Path], console: Optional[Console] = None, verbose: bool = False):
+        super().__init__(project_dir, True, console, verbose)
+        self.compile_files: List[Path] = compile_files
+
+    @override
+    def _collect_files(
+        self,
+        entrypoints_only: bool,
+        compile_only: bool
+    ) -> List[Path]:
+        return self.compile_files
+    
+    @override
+    def _format_log_line(self, line: str) -> str:
+        line = super()._format_log_line(line)
+        return line.removeprefix('knitpkg/autocomplete/')
 
 # ==============================================================
 # AUTOCOMPLETE GENERATOR CLASS
 # ==============================================================
 
-class AutocompleteGenerator(ConsoleAware):
+class AutocompleteTools(ConsoleAware):
     """Generates autocomplete files for MQL package projects."""
 
     def __init__(self, project_dir: Path, console: Optional[Console] = None, verbose: bool = False):
@@ -32,8 +56,9 @@ class AutocompleteGenerator(ConsoleAware):
         """
         super().__init__(console, verbose)
         self.project_dir = project_dir
+        self.autocomplete_dir = self.project_dir / "knitpkg" / "autocomplete"
 
-    def generate(self) -> None:
+    def generate_autocomplete(self) -> bool:
         """
         Generate the autocomplete.mqh file.
 
@@ -41,39 +66,23 @@ class AutocompleteGenerator(ConsoleAware):
         dependencies, making them available for autocompletion
         in MetaEditor.
         """
-        manifest: MQLKnitPkgManifest = load_knitpkg_manifest(
-            self.project_dir,
-            manifest_class=MQLKnitPkgManifest
-        )
 
-        self.print(
-                f"📝 [bold green]Autocomplete[/bold green] → "
-                f"[cyan]@{manifest.organization}/{manifest.name}[/cyan] : {manifest.version}"
-            )
+        project_root = self._download_dependencies("Autocomplete")
+        if project_root is None:
+            return False
 
-        if manifest.type != ProjectType.PACKAGE:
-            raise InvalidUsageError("Command `kp autocomplete` only works on projects with type: package")
+        shutil.rmtree(self.autocomplete_dir, ignore_errors=True)
+        self.autocomplete_dir.mkdir(parents=True, exist_ok=True)
 
-        # Resolve dependencies (reuse same logic as install)
-        resolved_deps: List[ProjectNode] = []
-        if not manifest.dependencies:
-            self.print(
-                "[yellow]⚠️  Warning:[/] No dependencies found in manifest. "
-                "Autocomplete file will be empty."
-            )
-            return
+        # Generate the header files in the include directory
 
-        registry_url = get_registry_url()
-        downloader = MQLDependencyDownloader(self.project_dir, registry_url, False, MQLKnitPkgManifest, console=self.console, verbose=self.verbose)
-        project_root = downloader.download_all()
+        delegate: IncludeModeDelegate = IncludeModeDelegate(self.autocomplete_dir, self.console, self.verbose)
+        delegate.process(project_root)
 
         try:
-            resolved_deps = project_root.resolved_nodes()
-
             # Generate the file
-            autocomplete_dir = self.project_dir / "knitpkg" / "autocomplete"
-            autocomplete_dir.mkdir(parents=True, exist_ok=True)
-            output_file = autocomplete_dir / "autocomplete.mqh"
+            
+            autocomplete_file = self.autocomplete_dir / "autocomplete.mqh"
 
             lines = [
                 "//+------------------------------------------------------------------+",
@@ -84,23 +93,75 @@ class AutocompleteGenerator(ConsoleAware):
             ]
 
             seen_paths = set()
-            for node in resolved_deps:
-                dep_path = node.resolved_path
-                include_dir = dep_path / INCLUDE_DIR
-                if include_dir.exists():
-                    for mqh in include_dir.rglob("*.mqh"):
-                        rel_path = navigate_path(
-                            autocomplete_dir,
-                            mqh
-                        )
-                        if str(rel_path) not in seen_paths:
-                            lines.append(f'#include "{rel_path.as_posix()}"')
-                            seen_paths.add(str(rel_path))
+            
+            if self.autocomplete_dir.exists():
+                for mqh in self.autocomplete_dir.rglob("*.mqh"):
+                    rel_path = navigate_path(
+                        self.autocomplete_dir,
+                        mqh
+                    )
+                    if str(rel_path) not in seen_paths:
+                        lines.append(f'#include "{rel_path.as_posix()}"')
+                        seen_paths.add(str(rel_path))
+
+            for node in project_root.resolved_nodes():
                 node.status = ProjectNodeStatus.INSTALLED
 
-            output_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            autocomplete_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
             self.print(
-                f"[bold green]✅ Autocomplete file generated[/bold green] → {output_file.relative_to(self.project_dir).as_posix()}"
+                f"[bold green]✅ Autocomplete file generated[/bold green] → {autocomplete_file.relative_to(self.project_dir).as_posix()}"
             )
         finally:
             send_telemetry_data(project_root, self.project_dir)
+
+        return True
+
+
+    def check_install(self, skip_autocomplete: bool=False):
+        """Check if this package can be successfully installed by compiling all the headers after
+         processing the directives."""
+
+        autocomplete_include = self.autocomplete_dir / INCLUDE_DIR
+
+        if not skip_autocomplete:
+            if self.generate_autocomplete() is None:
+                return
+
+        if not self.autocomplete_dir.exists():
+            raise InvalidUsageError("Autocomplete directory not found. Run `kp autocomplete` first.")
+                
+        shutil.copytree(self.project_dir / INCLUDE_DIR, autocomplete_include, dirs_exist_ok=True)
+
+        delegate: IncludeModeDelegate = IncludeModeDelegate(self.autocomplete_dir, self.console, self.verbose)
+        delegate.process_directives()
+
+        headers_to_compile: List[Path] = [autocomplete_include / f.relative_to(self.project_dir / INCLUDE_DIR) for f in (self.project_dir / INCLUDE_DIR).glob('**/*.mqh')]
+        compiler = MQLAutocompleteCompiler(self.project_dir, headers_to_compile, self.console, self.verbose)
+        compiler.compile()
+
+
+    def _download_dependencies(self, process_name: str) -> Optional[ProjectNode]:
+        """Download project dependencies."""
+        manifest: MQLKnitPkgManifest = load_knitpkg_manifest(
+            self.project_dir,
+            manifest_class=MQLKnitPkgManifest
+        )
+
+        self.print(
+                f"📝 [bold green]{process_name}[/bold green] → "
+                f"[cyan]@{manifest.organization}/{manifest.name}[/cyan] : {manifest.version}"
+            )
+
+        if manifest.type != ProjectType.PACKAGE:
+            raise InvalidUsageError("Command `kp autocomplete` only works on projects with type: package")
+
+        if not manifest.dependencies:
+            self.print(
+                "[yellow]⚠️  Warning:[/] No dependencies found in manifest. "
+                "Autocomplete file will be empty."
+            )
+            return None
+
+        registry_url = get_registry_url()
+        downloader = MQLDependencyDownloader(self.project_dir, registry_url, False, MQLKnitPkgManifest, console=self.console, verbose=self.verbose)
+        return downloader.download_all()

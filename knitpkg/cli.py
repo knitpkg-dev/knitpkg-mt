@@ -12,6 +12,7 @@ from knitpkg.commands import (
     init,
     install,
     autocomplete,
+    checkinstall,
     compile,
     build,
     get,
@@ -46,6 +47,7 @@ add.register(app)
 init.register(app)
 install.register(app)
 autocomplete.register(app)
+checkinstall.register(app)
 compile.register(app)
 build.register(app)
 get.register(app)

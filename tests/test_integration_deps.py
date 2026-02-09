@@ -1,6 +1,6 @@
 # No seu test_integration_deps.py
 from knitpkg.commands.install import ProjectInstaller
-from knitpkg.commands.autocomplete import AutocompleteGenerator
+from knitpkg.commands.autocomplete import AutocompleteTools
 from pathlib import Path
 from typing import Optional
 import pytest
@@ -606,12 +606,12 @@ def test_autocomplete(tmp_path: Path):
 
     # Instantiate AutocompleteGenerator and call generate directly
     # The AutocompleteGenerator expects a Console instance
-    generator = AutocompleteGenerator(depd_test_path, mock_console)
+    generator = AutocompleteTools(depd_test_path, mock_console)
 
     print(f"\nRunning AutocompleteGenerator.generate for {depd_test_path}")
     try:
         # Generates knitpkg/autocomplete/autocomplete.mqh
-        generator.generate()
+        generator.generate_autocomplete()
 
         # Print captured output for debugging if needed
         print("\n--- Captured Console Logs ---")
@@ -655,8 +655,89 @@ def test_autocomplete(tmp_path: Path):
     # Assertions to check if DepA.mqh and DepB.mqh are included
     assert "//+------------------------------------------------------------------+\n//|                                          autocomplete.mqh        |" in autocomplete_content
     
-    assert '#include "../../../DepA/knitpkg/include/Acme/DepA/DepA.mqh"' in autocomplete_content
-    assert '#include "../../../DepB/knitpkg/include/Acme/DepB/DepB.mqh"' in autocomplete_content
+    assert '#include "knitpkg/include/Acme/DepA/DepA.mqh"' in autocomplete_content
+    assert '#include "knitpkg/include/Acme/DepB/DepB.mqh"' in autocomplete_content
+
+    print("\nAutocomplete include file created and verified successfully using MockConsole!")
+
+def test_checkinstall(tmp_path: Path):
+    root_dir = tmp_path / "knitpkg_test_root"
+    print('='*50)
+    print(f"===========test_autocomplete root dir: {root_dir}")
+    print('='*50)
+    root_dir.mkdir()
+
+    create_project_files(root_dir, "DepD", "knitpkg/include/Acme/DepD", DEP_D_MQH_CONTENT, DEP_D_YAML_CONTENT, ".", DEP_D_MQ5_CONTENT)
+    create_project_files(root_dir, "DepA", "knitpkg/include/Acme/DepA", DEP_A_MQH_CONTENT, DEP_A_YAML_CONTENT)
+    create_project_files(root_dir, "DepB", "knitpkg/include/Acme/DepB", DEP_B_MQH_CONTENT, DEP_B_YAML_CONTENT)
+
+    depd_test_path = root_dir / "DepD"
+
+    # Instantiate MockConsole
+    mock_console = MockConsole()
+
+    # Instantiate AutocompleteGenerator and call generate directly
+    # The AutocompleteGenerator expects a Console instance
+    generator = AutocompleteTools(depd_test_path, mock_console)
+
+    print(f"\nRunning AutocompleteGenerator.generate for {depd_test_path}")
+    try:
+        # Generates knitpkg/autocomplete/autocomplete.mqh
+        generator.check_install()
+
+        # Print captured output for debugging if needed
+        print("\n--- Captured Console Logs ---")
+        for log in mock_console.logs:
+            print(log)
+        if mock_console.warnings:
+            print("\n--- Captured Console Warnings ---")
+            for warn in mock_console.warnings:
+                print(warn)
+        if mock_console.errors:
+            print("\n--- Captured Console Errors ---")
+            for error in mock_console.errors:
+                print(error)
+
+    except Exception as e:
+        # If an exception occurs within KnitPkgInstaller, print captured output
+        print(f"\n--- AutocompleteGenerator FAILED with an exception: {e} ---")
+        print("\n--- Captured Console Logs (before exception) ---")
+        for log in mock_console.logs:
+            print(log)
+        if mock_console.warnings:
+            print("\n--- Captured Console Warnings (before exception) ---")
+            for warn in mock_console.warnings:
+                print(warn)
+        if mock_console.errors:
+            print("\n--- Captured Console Errors (before exception) ---")
+            for error in mock_console.errors:
+                print(error)
+        pytest.fail(f"AutocompleteGenerator.install failed: {e}")
+
+    # Verify if autocomplete.mqh include file was created
+    autocomplete_path = depd_test_path / "knitpkg" / "autocomplete" / "autocomplete.mqh"
+    assert autocomplete_path.exists(), f"autocomplete.mqh file not found: {autocomplete_path}"
+
+    # Verify the content of the autocomplete include file
+    with open(autocomplete_path, "r", encoding="utf-8") as f:
+        autocomplete_content = f.read()
+
+    print(f"\nContent of {autocomplete_path}:\n{autocomplete_content}")
+
+    # Assertions to check if DepA.mqh and DepB.mqh are included
+    assert "//+------------------------------------------------------------------+\n//|                                          autocomplete.mqh        |" in autocomplete_content
+    
+    assert '#include "knitpkg/include/Acme/DepA/DepA.mqh"' in autocomplete_content
+    assert '#include "knitpkg/include/Acme/DepB/DepB.mqh"' in autocomplete_content
+
+    # Verify if directives were correctly processed
+    depd_processed_path = depd_test_path / "knitpkg" / "autocomplete" / "knitpkg" / "include" / "Acme" / "DepD" / "DepD.mqh"
+    with open(depd_processed_path, "r", encoding="utf-8") as f:
+        depd_processed_content = f.read()
+
+    assert '// #include "../../../autocomplete/autocomplete.mqh"' in depd_processed_content
+    assert '#include "../DepA/DepA.mqh"' in depd_processed_content
+    assert '#include "../DepB/DepB.mqh"' in depd_processed_content
 
     print("\nAutocomplete include file created and verified successfully using MockConsole!")
 

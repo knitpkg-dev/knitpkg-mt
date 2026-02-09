@@ -12,7 +12,7 @@ from pathlib import Path
 from rich.console import Console
 import typer
 
-from knitpkg.mql.compile import MQLCompiler
+from knitpkg.mql.compile import MQLProjectCompiler
 from knitpkg.core.exceptions import KnitPkgError
 
 # ==============================================================
@@ -22,7 +22,7 @@ from knitpkg.core.exceptions import KnitPkgError
 def compile_command(project_dir: Path, inplace: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool):
     """Command wrapper"""
 
-    compiler = MQLCompiler(project_dir, inplace, console, verbose)
+    compiler = MQLProjectCompiler(project_dir, inplace, console, verbose)
 
     compiler.compile(entrypoints_only, compile_only)
 

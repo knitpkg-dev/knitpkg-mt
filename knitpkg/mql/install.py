@@ -106,11 +106,12 @@ class IncludeModeDelegate(ConsoleAware):
             f"[bold green]✔ Include mode:[/] {total_copied} file(s) copied → "
             f"[bold]knitpkg/include/[/]"
         )
-        self._process_directives(include_dir)
+        self.process_directives()
 
-    def _process_directives(self, include_dir: Path) -> None:
+    def process_directives(self) -> None:
         """Process knitpkg directives in copied files."""
         log_neutralize = True
+        include_dir = self.project_dir / INCLUDE_DIR
         for mqh_file in include_dir.rglob("*.mqh"):
             content = mqh_file.read_text(encoding="utf-8")
             lines = content.splitlines()
@@ -122,11 +123,11 @@ class IncludeModeDelegate(ConsoleAware):
                     self.resolve_include_pattern.extract_groups(match)
                     include_path = self.resolve_include_pattern.include_path
                     directive = self.resolve_include_pattern.directive
-                    replace_path = self.resolve_include_pattern.directive_path
+                    directive_path = self.resolve_include_pattern.directive_path
 
-                    if directive == 'include' and replace_path is not None: # handles @knitpkg:include directive
+                    if directive == 'include' and directive_path is not None: # handles @knitpkg:include directive
                         lines[i] = (
-                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / replace_path).as_posix()}" '
+                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / directive_path).as_posix()}" '
                             f'/*** ← dependence added by KnitPkg ***/'
                         )
                         modified = True
