@@ -40,14 +40,15 @@ nav:
     - Registry: concepts/registry.md
     - Git First: concepts/git-first.md
     - Telemetry: concepts/telemetry.md
-#  - User Guide:
-#    - user-guide/index.md
-#    - Creating Packages: user-guide/creating-packages.md
+  - User Guide: 
+    - Overview: user-guide/overview.md
+    - Creating Packages: user-guide/creating-packages.md
 #    - Managing Dependencies: user-guide/managing-dependencies.md
-#    - Package Registry: user-guide/package-registry.md
+#    - Registry: user-guide/package-registry.md
 #    - Creating Projects: user-guide/creating-projects.md
-#    - Project Settings: reference/project-settings.md
-#    - Global Configuration: reference/global-configuration
+#    - Revision: user-guide/revisions.md
+#    - Update: user-guide/update.md
+#    - Settings: reference/settings.md
   - Reference:
     - Manifest: reference/manifest.md
     - Version Ranges: reference/version-ranges.md
@@ -78,3 +79,6 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.striphtml:
+      strip_comments: true
+      strip_js_on_attributes: false         
