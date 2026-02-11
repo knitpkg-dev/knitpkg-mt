@@ -43,7 +43,9 @@ nav:
   - User Guide: 
     - Overview: user-guide/overview.md
     - Creating Packages: user-guide/creating-packages.md
-#    - Managing Dependencies: user-guide/managing-dependencies.md
+    - Managing Dependencies: user-guide/managing-dependencies.md
+    - Unit Tests: user-guide/unit-tests.md
+    - Local Dependencies: user-guide/local-dependencies.md
 #    - Registry: user-guide/package-registry.md
 #    - Creating Projects: user-guide/creating-projects.md
 #    - Revision: user-guide/revisions.md

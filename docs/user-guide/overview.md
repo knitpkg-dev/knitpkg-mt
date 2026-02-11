@@ -12,6 +12,8 @@ This guide covers the following topics:
 
 - **Creating Packages**: How to create a new package from scratch.
 - **Managing Dependencies**: How to add or remove dependencies in a project.
+- **Unit Tests**: How to write Unit Tests for a package.
+- **Local Dependencies**: How to use local dependencies during development time.
 - **Registry**: How to register a project to the KnitPkg registry.
 - **Revisions**: How to release a new version of a project.
 - **Creating Projects**: How to create a new MetaTrader project (e.g., Expert Advisor or Indicator).
@@ -28,23 +30,26 @@ Throughout this guide, we will build and modify real packages and projects. The 
 
 We will create a new **composite package** called `barhelper`, which provides helper functions for the existing [`bar`](https://forge.mql5.io/DouglasRechia/bar) package. For example, we will implement a `Cross` function that returns `true` or `false` when two `TimeSeries` values cross.
 
-### 2. Extend the `expertdemo` Project
-
-We will update the [`expertdemo`](https://forge.mql5.io/DouglasRechia/expertdemo) project to implement a real trading strategy:
-
-- **Entry condition**: Enter long when `sma1` crosses above `sma2`.
-- **Entry filter**: Only enter if `close > sma1 > sma2 > sma3`. This filter can be toggled on or off.
-- **Exit condition**: Exit only when `sma1` crosses below `sma2`.
-- **Parameter validation**: Ensure that `sma1.period < sma2.period < sma3.period`.
-
-The project will depend on the following packages: [`bar`](https://forge.mql5.io/DouglasRechia/bar), [`calc`](https://forge.mql5.io/DouglasRechia/calc), and `barhelper`.
-
-### 3. Manage Dependencies
+### 2. Manage Dependencies
 
 We will demonstrate how to:
 
-- Add and remove dependencies using the CLI.
-- Use local dependencies during development (e.g., add `barhelper` as a local dependency in `expertdemo`).
+- Add and remove dependencies using the CLI or modifying the manifest directly.
+- Generate the autocomplete.mqh for IntelliSense support and Unit tests compilation.
+- Write @knitpkg:include directives for headers with external dependencies (applicable to packages).
+- Check if a package is ok to be consumed by other projects.
+
+### 3. Unit tests
+
+We will write Unit Tests for the `barhelper` package using the built-in testing framework. This will include:
+- Writing test cases for the `Cross` function.
+- Running the tests and interpreting the results.
+
+### 4. Extend the `expertdemo` Project
+
+We will update the [`expertdemo`](https://forge.mql5.io/DouglasRechia/expertdemo) project to implement a real trading strategy. The project will depend on the following packages: [`bar`](https://forge.mql5.io/DouglasRechia/bar), [`calc`](https://forge.mql5.io/DouglasRechia/calc), and `barhelper`.
+
+We will demonstrate how to use local dependencies during development (that is, add `barhelper` as a local dependency in `expertdemo`).
 
 ### 4. Register a Package
 

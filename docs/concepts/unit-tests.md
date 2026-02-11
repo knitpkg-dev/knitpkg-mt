@@ -43,7 +43,7 @@ This approach is intentionally simple: it relies on MQL + printing to the Expert
 
 The command `kp init` can generate a basic test scaffold. Below is an example of how a unit test script can be structured:
 
-```mql5 title="ExampleUnitTest.mq5" linenums="1" hl_lines="20 25-30 40-47"
+```mql5 title="ExampleUnitTest.mq5" linenums="1" hl_lines="20 25-30 38-47"
 //+------------------------------------------------------------------+
 //|                                                    UnitTests.mq5 |
 //|                                 Unit Tests for Package autoctest |
@@ -123,7 +123,7 @@ The three key parts are highlighted:
 
 - **Code under test** (line 20): include the header under test with the standard MQL #include directive.
 - **Test function** (lines 25–30): a `bool` function that returns `true` for pass, `false` for fail.
-- **Test invocation** (lines 40–47): the code that calls the test, updates counters, and prints the result.
+- **Test invocation** (lines 38–47): the code that calls the test, updates counters, and prints the result.
 
 Each new test you add must follow the same pattern: define a new `bool` test function, then add a corresponding call inside `DoTests(...)`.
 
