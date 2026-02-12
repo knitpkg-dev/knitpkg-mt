@@ -322,7 +322,7 @@ kp yank mql5 @acme/math 1.2.3
 
 ### `kp status`
 
-Shows registry and authentication status.
+Shows registry and authentication status along with supported Git providers.
 
 **Usage:**
 ```bash

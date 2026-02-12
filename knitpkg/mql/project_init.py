@@ -40,6 +40,7 @@ class ProjectInitializer(ConsoleAware):
         self.organization: Optional[str] = None
         self.version: Optional[str] = None
         self.description: Optional[str] = None
+        self.keywords: Optional[list[str]] = None
         self.author: Optional[str] = None
         self.license: Optional[str] = None
         self.target: Optional[Target] = None
@@ -302,6 +303,30 @@ class ProjectInitializer(ConsoleAware):
             description = Prompt.ask("Project description", default=default_description)
         self.description = description
 
+    def prompt_keywords(self, keywords: Optional[str]) -> None:
+        """Prompt for project keywords (up to 10)."""
+        if keywords is None:
+            while True:
+                keywords_input = Prompt.ask(
+                    "Project keywords (comma-separated, up to 10)",
+                    default=""
+                )
+                if not keywords_input.strip():
+                    self.keywords = None
+                    break
+                
+                keywords_list = [kw.strip() for kw in keywords_input.split(",") if kw.strip()]
+                if len(keywords_list) > 10:
+                    self.print("[red]Maximum 10 keywords allowed. Please try again.[/red]")
+                    continue
+                self.keywords = keywords_list
+                break
+        else:
+            keywords_list = [kw.strip() for kw in keywords.split(",") if kw.strip()]
+            if len(keywords_list) > 10:
+                raise InvalidUsageError("Maximum 10 keywords allowed.")
+            self.keywords = keywords_list if keywords_list else None
+
     def prompt_author(self, author: Optional[str]) -> None:
         """Prompt for author name."""
         if author is None:
@@ -552,16 +577,17 @@ class ProjectInitializer(ConsoleAware):
 
         # Create knitpkg.yaml
         manifest_data = {
+            "target": self.target.value, # type: ignore
+            "type": self.project_type.value, # type: ignore
+            "organization": self.organization,
             "name": self.name,
             "version": self.version,
             "description": self.description,
             "author": self.author,
             "license": self.license,
-            "target": self.target.value, # type: ignore
-            "type": self.project_type.value, # type: ignore
         }
-        if self.organization:
-            manifest_data["organization"] = self.organization
+        if self.keywords:
+            manifest_data["keywords"] = self.keywords
         if self.include_mode:
             manifest_data["include_mode"] = self.include_mode.value
         if self.entrypoints:
@@ -603,6 +629,7 @@ class ProjectInitializer(ConsoleAware):
         organization: Optional[str],
         version: Optional[str],
         description: Optional[str],
+        keywords: Optional[str],
         author: Optional[str],
         license: Optional[str],
         target: Optional[Target],
@@ -626,6 +653,7 @@ class ProjectInitializer(ConsoleAware):
         self.prompt_organization(organization)
         self.prompt_version(version)
         self.prompt_description(description)
+        self.prompt_keywords(keywords)
         self.prompt_author(author)
         self.prompt_license(license)
         self.select_indicator_input_type(indicator_input_type)

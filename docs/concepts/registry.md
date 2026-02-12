@@ -94,7 +94,7 @@ This is a guarantee provided by the registry.
 
 ## Version yanking 
 
-As a contingency measure, a project owner may mark a version as yanked. Yanked versions are not removed, but are treated as withdrawn to discourage new usage while preserving stability for existing builds. This should not break the ecosystem thanks to the [version ranges](../reference/version-ranges.md) system, which enables dependency resolution to move away from yanked releases without forcing a hard break.
+As a contingency measure, a project owner may mark a version as yanked. Yanked versions are not removed, but are treated as withdrawn to discourage new usage while preserving stability for existing builds. This should not break the ecosystem thanks to the [version ranges](../reference/version-ranges.md/#yanked-versions) system, which enables dependency resolution to move away from yanked releases without forcing a hard break.
 
 ## Using the registry from the CLI
 
