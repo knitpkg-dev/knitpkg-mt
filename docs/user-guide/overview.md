@@ -47,21 +47,21 @@ We will write Unit Tests for the `barhelper` package using the built-in testing 
 
 ### 4. Extend the `expertdemo` Project
 
-We will update the [`expertdemo`](https://forge.mql5.io/DouglasRechia/expertdemo) project to implement a real trading strategy. The project will depend on the following packages: [`bar`](https://forge.mql5.io/DouglasRechia/bar), [`calc`](https://forge.mql5.io/DouglasRechia/calc), and `barhelper`.
+We will update the [`expertdemo`](https://forge.mql5.io/DouglasRechia/expertdemo) project to implement a real trading strategy. The project will depend on the packages [`bar`](https://forge.mql5.io/DouglasRechia/bar) and `barhelper`. Dependency to `calc` will be replaced with the [`sma`](https://forge.mql5.io/DouglasRechia/sma) indicator.
 
 We will demonstrate how to use local dependencies during development (that is, add `barhelper` as a local dependency in `expertdemo`).
 
 ### 4. Register a Package
 
-We will publish the new `barhelper` package to the KnitPkg registry using `kp register`.
+We will publish the new `barhelper` package to the KnitPkg registry using `kp register`. Going one step further, we'll see how to search for projects in the registry and inspect a project's details.
 
 ### 5. Release New Revisions
 
-We will create new versions of the [`bar`](https://forge.mql5.io/DouglasRechia/bar) and [`calc`](https://forge.mql5.io/DouglasRechia/calc) packages. In particular, we will add a new function to [`calc`](https://forge.mql5.io/DouglasRechia/calc) that computes the ATR (Average True Range) indicator.
+We will create new versions of the [`bar`](https://forge.mql5.io/DouglasRechia/bar) and [`calc`](https://forge.mql5.io/DouglasRechia/calc) packages. 
 
 ### 6. Create a New Project
 
-We will create a new indicator project called `atr`, which uses the newly added ATR function from the updated [`calc`](https://forge.mql5.io/DouglasRechia/calc) package.
+We will create a new indicator project called `atr`, which uses the ATR function from [`calc`](https://forge.mql5.io/DouglasRechia/calc) package.
 
 ### 7. Update a Project
 
