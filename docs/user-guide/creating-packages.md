@@ -27,6 +27,10 @@ organization: douglasrechia
 name: barhelper
 ```
 
+!!! important "Organization naming"
+    The organization part of the path is expected to match the Git repository owner/organization, normalized to lowercase.
+    (Project names do not have to match the repository name, but organizations must.)
+
 ---
 
 ## Step 2: Initialize the Package

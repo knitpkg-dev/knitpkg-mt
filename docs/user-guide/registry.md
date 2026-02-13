@@ -1,6 +1,6 @@
 # Registry
 
-In this section, we will demonstrate how to register a new package to the KnitPkg Registry using the `barhelper` project created earlier. We will also show how to update the version of an existing project like `expertdemo`.
+In this section, we will demonstrate how to register a new package to the KnitPkg Registry using the `barhelper` project created earlier. See [Registry](../concepts/registry.md) to check out what the registry is.
 
 ---
 
@@ -34,7 +34,7 @@ To make your project easier to find via [`kp search`](../reference/cli.md/#kp-se
 
 ## How Registry Search Works
 
-The KnitPkg Registry supports flexible search capabilities via `kp search`:
+The KnitPkg Registry supports flexible search capabilities via [`kp search`](../reference/cli.md/#kp-search):
 
 - **Generic search**: `--query` searches across `name`, `keywords`, and `description` (in that order).
 - **Filters**: Use `--organization`, `--type`, `--author`, or `--license` to narrow results.
@@ -93,7 +93,7 @@ Ensure the repository is public. Private repositories are not supported in the F
 
 ## Logging in to the Registry
 
-Before registering, log in using your Git provider credentials:
+Before registering, log in using your Git provider credentials with [`kp login`](../reference/cli.md/#kp-login):
 
 ```bash
 kp login --provider mql5forge
@@ -173,7 +173,7 @@ kp info mql5 @douglasrechia/barhelper
 
 ## Yank a Version
 
-If you discover a critical issue in a released version, you can **yank** it:
+If you discover a critical issue in a released version, you can [**yank**](../concepts/registry.md/#version-yanking) it:
 
 ```bash
 kp yank mql5 @douglasrechia/barhelper 1.0.0

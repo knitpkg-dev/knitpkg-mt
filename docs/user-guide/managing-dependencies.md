@@ -1,6 +1,8 @@
 # Managing Dependencies
 
-In the previous section, we created the `barhelper` package. Now we will add its dependency on `@douglasrechia/bar` using the `kp add` command:
+In the previous section we created `barhelper`, a composite package. The [Composite packages](../concepts/composite-packages.md#composite-packages_1) section is a must-read before diving into managing dependencies.
+
+Now we will add its dependency on `@douglasrechia/bar` using the `kp add` command:
 
 ```bash
 kp add @douglasrechia/bar
@@ -175,7 +177,7 @@ As an exercise, try introducing an error in the path of the `@knitpkg:include` d
 
 !!! note "Working with Single Packages"
 
-    The process for creating **single packages** is essentially the same as for composite packages. However, there are two key differences:
+    The process for creating [**single packages**](../concepts/composite-packages.md/#single-packages) is essentially the same as for composite packages. However, there are two key differences:
 
     - You do **not** need to run `kp autocomplete`, since single packages do not have any external dependencies and thus the headers compile cleanly as a normal `.mqh` files.
     - You do **not** need to run `kp checkinstall`, because the exported headers will not have the `@knitpkg:include` directives.

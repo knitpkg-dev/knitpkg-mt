@@ -181,7 +181,7 @@ Here’s the equity curve for EURUSD H4 (2025-01-01 to 2025-12-31):
 
 Let’s improve the code by abstracting the SMA buffer-to-series logic into a helper function in `barhelper`.
 
-We’ll create a new function `NewTimeSeriesFromIndicator()`:
+We’ll create a new function `NewTimeSeriesFromIndicator()` in `barhelper`:
 
 ```mql5
 TimeSeriesArray<double>* NewTimeSeriesFromIndicator(int indicatorHandler, int indicatorBufferNum, int startPos, int count)
@@ -195,10 +195,8 @@ TimeSeriesArray<double>* NewTimeSeriesFromIndicator(int indicatorHandler, int in
   }
 ```
 
-This function should be placed in:
-knitpkg/include/douglasrechia/barhelper/IndicatorSeries.mqh
-
-The final version is available here: [IndicatorSeries.mqh](resources/draft2/IndicatorSeries.mqh)
+This function should be placed in
+`knitpkg/include/douglasrechia/barhelper/IndicatorSeries.mqh`, which is available [here](resources/draft2/IndicatorSeries.mqh).
 
 After updating `barhelper`, we can simplify `OnNewBar()` like this:
 
@@ -219,6 +217,9 @@ This encapsulates the buffer-copy logic into a reusable abstraction. The final e
 
 - [KnitPkgExpertDemo.mqh](resources/draft2/KnitPkgExpertDemo.mqh)
 - [KnitPkgExpertDemo.mq5](resources/draft2/KnitPkgExpertDemo.mq5)
+
+!!! note
+    As you already know, `kp install` is required every time you update the entrypoint header with `@knitpkg:include`. Always run `kp checkinstall` to verify that the directives are correct.
 
 ---
 

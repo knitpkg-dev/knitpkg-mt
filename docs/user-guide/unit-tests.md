@@ -1,6 +1,6 @@
 # Unit Tests
 
-In this section, we will write a unit test for the `CrossUp` function implemented in the `barhelper` package. The `kp init` command already created a test skeleton in `tests/UnitTests.mq5`, which we will now complete.
+In this section, we will write a unit test for the `CrossUp` function implemented in the `barhelper` package. The `kp init` command already created a test skeleton in `tests/UnitTests.mq5`, which we will now complete. See [Unit Tests](../concepts/unit-tests.md) section for a more conceptual view on this topic.
 
 ---
 
