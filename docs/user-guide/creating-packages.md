@@ -52,7 +52,7 @@ kp init
 
 You will be prompted to answer a few questions. Use the appropriate values for `Project name` and `Organization name`. Keep the default values for the other fields unless you have specific needs.
 
-![alt text](images/kp-init-options.png)
+![alt text](images/terminal-kp-init-options.png)
 
 After confirming with `y`, the project will be created.
 

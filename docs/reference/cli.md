@@ -139,7 +139,7 @@ kp build [options]
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--project-dir`, `-d` | Project directory | `.` |
-| `--locked` | Enforce lockfile consistency | `True` |
+| `--locked` / `--no-locked` | Enforce lockfile consistency | `--locked` |
 | `--no-tree` | Skip dependency tree display | `False` |
 | `--in-place` | Keep binaries in place | `False` |
 | `--entrypoints-only` | Compile only entrypoints | `False` |

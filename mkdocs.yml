@@ -47,9 +47,8 @@ nav:
     - Unit Tests: user-guide/unit-tests.md
     - Local Dependencies: user-guide/local-dependencies.md
     - Registry: user-guide/registry.md
-#    - Creating Projects: user-guide/creating-projects.md
-#    - Revision: user-guide/revisions.md
-#    - Update: user-guide/update.md
+    - Revision: user-guide/revisions.md
+    - Creating Projects: user-guide/creating-projects.md
 #    - Settings: reference/settings.md
   - Reference:
     - Manifest: reference/manifest.md

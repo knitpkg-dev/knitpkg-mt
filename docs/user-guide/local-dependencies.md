@@ -171,7 +171,7 @@ You can find the full source here:
 - [KnitPkgExpertDemo.mq5](resources/draft1/KnitPkgExpertDemo.mq5)
 - [KnitPkgExpertDemo.mqh](resources/draft1/KnitPkgExpertDemo.mqh)
 
-Here’s the equity curve for EURUSD H4 (2025-01-01 to 2025-12-31):
+Here’s the equity curve for EURUSD H4 (2025-01-01 to 2025-12-31, with default parameters but filter off):
 
 ![alt text](images/expertdemo-equity.png)
 

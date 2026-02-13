@@ -87,6 +87,8 @@ git remote add origin https://forge.mql5.io/DouglasRechia/barhelper.git
 git push -u origin main
 ```
 
+Now the code is also in the remote repository, see it [here](https://forge.mql5.io/DouglasRechia/barhelper/src/commit/10bef40024143312df527b9e437df311914de150).
+
 Ensure the repository is public. Private repositories are not supported in the Free tier.
 
 ---

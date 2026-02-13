@@ -582,6 +582,7 @@ class ProjectInitializer(ConsoleAware):
             "organization": self.organization,
             "name": self.name,
             "version": self.version,
+            "version_description": "Initial creation",
             "description": self.description,
             "author": self.author,
             "license": self.license,

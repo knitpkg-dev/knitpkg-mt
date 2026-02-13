@@ -15,9 +15,8 @@ This guide covers the following topics:
 - **Unit Tests**: How to write Unit Tests for a package.
 - **Local Dependencies**: How to use local dependencies during development time.
 - **Registry**: How to register a project to the KnitPkg registry.
-- **Revisions**: How to release a new version of a project.
+- **Revisions**: How to release a new version of a project and update its dependencies.
 - **Creating Projects**: How to create a new MetaTrader project (e.g., Expert Advisor or Indicator).
-- **Updates**: How to update a project when a dependency releases a new version.
 - **Settings**: How to configure project-specific and global KnitPkg options.
 
 ---
@@ -57,17 +56,14 @@ We will publish the new `barhelper` package to the KnitPkg registry using `kp re
 
 ### 5. Release New Revisions
 
-We will create new versions of the [`bar`](https://forge.mql5.io/DouglasRechia/bar) and [`calc`](https://forge.mql5.io/DouglasRechia/calc) packages. 
+We will create new versions of the [`bar`](https://forge.mql5.io/DouglasRechia/bar) and [`calc`](https://forge.mql5.io/DouglasRechia/calc) packages. Further, we will demonstrate how to update a project when one of its dependencies releases a new version.
 
 ### 6. Create a New Project
 
 We will create a new indicator project called `atr`, which uses the ATR function from [`calc`](https://forge.mql5.io/DouglasRechia/calc) package.
 
-### 7. Update a Project
 
-We will demonstrate how to update a project when one of its dependencies releases a new version.
-
-### 8. Configure KnitPkg
+### 7. Configure KnitPkg
 
 We will show how to:
 
