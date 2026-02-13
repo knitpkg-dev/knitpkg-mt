@@ -75,7 +75,7 @@ def register(app):
         ),
         locked: Optional[bool] = typer.Option(
             True,
-            "--locked",
+            "--locked/--no-locked",
             help="Fail if any dependency has local changes or does not match the lockfile. "
             "Enables strict reproducible builds (recommended for CI/CD and production)."
         ),
