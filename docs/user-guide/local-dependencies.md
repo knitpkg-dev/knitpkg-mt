@@ -54,6 +54,31 @@ Therefore, `expertdemo` should declare `bar` as a **direct dependency**. However
 
 In practice, this setup would work with or without declaring `bar`, but being explicit has its benefits.
 
+## Forcing a Specific Version of an Indirect Dependency
+
+If you decide **not** to declare an indirect dependency explicitly in the `dependencies` section, but still want to control which version is used, you can use the [`overrides`](../concepts/composite-packages.md/#version-conflicts-and-overrides) field in your manifest.
+
+This allows you to force a specific version of a dependency that is required transitively by another package.
+
+Here’s an example:
+
+```yaml
+overrides:
+    '@douglasrechia/bar': 1.0.0
+dependencies:
+    '@douglasrechia/calc': ^1.0.0
+```
+
+In this case, even though `@douglasrechia/bar` is not listed as a direct dependency, the override ensures that version `1.0.0` will be used if `calc` (or any other dependency) requires `bar`.
+
+This is useful when:
+
+- You want to avoid declaring a dependency explicitly
+- You need to resolve version conflicts
+- You want to ensure reproducibility across builds
+
+For more details, see [Version Conflicts and Overrides](../concepts/composite-packages.md/#version-conflicts-and-overrides).
+
 ---
 
 ## Adjusting Dependencies to Use the `sma` Indicator
@@ -73,6 +98,15 @@ dependencies:
   '@douglasrechia/bar': ^1.0.0
   '@douglasrechia/barhelper': ../../Scripts/barhelper
 ```
+
+!!! note "Order of Dependency Declarations Matters"
+    In the example above, the dependency on `@douglasrechia/bar` was declared **before** `@douglasrechia/barhelper`. This is intentional.
+
+    KnitPkg resolves dependencies in the order they appear in the manifest. If `barhelper` is declared first, KnitPkg will resolve its transitive dependency on `bar` **before** seeing the version constraint declared by `expertdemo`. As a result, the version of `bar` used will be the one required by `barhelper`, not the one specified by `expertdemo`.
+
+    Declaring `@douglasrechia/bar` **before** `@douglasrechia/barhelper` ensures that the version of `bar` is locked according to the version range specified by `expertdemo`.
+
+    For more details, see [Version Conflicts and Overrides](../concepts/composite-packages.md/#version-conflicts-and-overrides).
 
 ---
 
@@ -219,8 +253,12 @@ This encapsulates the buffer-copy logic into a reusable abstraction. The final e
 - [KnitPkgExpertDemo.mq5](resources/draft2/KnitPkgExpertDemo.mq5)
 
 !!! note
-    As you already know, `kp install` is required every time you update the entrypoint header with `@knitpkg:include`. Always run `kp checkinstall` to verify that the directives are correct.
+    **Applicable to packages only**: always run `kp checkinstall` to verify that the directives are correct.
 
+    **Applicable to all project types except packages**: `kp install` is required every time you update any `@knitpkg:include` directive in the entrypoint header. 
+
+!!! tip
+    Execute `kp build --no-locked` to run install + compile at one shot; `--no-locked` is required because the build command installs in `--locked` mode by default and we have local dependencies. See [`kp build`](../reference/cli.md/#kp-build).
 ---
 
 Congratulations! You’ve learned how to use local dependencies, manage indirect dependencies, and improve code abstraction using KnitPkg.

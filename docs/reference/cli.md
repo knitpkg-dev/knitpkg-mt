@@ -20,7 +20,7 @@ All commands support the global option:
 
 ### `kp init`
 
-Initializes a new KnitPkg project interactively or via flags.
+Initializes a new KnitPkg project interactively or via flags. User is prompted for the not provided options .
 
 **Usage:**
 ```bash
@@ -78,7 +78,7 @@ kp add @acme/math -v ~1.2.0
 
 ### `kp install`
 
-Resolves and installs all dependencies.
+Resolves and installs all dependencies. Applicable for all project types except `package`.
 
 **Usage:**
 ```bash
@@ -90,7 +90,7 @@ kp install [options]
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--project-dir`, `-d` | Project directory | `.` |
-| `--locked` | Enforce lockfile consistency | `False` |
+| `--locked` | Enforce lockfile consistency; not allowed with local dependencies | `False` |
 | `--no-tree` | Skip dependency tree display | `False` |
 
 **Example:**
@@ -102,7 +102,7 @@ kp install --locked
 
 ### `kp compile`
 
-Compiles MQL source files.
+Compiles all the MQL source files declared in [`entrypoints`](manifest.md/#entrypoints-optional-but-required-for-include_mode-flat) and [`compile`](manifest.md/#compile-optional) entries in manifest. MetaEditor standard compiler is used by command line. By default, the binaries .ex5 and .ex4 are moved to bin/ directory if compile is successful.
 
 **Usage:**
 ```bash
@@ -127,7 +127,7 @@ kp compile
 
 ### `kp build`
 
-Builds the project. For packages, runs `checkinstall` and `compile` in sequence. For others, runs `install` and then `compile`.
+Builds the project. For packages, runs `checkinstall` and `compile` in sequence. For others, runs `install --locked` and then `compile`.
 
 **Usage:**
 ```bash
@@ -156,7 +156,7 @@ kp build
 
 ### `kp autocomplete`
 
-Generates `autocomplete.mqh` for MetaEditor IntelliSense.
+Generates `autocomplete.mqh` for MetaEditor IntelliSense and Unit tests compilation.
 
 **Usage:**
 ```bash
@@ -178,7 +178,7 @@ kp autocomplete
 
 ### `kp checkinstall`
 
-Validates all directives and headers.
+Validates all directives and headers. If no errors are found, it means the package is good to be consumed as dependency by others projects.
 
 **Usage:**
 ```bash
