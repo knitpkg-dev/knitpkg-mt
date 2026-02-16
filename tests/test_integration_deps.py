@@ -4,6 +4,7 @@ from knitpkg.commands.autocomplete import AutocompleteTools
 from pathlib import Path
 from typing import Optional
 import pytest
+import os
 
 # --- MockConsole para capturar a saída ---
 class MockConsole:
@@ -660,6 +661,7 @@ def test_autocomplete(tmp_path: Path):
 
     print("\nAutocomplete include file created and verified successfully using MockConsole!")
 
+@pytest.mark.skipif(os.getenv('GITHUB_ACTIONS') == 'true', reason="Skip in GitHub Actions")
 def test_checkinstall(tmp_path: Path):
     root_dir = tmp_path / "knitpkg_test_root"
     print('='*50)

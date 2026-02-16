@@ -126,7 +126,7 @@ But this is just scratching the surface.
 
 To truly understand how KnitPkg works and how to take full advantage of its capabilities, we encourage you to continue reading:
 
-- The [Concepts](concepts/index.md) section explains the core ideas and design principles behind KnitPkg.
-- The [User Guide](user-guide/index.md) provides detailed instructions on commands, workflows, and the full development lifecycle.
+- The [Concepts](concepts/overview.md) section explains the core ideas and design principles behind KnitPkg.
+- The [User Guide](user-guide/overview.md) provides detailed instructions on commands, workflows, and the full development lifecycle.
 
 Dive deeper and unlock the full power of modular, testable, and maintainable MQL development with KnitPkg.
