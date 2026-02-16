@@ -15,7 +15,7 @@ from knitpkg.mql.autocomplete import AutocompleteTools
 from knitpkg.mql.install import ProjectInstaller
 from knitpkg.mql.compile import MQLProjectCompiler
 from git.exc import GitCommandError
-from knitpkg.mql.settings import MQLSettings
+from knitpkg.mql.config import MQLProjectConfig
 from knitpkg.mql.models import Target
 
 T = TypeVar('T', bound=KnitPkgManifest)
@@ -100,8 +100,8 @@ class ProjectGet(ConsoleAware):
         except Exception as e:
             raise GitCommitNotFoundError(commit_hash, str(e))
         
-        settings: MQLSettings = MQLSettings(project_dir)
-        settings.set_data_folder_path(str(mql_target_folder.parent), Target(target))
+        config: MQLProjectConfig = MQLProjectConfig(project_dir)
+        config.set_data_folder_path(str(mql_target_folder.parent), Target(target))
         
         self.print(f"[green]✓[/] Got [bold]{proj_specifier}[/] : {resolved_version}\n")
 

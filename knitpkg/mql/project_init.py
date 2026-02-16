@@ -17,7 +17,7 @@ from knitpkg.core.exceptions import InvalidUsageError
 
 from knitpkg.core.models import PROJECT_NAME_RE, ORGANIZATION_RE
 from knitpkg.core.version_handling import validate_version
-from knitpkg.core.settings import Settings
+from knitpkg.core.config import ProjectConfig
 
 class IndicatorInputType(str, Enum):
     """Indicator data input type."""
@@ -613,8 +613,8 @@ class ProjectInitializer(ConsoleAware):
                 self.print(f"[red]✗ Error initializing Git[/red]: {e}")
 
         if self.enable_telemetry:
-            settings = Settings(project_root)
-            settings.save_if_changed("telemetry", True)
+            config = ProjectConfig(project_root)
+            config.save_if_changed("telemetry", True)
 
         self.print(f"\n🎉[bold green] Project '{self.name}' created successfully in {project_root}[/bold green]")
         self.print("[bold blue]Next steps:[/bold blue]")

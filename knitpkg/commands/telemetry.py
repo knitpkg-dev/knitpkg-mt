@@ -7,7 +7,7 @@ from rich.console import Console
 from knitpkg.core.console import ConsoleAware
 from knitpkg.core.exceptions import KnitPkgError
 from knitpkg.core.global_config import set_global_telemetry
-from knitpkg.core.settings import Settings
+from knitpkg.core.config import ProjectConfig
 
 # ==============================================================
 # COMMAND WRAPPER
@@ -24,8 +24,8 @@ def telemetry_command(state: str, global_setting: bool, project_dir: Path, conso
         status = "enabled" if enabled else "disabled"
         console_awr.print(f"📊 [bold green]Global telemetry {status}[/bold green]")
     else:
-        settings = Settings(project_dir)
-        settings.save_if_changed("telemetry", enabled)
+        config = ProjectConfig(project_dir)
+        config.save_if_changed("telemetry", enabled)
         status = "enabled" if enabled else "disabled"
         console_awr.print(f"📊 [bold green]Project telemetry {status}[/bold green]")
 
@@ -48,7 +48,7 @@ def register(app):
             help="Project directory (default: current directory)"
         )
     ):
-        """Configure telemetry settings."""
+        """Configure telemetry options."""
         console = Console(log_path=False)
         console_awr = ConsoleAware(console=console, verbose=False)
 

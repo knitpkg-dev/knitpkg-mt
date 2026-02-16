@@ -1,16 +1,19 @@
-# knitpkg/mql/settings.py
-from typing import Optional
+# knitpkg/mql/config.py
+from typing import Optional, Any
 from pathlib import Path
+import os
+
+from knitpkg.core.global_config import get_global_default
 
 """
-MQL-specific settings management.
+MQL-specific configuration options management.
 
 This module provides functions to get and set configuration paths
 related to MetaTrader installations, such as compiler paths and
 data folder paths.
 """
 
-from knitpkg.core.settings import Settings
+from knitpkg.core.config import ProjectConfig
 from knitpkg.mql.models import Target
 from knitpkg.mql.exceptions import UnsupportedTargetError
 
@@ -18,18 +21,36 @@ from knitpkg.mql.exceptions import UnsupportedTargetError
 DEFAULT_MQL5_COMPILER = r"C:\Program Files\MetaTrader 5\MetaEditor64.exe"
 DEFAULT_MQL4_COMPILER = r"C:\Program Files (x86)\MetaTrader 4\metaeditor.exe"
 
-class MQLSettings(Settings):
-    """MQL-specific settings handler."""
+class MQLProjectConfig(ProjectConfig):
+    """MQL-specific configuration options handler."""
 
     def __init__(self, project_path: Path):
         super().__init__(project_path)
+        self.global_config_default: dict = get_global_default()
     
+    def get_final(self, env_key: str, config_key: str, default: Optional[str]=None) -> Any:
+        """Get configuration value from environment variable, config file, or default."""
+
+        # Env has the highest priority
+        v = os.environ.get(env_key, None)
+        if v is not None:
+            return v
+        
+        # Then project-specific config file
+        v = self.get(config_key, None)
+        if v is not None:
+            return v
+        
+        # Finally global config or default value
+        v = self.global_config_default.get(config_key, default)
+        return v
+
     def get_compiler_path(self, target: Target) -> str:
         """Get compiler path for specified MQL version."""
         if target == Target.mql4:
-            return self.get("mql4-compiler-path", DEFAULT_MQL4_COMPILER)
+            return self.get_final("MQL4_COMPILER_PATH", "mql4-compiler-path", DEFAULT_MQL4_COMPILER)
         elif target == Target.mql5:
-            return self.get("mql5-compiler-path", DEFAULT_MQL5_COMPILER)
+            return self.get_final("MQL5_COMPILER_PATH", "mql5-compiler-path", DEFAULT_MQL5_COMPILER)
         else:
             raise UnsupportedTargetError(target)
     
@@ -57,10 +78,10 @@ class MQLSettings(Settings):
     def get_data_folder_path(self, target: Target) -> Optional[str]:
         """Get compiler path for specified MQL version."""
         if target == Target.mql4:
-            return self.get("mql4-data-folder-path")
+            return self.get_final("MQL4_DATA_FOLDER_PATH", "mql4-data-folder-path")
         
         elif target == Target.mql5:
-            return self.get("mql5-data-folder-path")
+            return self.get_final("MQL5_DATA_FOLDER_PATH", "mql5-data-folder-path")
         
         else:
             raise UnsupportedTargetError(target)

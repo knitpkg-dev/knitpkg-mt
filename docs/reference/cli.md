@@ -415,7 +415,7 @@ kp config [options]
 
 ### `kp globalconfig`
 
-Sets global CLI settings.
+Sets global CLI options.
 
 **Usage:**
 ```bash

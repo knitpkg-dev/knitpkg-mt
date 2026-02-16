@@ -4,14 +4,14 @@ from pathlib import Path
 from knitpkg.core.dependency_downloader import ProjectNode, ProjectNodeStatus
 from knitpkg.core.console import Console
 from knitpkg.core.global_config import is_global_telemetry, get_registry_url
-from knitpkg.core.settings import Settings
+from knitpkg.core.config import ProjectConfig
 from knitpkg.core.registry import Registry
 
 def _telemetry_enabled(project_dir: Path):
     if is_global_telemetry():
         return True
     
-    return Settings(project_dir).get("telemetry", False)
+    return ProjectConfig(project_dir).get("telemetry", False)
 
 def print_telemetry_warning(project_dir: Path):
     if _telemetry_enabled(project_dir):

@@ -17,7 +17,7 @@ This guide covers the following topics:
 - **Registry**: How to register a project to the KnitPkg registry.
 - **Revisions**: How to release a new version of a project and update its dependencies.
 - **Creating Projects**: How to create a new MetaTrader project (e.g., Expert Advisor or Indicator).
-- **Settings**: How to configure project-specific and global KnitPkg options.
+- **Configuration**: How to configure project-specific and global KnitPkg options.
 
 ---
 
@@ -67,7 +67,7 @@ We will create a new indicator project called `atr`, which uses the ATR function
 
 We will show how to:
 
-- Configure project-specific settings (e.g., compiler paths, data folders).
+- Configure project-specific options (e.g., compiler paths, data folders).
 - Set global options that apply across all projects.
 
 ---

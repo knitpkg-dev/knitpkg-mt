@@ -49,7 +49,8 @@ nav:
     - Registry: user-guide/registry.md
     - Revision: user-guide/revisions.md
     - Creating Projects: user-guide/creating-projects.md
-#    - Settings: reference/settings.md
+    - Target Platforms: user-guide/target-platforms.md
+    - Configuration: reference/config.md
   - Reference:
     - Manifest: reference/manifest.md
     - Version Ranges: reference/version-ranges.md

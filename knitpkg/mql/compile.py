@@ -12,7 +12,7 @@ from knitpkg.core.console import Console, ConsoleAware
 from knitpkg.mql.models import MQLKnitPkgManifest, Target
 from knitpkg.mql.constants import FLAT_DIR, COMPILE_LOGS_DIR, BIN_DIR
 from knitpkg.mql.mql_paths import find_mql_paths
-from knitpkg.mql.settings import MQLSettings
+from knitpkg.mql.config import MQLProjectConfig
 
 # Import MQL-specific exceptions
 from knitpkg.mql.exceptions import (
@@ -167,8 +167,8 @@ class MQLProjectCompiler(ConsoleAware):
             UnsupportedTargetError: If manifest target is not mql4 or mql5
             CompilerNotFoundError: If the compiler executable does not exist
         """
-        settings: MQLSettings = MQLSettings(self.project_dir)
-        compiler_path: Path = Path(settings.get_compiler_path(Target(self.manifest.target)))
+        config: MQLProjectConfig = MQLProjectConfig(self.project_dir)
+        compiler_path: Path = Path(config.get_compiler_path(Target(self.manifest.target)))
 
         if not compiler_path.exists():
             raise CompilerNotFoundError(
@@ -251,8 +251,8 @@ class MQLProjectCompiler(ConsoleAware):
         Raises:
             IncludePathNotFoundError: If the MQL include directory cannot be located.
         """
-        settings: MQLSettings = MQLSettings(self.project_dir)
-        mql_data_folder_path_str: Optional[str] = settings.get_data_folder_path(Target(self.manifest.target))
+        config: MQLProjectConfig = MQLProjectConfig(self.project_dir)
+        mql_data_folder_path_str: Optional[str] = config.get_data_folder_path(Target(self.manifest.target))
 
         # 1. Check for configured data folder path
         if mql_data_folder_path_str:

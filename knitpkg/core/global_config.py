@@ -76,3 +76,19 @@ def set_global_registry(url: str):
 def set_global_telemetry(enabled: bool):
     set_global("telemetry", {"enabled": enabled})
 
+def set_global_default(key: str, value: str):
+    global_config = load_global_config()
+    if not global_config:
+        global_config = {}
+    
+    default_entry = global_config.get('default', {})
+    default_entry[key] = value
+    set_global('default', default_entry)
+
+def get_global_default() -> dict:
+    global_config = load_global_config()
+    if not global_config:
+        return {}
+
+    default_entry = global_config.get('default', {})
+    return default_entry
