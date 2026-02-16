@@ -57,6 +57,17 @@ def register(app):
             console_awr.print(f"[bold red]❌ Invalid state:[/bold red] '{state}'. Must be 'on' or 'off'.")
             raise typer.Exit(code=1)
 
+        # Prompt for Terms of Service agreement if turning telemetry on
+        if state.lower() == 'on':
+            console_awr.print("\n[bold yellow]📋 Terms of Service[/bold yellow]")
+            console_awr.print("By enabling telemetry, you agree to the Terms of Service at:")
+            console_awr.print("[cyan]https://docs.knitpkg.dev/terms-of-service/telemetry/[/cyan]\n")
+            
+            agree = typer.confirm("Do you agree to the Terms of Service?")
+            if not agree:
+                console_awr.print("\n[bold yellow]⚠️  Telemetry not enabled. Terms of Service not accepted.[/bold yellow]")
+                raise typer.Exit(code=0)
+
         project_path = Path(project_dir).resolve() if project_dir else Path.cwd()
 
         try:

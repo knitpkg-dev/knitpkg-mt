@@ -50,6 +50,16 @@ def register(app):
         from knitpkg.core.console import ConsoleAware
         console_awr = ConsoleAware(console=console, verbose=True if verbose else False)
 
+        # Prompt for Terms of Service agreement
+        console_awr.print("\n[bold yellow]📋 Terms of Service[/bold yellow]")
+        console_awr.print("By registering your project, you agree to the Terms of Service at:")
+        console_awr.print("[cyan]https://docs.knitpkg.dev/terms-of-service/registry/[/cyan]\n")
+        
+        agree = typer.confirm("Do you agree to the Terms of Service?")
+        if not agree:
+            console_awr.print("\n[bold yellow]⚠️  Registration cancelled. Terms of Service not accepted.[/bold yellow]")
+            raise typer.Exit(code=0)
+
         try:
             console_awr.print("")
             project_dir = project_dir if project_dir is not None else Path.cwd()
