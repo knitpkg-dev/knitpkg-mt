@@ -2,86 +2,35 @@
 
 **A modern package & project manager for MQL5/MQL4 — built for real-world MetaTrader development.**
 
-KnitPkg brings **npm-like dependency workflows** to MetaTrader while staying true to how MQL projects are actually built and shared: **Git repositories + reproducible installs + automation**.
+**KnitPkg** is a modern **package and project manager for MQL5/MQL4**, bringing an *npm-like* dependency workflow to real-world MetaTrader development.
 
-- Main page: [knitpkg.dev](https://knitpkg.dev)  
+MetaTrader projects often evolve through manual copy/paste, ad-hoc folder sharing, and “it works on my machine” dependency drift. KnitPkg exists to fix that by making code reuse and collaboration **predictable, reproducible, and automated**—without changing how MQL developers already publish code (Git repos).
+
+- Home page: [knitpkg.dev](https://knitpkg.dev)  
 - Documentation: [docs.knitpkg.dev](https://docs.knitpkg.dev)
 - Registry: [registry.knitpkg.dev](https://registry.knitpkg.dev)
 
 ---
 
-## Why KnitPkg
+## What KnitPkg is
 
-### Ship faster with reproducible builds
-- **SemVer + ranges (npm-style)**: `^ ~ < > * !=` with **pre-releases** support.
-- **Lockfile for reproducibility**: get the *same* dependency graph across machines and time.
-- **Yank support**: yanked versions stop being resolved by ranges (without breaking existing builds).
+KnitPkg is built around a **Git-first** model:
 
-### Dependencies that feel effortless
-- **One-command install**: resolve the full dependency tree and download everything ready-to-use.
-- **Composable packages**: build packages that reuse other packages (clean dependency trees).
-- **Dependency overrides**: take full control by overriding indirect dependency versions (like npm `overrides`).
-- **Local path dependencies**: develop packages locally before publishing them.
+- Your code lives in **Git repositories** (Mql5Forge, GitHub, GitLab, Bitbucket).
+- KnitPkg acts as a **metadata registry** that indexes projects via their manifests (it does **not** host your source or binaries).
+- A **CLI tool** installs dependencies, resolves versions (SemVer + ranges), generates reproducible installs via a lock file, and can automate compilation.
 
-### Built for MQL ergonomics (not generic C/C++)
-- **Standardized MQL project structure** (`src/`, `bin/`, manifest, etc).
-- **Automatic compilation** from the CLI.
-- **Autocomplete helpers** for MetaEditor to make composed packages pleasant to work with.
-- **`@knitpkg:include` directive**: include headers from other packages and have them resolved at install time.
+The public registry API is available and currently operational.
 
-### Public registry (metadata-first)
-- KnitPkg uses a public registry to store **project metadata from manifests** (not source code or binaries).
-- Supports projects hosted on **Mql5Forge, GitHub, GitLab, and Bitbucket**.
-- Installing **public** projects doesn’t require authentication.
+## Why developers use KnitPkg
 
----
+KnitPkg focuses on the pain points that show up fast in MQL development:
 
-## Quick Start
-
-```bash
-# Create a new project (wizard-style)
-kp init
-
-# Add a dependency to your project
-kp add @organization/package-name
-
-# Install dependencies
-kp install
-
-# Compile MQL sources
-kp compile
-
-# One-shot: install + compile
-kp build
-```
-
-## (Some) Supported Commands
-
-- `kp init` — initialize a new KnitPkg project (wizard)
-- `kp add` — add a dependency to the current project
-- `kp install` — resolve and download dependencies
-- `kp compile` — compile MQL source files via CLI
-- `kp build` — install + compile in one step
-- `kp search` — search the KnitPkg public registry
-- `kp info` — show details about a registry project
-- `kp get` — query the registry for the project metadata, download and build it directly to your MetaTrader instalation
-- `kp login` / `kp logout` — manage registry authentication (needed for publishing; not required for installing public projects)
-- `kp register` - register a new project or a version of an existing project to the registry (requires registry authentication)
-
-(run `kp --help` for the complete commands list)
-
----
-
-## Suggested Project Structure (typical)
-
-While KnitPkg supports both MQL5 and MQL4 projects, it encourages a consistent layout:
-
-- `src/` — MQL sources for Expert advisors, indicators, etc
-- `bin/` — compiled artifacts
-- `knitpkg/` — installed dependency headers made available to your project
-- `knitpkg.yaml` — project metadata + dependencies
-
-(See the docs for the authoritative structure and examples.)
+- **Versioned dependencies** (SemVer + ranges like `^`, `~`, `<`, `>`, `*`, `!=`)
+- **Reproducible builds** with a lock file
+- **Composed packages** (dependency trees), including helpers like autocomplete and `@knitpkg:include`
+- **Safe ecosystem maintenance** with *yanked* versions (removed from range resolution without breaking history)
+- **Git-host login via OAuth** for publishing (no extra KnitPkg account); public installs need no auth
 
 ---
 ## Installation
@@ -96,6 +45,9 @@ While KnitPkg supports both MQL5 and MQL4 projects, it encourages a consistent l
 2. **Git client**  
    KnitPkg *leverages Git* for MetaTrader package & project management, so a Git client is essential.  
    - Download: [https://git-scm.com/](https://git-scm.com/)
+
+3. **MetaTrader 4 and/or MetaTrader 5**
+   Available at: [https://www.mql5.com/](https://www.mql5.com/).
 
 ### Install `kp`
 
@@ -123,7 +75,9 @@ kp search mql5 -o douglasrechia
 kp search mql5 -o douglasrechia
 ```
 
-From the results, you can inspect details with `kp info`, or fetch and compile a project locally with `kp get`.
+From the results, you can inspect details with `kp info`, or fetch and compile a project locally with `kp get`. 
+
+See [Getting started](https://docs.knitpkg.dev/getting-started/) for a quick introduction and first steps using KnitPkg.
 
 
 ---
@@ -133,26 +87,17 @@ From the results, you can inspect details with `kp info`, or fetch and compile a
 KnitPkg aims to strengthen the MQL ecosystem with better tooling. You can help keep the CLI and the **public registry** running by:
 
 - Giving the repo a **GitHub star**
-- Donating via **GitHub Sponsors / Donations**
+- Donating via **GitHub Sponsors / Donations** (not yet available)
 
 ---
 
-**KnitPkg — The dependency manager MQL5 always needed.**
+**KnitPkg — The dependency manager MQL always needed**
 
-Made with passion
+- Discord: [https://discord.gg/hCbmYtkn](https://discord.gg/hCbmYtkn) to the future.
+- Contact: [contact@knitpkg.dev](mailto:contact@knitpkg.dev)
+- MIT Licensed — Forever free for the community
 
-MIT Licensed — Forever free for the community
-
-Documentation: [https://docs.knitpkg.dev](https://docs.knitpkg.dev)
-
-GitHub: [https://github.com/knitpkg-dev/knitpkg-mt.git](https://github.com/knitpkg-dev/knitpkg-mt.git)
-
-Discord: [https://discord.gg/hCbmYtkn](https://discord.gg/hCbmYtkn) to the future.
-
-Contact: [contact@knitpkg.dev](mailto:contact@knitpkg.dev)
-
-
-**KnitPkg – The future of MQL5 development**
+**KnitPkg – The future of MQL5 development.**
 
 ---
 
