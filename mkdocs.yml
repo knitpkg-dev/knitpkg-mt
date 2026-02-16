@@ -1,6 +1,6 @@
 site_name: 'KnitPkg Documentation'
 site_description: 'A modern package & project manager for MQL5/MQL4'
-site_url: 'https://docs.knitpkg.dev/'
+site_url: 'https://knitpkg-dev.github.io/knitpkg-mt/'
 
 theme:
   name: 'material'
