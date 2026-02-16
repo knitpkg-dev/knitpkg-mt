@@ -68,7 +68,7 @@ A typical layout looks like:
 project_dir/
 │   knitpkg.yaml        # Manifest
 │   LICENSE             # Optional: license (text format)
-│   README.md           # Recommended: README (markup format)
+│   README.md           # Recommended: README (markdown format)
 │   .gitignore          # Git ignore
 │
 ├───.knitpkg            # Reserved for KnitPkg use

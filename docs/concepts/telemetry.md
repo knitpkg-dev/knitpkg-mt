@@ -50,4 +50,4 @@ This lets you adopt telemetry gradually and keep full control over where it appl
 
 Telemetry authorization and configuration are managed through the CLI.
 
-See the [CLI reference](../reference/cli.md) for the exact commands and configuration options.
+See the [CLI reference](../reference/cli.md/#kp-telemetry) for the exact commands and configuration options.

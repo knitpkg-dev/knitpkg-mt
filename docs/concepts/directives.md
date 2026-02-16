@@ -1,6 +1,6 @@
 ## The entrypoint source file and the @knitpkg:include directives
 
-As we saw in the [previous section](manifest.md), the entrypoint source file is [src/KnitPkgSMA.mqh](https://forge.mql5.io/DouglasRechia/sma/src/commit/d50674497d1664b21acb0caf056c6e2f8d7be413/src/KnitPkgSMA.mqh). Inside it, you can see special KnitPkg directives:
+As we already know, the entrypoint source file is [src/KnitPkgSMA.mqh](https://forge.mql5.io/DouglasRechia/sma/src/commit/d50674497d1664b21acb0caf056c6e2f8d7be413/src/KnitPkgSMA.mqh). Inside it, you can see special KnitPkg directives:
 
 ```mql5 linenums="24" title="src/KnitPkgSMA.mqh"
 /* @knitpkg:include "douglasrechia/calc/Calc.mqh" */

@@ -38,7 +38,7 @@ The manifest is the “brain” of a KnitPkg repository: it tells KnitPkg **what
 
 Pay special attention to the highlighted parts:
 
-- **`include_mode`** and **`entrypoints`**: with `include_mode: flat` and `src/KnitPkgSMA.mqh` added as the entrypoint for dependency resolution in `entrypoints`, KnitPkg will use this file as the root to generate the flattened header needed for compilation.
+- **`include_mode`** and **`entrypoints`**: with `include_mode: flat` and [src/KnitPkgSMA.mqh](https://forge.mql5.io/DouglasRechia/sma/src/commit/d50674497d1664b21acb0caf056c6e2f8d7be413/src/KnitPkgSMA.mqh) added as the entrypoint for dependency resolution in `entrypoints`, KnitPkg will use this file as the root to generate the flattened header needed for compilation.
 - **`dependencies`**: declares that this project depends on the package `@douglasrechia/calc`. KnitPkg will use this information to resolve the dependency version and fetch the required code.
 
 In other words: the manifest explains *why* the repository is missing some includes—because they are produced during installation.

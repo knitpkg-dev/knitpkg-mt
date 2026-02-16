@@ -72,7 +72,8 @@ code .
 - Use [MetaEditor](https://www.metatrader5.com/en/automated-trading/metaeditor) to edit `.mqh`, `.mq4`, and `.mq5` files. It offers excellent IntelliSense and follows MQL standards.
 - Use [VSCode](https://code.visualstudio.com/) for editing other files like `.yaml` and for Git operations. You can enable MQL syntax highlighting in VSCode using [this tutorial](https://www.mql5.com/en/blogs/post/719548).
 
-Tip: You can also use the integrated terminal in VSCode by clicking **Terminal > New Terminal**.
+!!! tip
+     You can also use the integrated terminal in VSCode by clicking **Terminal > New Terminal**.
 
 Once opened, you will see the directory structure created by `kp init`:
 
@@ -98,7 +99,8 @@ compile:
 dependencies: {}
 ```
 
-Note: A `GETTING_STARTED` file is also created to help beginners. You can delete it at any time — it is ignored by Git thanks to `.gitignore`.
+!!! note
+     A `GETTING_STARTED` file is also created to help beginners. You can delete it at any time — it is ignored by Git thanks to `.gitignore`.
 
 ---
 
