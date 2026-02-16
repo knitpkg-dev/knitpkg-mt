@@ -28,6 +28,7 @@ theme:
 nav:
   - Overview: index.md
   - Installation: installation.md
+  - Getting started: getting-started.md
   - Core Concepts: 
     - Overview: concepts/overview.md
     - Manifest: concepts/manifest.md
@@ -50,7 +51,7 @@ nav:
     - Revision: user-guide/revisions.md
     - Creating Projects: user-guide/creating-projects.md
     - Target Platforms: user-guide/target-platforms.md
-    - Configuration: reference/config.md
+    - Configuration: user-guide/configuration.md
   - Reference:
     - Manifest: reference/manifest.md
     - Version Ranges: reference/version-ranges.md

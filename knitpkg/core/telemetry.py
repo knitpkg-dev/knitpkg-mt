@@ -8,10 +8,11 @@ from knitpkg.core.config import ProjectConfig
 from knitpkg.core.registry import Registry
 
 def _telemetry_enabled(project_dir: Path):
-    if is_global_telemetry():
-        return True
+    is_project_enabled = ProjectConfig(project_dir).get("telemetry", None)
+    if is_project_enabled is not None:
+        return is_project_enabled
     
-    return ProjectConfig(project_dir).get("telemetry", False)
+    return is_global_telemetry()
 
 def print_telemetry_warning(project_dir: Path):
     if _telemetry_enabled(project_dir):

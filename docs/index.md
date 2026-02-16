@@ -39,6 +39,7 @@ This site is structured to take you from “first install” to “deep referenc
 
 - **Overview**: what KnitPkg is and the core idea behind it
 - **Installation**: getting the CLI working on your machine
+- **Getting started**: a quick introduction to your first steps using KnitPkg
 - **Core Concepts**: packages vs projects, the registry, and the Git-first workflow
 - **User Guide**: day-to-day workflows (init, add, install, get, publish, search)
 - **Reference**: exact specs (manifest format, directives, SemVer rules, layouts, CLI)

@@ -64,7 +64,6 @@ def register(app: typer.Typer):
 
     @app.command()
     def globalconfig(
-        set_registry: str = typer.Option(None, "--set-registry", help="Set default registry URL"),
         mql5_compiler_path: Optional[Path] = typer.Option(
             None,
             "--mql5-compiler-path",
@@ -84,7 +83,8 @@ def register(app: typer.Typer):
             None,
             "--mql4-data-folder-path",
             help="Set the default custom data folder path for MQL4 (e.g., C:\\Users\\User\\AppData\\Roaming\\MetaQuotes\\Terminal\\<hash>)"
-        )
+        ),
+        set_registry: str = typer.Option(None, "--set-registry", help="Set default registry URL")
     ):
         """Configure KnitPkg CLI options."""
         console = Console(log_path=False)

@@ -426,8 +426,11 @@ kp globalconfig [options]
 
 | Flag | Description | Default |
 |------|-------------|---------|
+| `--mql5-compiler-path` | Path to MetaEditor64.exe | `None` |
+| `--mql4-compiler-path` | Path to MetaEditor.exe | `None` |
+| `--mql5-data-folder-path` | MQL5 data folder path | `None` |
+| `--mql4-data-folder-path` | MQL4 data folder path | `None` |
 | `--set-registry` | Set default registry URL | `None` |
-| `--list`, `-l` | Show current global config | `False` |
 
 ---
 

@@ -1,6 +1,6 @@
 # Installation
 
-This guide explains how to install the **KnitPkg CLI for MetaTrader** (`kp`) and configure your machine for MQL4/MQL5 development.
+This guide explains how to install the **KnitPkg CLI for MetaTrader** (`kp`).
 
 > KnitPkg is currently **Windows-first**, because MetaTrader and MetaEditor are typically used on Windows.
 
@@ -42,28 +42,6 @@ If the command is not found, PATH is not set correctly (or the terminal session 
 ### Option B: PyPI (coming soon)
   Distribution via `pip` is in progress. This section will be expanded once the package is published and stabilized.
 
----
-
-## Essential workflow commands
-
-Once `kp` is installed, these are the commands you’ll use most often.
-
-```bash
-# Create a new project (wizard-style)
-kp init
-
-# Add a dependency to your project
-kp add @organization/package-name
-
-# Install dependencies
-kp install
-
-# Compile MQL sources
-kp compile
-
-# One-shot: install + compile
-kp build
-```
 
 ## Beta note
 
