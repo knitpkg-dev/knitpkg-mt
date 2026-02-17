@@ -77,7 +77,7 @@ jobs:
             - [kp.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp.exe)
 
             ### Changelog
-            (ADD YOUR CHANGELOG HERE)
+            First Beta release
           draft: false
           prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
         env:
