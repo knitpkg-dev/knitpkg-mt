@@ -49,10 +49,6 @@ This site is structured to take you from “first install” to “deep referenc
 
 **KnitPkg — The dependency manager MQL5 always needed.**
 
-Made with passion
-
-MIT Licensed — Forever free for the community
-
 GitHub: [https://github.com/knitpkg-dev/knitpkg-mt.git](https://github.com/knitpkg-dev/knitpkg-mt.git)
 
 Discord: [https://discord.gg/hCbmYtkn](https://discord.gg/hCbmYtkn) to the future.

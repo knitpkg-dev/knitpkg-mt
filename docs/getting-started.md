@@ -24,7 +24,7 @@ You should now see the Terminal open in the MetaTrader Data folder:
 
 ## Installing the Demo Indicator in One Command
 
-To download and compile the demo indicator `sma` directly into your MetaTrader environment, run:
+To download and compile the source code of the demo indicator [`sma`](https://forge.mql5.io/DouglasRechia/sma.git) directly into your MetaTrader environment, run:
 
 ```bash
 kp get mql5 @douglasrechia/sma
@@ -45,7 +45,7 @@ Double-click it to attach it to a chart. It will display a 10-period SMA by defa
 
 ## Installing the Demo Expert Advisor and Running a Backtest
 
-To download and compile the demo Expert Advisor `expertdemo`, run:
+To download and compile the source code of the demo Expert Advisor [`expertdemo`](https://forge.mql5.io/DouglasRechia/expertdemo.git), run:
 
 ```bash
 kp get mql5 @douglasrechia/expertdemo

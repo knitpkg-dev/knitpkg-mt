@@ -1,36 +1,130 @@
 site_name: 'KnitPkg Documentation'
 site_description: 'A modern package & project manager for MQL5/MQL4'
-site_url: 'https://knitpkg-dev.github.io/knitpkg-mt/'
+site_url: 'https://docs.knitpkg.dev/'
+repo_url: 'https://github.com/knitpkg-dev/knitpkg-mt'
+repo_name: 'knitpkg-dev/knitpkg-mt'
 
 theme:
-  name: 'material'
-  language: 'en'
+  name: material
+  logo: assets/kp-logo.svg
+  favicon: assets/kp-logo.svg
+
+  palette:
+    # Dark mode (primary)
+    - scheme: slate
+      primary: custom  # We'll define custom colors below
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+    # Light mode (optional, but keeping dark as default)
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
   features:
-    - navigation.expand
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
     - navigation.footer
+    - toc.follow
+    - toc.integrate
+    - search.suggest
     - search.highlight
     - search.share
     - content.code.copy
-  palette:
-    # Dark Mode
-    - scheme: slate
-      toggle:
-        icon: material/weather-sunny
-        name: Dark mode
+    - content.code.annotate
+    - content.tabs.link
+    - announce.dismiss
 
-    # Light Mode
-    - scheme: default
-      toggle:
-        icon: material/weather-night
-        name: Light mode
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/knitpkg-dev/knitpkg-mt
+      name: KnitPkg on GitHub
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/hCbmYtkn
+      name: Join our Discord
+
+  analytics:
+    provider: google
+    property: !ENV GOOGLE_ANALYTICS_KEY
+
+  consent:
+    title: Cookie consent
+    description: >- 
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=|$$|()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
 
 nav:
   - Overview: index.md
   - Installation: installation.md
   - Getting started: getting-started.md
-  - Core Concepts: 
-    - Overview: concepts/overview.md
+  - Core Concepts:
+    - concepts/overview.md
     - Manifest: concepts/manifest.md
     - KnitPkg Directives: concepts/directives.md
     - Install and Compile: concepts/install-and-compile.md
@@ -41,8 +135,8 @@ nav:
     - Registry: concepts/registry.md
     - Git First: concepts/git-first.md
     - Telemetry: concepts/telemetry.md
-  - User Guide: 
-    - Overview: user-guide/overview.md
+  - User Guide:
+    - user-guide/overview.md
     - Creating Packages: user-guide/creating-packages.md
     - Managing Dependencies: user-guide/managing-dependencies.md
     - Unit Tests: user-guide/unit-tests.md
@@ -63,25 +157,6 @@ nav:
     - Telemetry: terms-of-service/telemetry.md
     - Registry: terms-of-service/registry.md
 
-markdown_extensions:
-  - admonition
-  - codehilite:
-      guess_lang: false
-      linenums: true
-  - toc:
-      permalink: true
-  - pymdownx.highlight:
-      anchor_linenums: true
-      line_spans: __span
-      pygments_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-  - attr_list
-  - md_in_html
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
-  - pymdownx.striphtml:
-      strip_comments: true
-      strip_js_on_attributes: false         
+copyright: >
+  Copyright &copy; 2024-2026 KnitPkg –
+  <a href="#__consent">Change cookie settings</a>

@@ -1,0 +1,331 @@
+/**
+ * KnitPkg Brand Colors
+ * Cyan: #00d9ff (primary)
+ * Magenta: #ff1b8d (accent)
+ */
+
+:root {
+  /* Cyan palette (primary) */
+  --md-primary-fg-color: #00d9ff;
+  --md-primary-fg-color--light: #33dfff;
+  --md-primary-fg-color--dark: #00aecc;
+  --md-primary-bg-color: #020617;
+  --md-primary-bg-color--light: #0f172a;
+
+  /* Magenta palette (accent) */
+  --md-accent-fg-color: #ff1b8d;
+  --md-accent-fg-color--transparent: rgba(255, 27, 141, 0.1);
+  --md-accent-bg-color: #020617;
+  --md-accent-bg-color--light: #0f172a;
+
+  /* Typeset colors */
+  --md-typeset-a-color: #00d9ff;
+  --md-typeset-mark-color: rgba(0, 217, 255, 0.2);
+
+  /* Code colors */
+  --md-code-hl-color: rgba(0, 217, 255, 0.15);
+  --md-code-hl-number-color: #ff1b8d;
+  --md-code-hl-special-color: #00d9ff;
+  --md-code-hl-function-color: #00d9ff;
+  --md-code-hl-constant-color: #ff1b8d;
+  --md-code-hl-keyword-color: #ff1b8d;
+  --md-code-hl-string-color: #66dbff;
+
+  /* Admonition colors */
+  --md-admonition-icon--note: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="%2300d9ff"/></svg>');
+
+  /* Scrollbar */
+  --md-scrollbar-thumb-color: rgba(0, 217, 255, 0.3);
+  --md-scrollbar-thumb-color--hover: rgba(0, 217, 255, 0.5);
+}
+
+/* Dark mode specific (slate scheme) */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #020617;
+  --md-default-fg-color: #e2e8f0;
+  --md-default-fg-color--light: #94a3b8;
+  --md-default-fg-color--lighter: #64748b;
+  --md-default-fg-color--lightest: #475569;
+
+  /* Code blocks */
+  --md-code-bg-color: #0f172a;
+  --md-code-fg-color: #e2e8f0;
+
+  /* Footer */
+  --md-footer-bg-color: #020617;
+  --md-footer-bg-color--dark: #000000;
+}
+
+/* Light mode adjustments (optional) */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #00aecc;
+  --md-accent-fg-color: #cc1671;
+  --md-typeset-a-color: #00aecc;
+}
+
+/* Custom glow effects for headers */
+.md-typeset h1 {
+  color: #00d9ff;
+  text-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+}
+
+.md-typeset h2 {
+  color: #e2e8f0;
+  border-bottom: 2px solid rgba(0, 217, 255, 0.3);
+}
+
+/* Links with hover glow */
+.md-typeset a:hover {
+  color: #33dfff;
+  text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+}
+
+/* Code copy button */
+.md-clipboard {
+  color: #64748b;
+}
+
+.md-clipboard:hover {
+  color: #00d9ff;
+}
+
+/* Search highlight */
+.md-search-result__article--document:hover {
+  background-color: rgba(0, 217, 255, 0.05);
+}
+
+/* Navigation tabs */
+.md-tabs__link--active {
+  color: #00d9ff;
+  border-bottom-color: #00d9ff;
+}
+
+.md-tabs__link:hover {
+  color: #00d9ff;
+}
+
+/* Table of contents active link */
+.md-nav__link--active {
+  color: #00d9ff;
+  font-weight: 600;
+}
+
+/* Buttons and badges */
+.md-button {
+  background-color: #00d9ff;
+  color: #020617;
+  border: none;
+}
+
+.md-button:hover {
+  background-color: #33dfff;
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+.md-button--primary {
+  background-color: #00d9ff;
+  color: #020617;
+}
+
+.md-button--primary:hover {
+  background-color: #33dfff;
+}
+
+/* Tags */
+.md-tag {
+  background-color: rgba(0, 217, 255, 0.1);
+  color: #00d9ff;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+}
+
+/* Admonitions with brand colors */
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-color: #00d9ff;
+}
+
+.md-typeset .note > .admonition-title,
+.md-typeset .note > summary {
+  background-color: rgba(0, 217, 255, 0.1);
+  border-color: #00d9ff;
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: #ff1b8d;
+}
+
+.md-typeset .tip > .admonition-title,
+.md-typeset .tip > summary {
+  background-color: rgba(255, 27, 141, 0.1);
+  border-color: #ff1b8d;
+}
+
+/* Logo glow effect */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  filter: drop-shadow(0 0 10px rgba(0, 217, 255, 0.5));
+}
+
+/* Footer styling */
+.md-footer {
+  background: linear-gradient(to bottom, #020617, #000000);
+  border-top: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+.md-footer-meta {
+  background-color: #000000;
+}
+
+/* Announcement bar (if used) */
+.md-banner {
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.1), rgba(255, 27, 141, 0.1));
+  border-bottom: 1px solid rgba(0, 217, 255, 0.3);
+}
+
+/* Code blocks with brand styling */
+.md-typeset pre > code {
+  background-color: #0f172a;
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.1);
+}
+
+/* Inline code */
+.md-typeset code {
+  background-color: rgba(0, 217, 255, 0.1);
+  color: #00d9ff;
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(0, 217, 255, 0.3);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: rgba(0, 217, 255, 0.3);
+  color: #ffffff;
+}
+
+/* Fix navigation tabs hover - use magenta from logo */
+.md-tabs__link:hover {
+  color: #FE0E82 !important;
+  opacity: 1;
+}
+
+.md-tabs__link:focus,
+.md-tabs__link:active {
+  color: #FE0E82 !important;
+}
+
+/* Active tab should use cyan */
+.md-tabs__link--active {
+  color: #00d9ff !important;
+  border-bottom-color: #00d9ff !important;
+}
+
+/* Header navigation links hover */
+.md-header__button:hover {
+  color: #FE0E82 !important;
+}
+
+/* Primary navigation (sidebar) hover */
+.md-nav__link:hover {
+  color: #FE0E82 !important;
+}
+
+/* Search button hover */
+.md-search__input:focus {
+  border-color: #FE0E82 !important;
+}
+
+/* Tabs background on hover */
+.md-tabs__item:hover {
+  background-color: rgba(254, 14, 130, 0.1);
+}
+
+/* Header/Navbar - match homepage dark background */
+.md-header {
+  background-color: rgba(2, 6, 23, 0.8) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #1e293b;
+  box-shadow: none;
+}
+
+/* Header when scrolled */
+.md-header[data-md-state="shadow"] {
+  box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.5rem rgba(0, 0, 0, 0.2);
+}
+
+/* Tabs container - also dark */
+.md-tabs {
+  background-color: rgba(2, 6, 23, 0.8) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #1e293b;
+}
+
+/* Remove default gradient/color from header */
+.md-header,
+.md-tabs {
+  background-image: none !important;
+}
+
+/* Header title/logo area */
+.md-header__title {
+  color: #e2e8f0;
+}
+
+/* Search box in header */
+.md-search__input {
+  background-color: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+}
+
+.md-search__input:focus {
+  background-color: rgba(15, 23, 42, 0.9);
+  border-color: #FE0E82;
+}
+
+.md-search__input::placeholder {
+  color: #64748b;
+}
+
+/* Header icons/buttons */
+.md-header__button {
+  color: #94a3b8;
+}
+
+.md-header__button:hover {
+  color: #FE0E82;
+}
+
+/* Repository link in header */
+.md-source {
+  color: #94a3b8;
+}
+
+.md-source:hover {
+  color: #00d9ff;
+}
+
+/* FIX: Menu tabs text color - make visible */
+.md-tabs__link {
+  color: #94a3b8 !important; /* Slate-400 - visible on dark background */
+}
+
+.md-tabs__link:hover {
+  color: #FE0E82 !important; /* Magenta on hover */
+}
+
+.md-tabs__link--active {
+  color: #00d9ff !important; /* Cyan when active */
+  border-bottom-color: #00d9ff !important;
+}
+
+/* Ensure tabs text is never black */
+.md-tabs__item {
+  color: #94a3b8;
+}
