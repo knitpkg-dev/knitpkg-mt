@@ -35,33 +35,15 @@ KnitPkg focuses on the pain points that show up fast in MQL development:
 ---
 ## Installation
 
-### Prerequisites
-
-1. **(Updated) Windows Terminal**  
-   Windows 11 already includes it. On older Windows versions, you may need the newer terminal to correctly render the CLI’s UTF-8 symbols and formatting.  
-   - Microsoft Store: [https://aka.ms/terminal](https://aka.ms/terminal)  
-   - Other install methods: [https://github.com/microsoft/terminal](https://github.com/microsoft/terminal)
-
-2. **Git client**  
-   KnitPkg *leverages Git* for MetaTrader package & project management, so a Git client is essential.  
-   - Download: [https://git-scm.com/](https://git-scm.com/)
-
-3. **MetaTrader 4 and/or MetaTrader 5**
-   Available at: [https://www.mql5.com/](https://www.mql5.com/).
-
-### Install `kp`
-
-- **GitHub Releases (Windows)**  
-  Download `kp.exe` from the repository [Releases](https://github.com/knitpkg-dev/knitpkg-mt/releases) and add it to your `PATH`.
-
-- **PyPI (coming soon)**  
-  Distribution via `pip` is in progress. This section will be expanded once the package is published and stabilized.
+Follow the [Installation section](https://docs.knitpkg.dev/installation/) of KnitPkg Documentation.
 
 ---
 
 ## Explore Seed Projects (Examples by the Author)
 
 If you want real-world examples of how KnitPkg projects and reusable packages can be structured, you can explore the author’s public “seed” projects in the registry.
+
+### Option A) Search using the CLI
 
 **MQL5 seeds:**
 
@@ -72,10 +54,18 @@ kp search mql5 -o douglasrechia
 **MQL4 seeds:**
 
 ```bash
-kp search mql5 -o douglasrechia
+kp search mql4 -o douglasrechia
 ```
 
-From the results, you can inspect details with `kp info`, or fetch and compile a project locally with `kp get`. 
+From the results, you can inspect details with `kp info`, or fetch and compile a project locally with `kp get`. <br>
+
+### Option B) Browse the registry website
+
+As an alternative, you can browse the registry directly in your browser:
+
+- **MQL5 seeds:** [registry.knitpkg.dev/mql5?org=douglasrechia](https://registry.knitpkg.dev/mql5?org=douglasrechia)
+- **MQL4 seeds:** [registry.knitpkg.dev/mql4?org=douglasrechia](https://registry.knitpkg.dev/mql4?org=douglasrechia)
+
 
 See [Getting started](https://docs.knitpkg.dev/getting-started/) for a quick introduction and first steps using KnitPkg.
 
