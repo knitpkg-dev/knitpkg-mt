@@ -3,7 +3,7 @@ name: Deploy Documentation
 on:
   push:
     branches:
-      - main
+      - main-REMOVE
   workflow_dispatch:
 
 permissions:
