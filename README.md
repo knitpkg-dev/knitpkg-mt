@@ -85,7 +85,7 @@ KnitPkg aims to strengthen the MQL ecosystem with better tooling. You can help k
 
 [Home page](https://knitpkg.dev/) - [Browse Registry](https://registry.knitpkg.dev/)
 
-[GitHub](https://github.com/knitpkg-dev/knitpkg-mt.git) - [Join Discord](https://discord.gg/bWvWpjw5m4) - [contact@knitpkg.dev](mailto:contact@knitpkg.dev)
+[X/Twitter](https://x.com/knitpkg) - [GitHub](https://github.com/knitpkg-dev/knitpkg-mt.git) - [Join Discord](https://discord.gg/bWvWpjw5m4) - [contact@knitpkg.dev](mailto:contact@knitpkg.dev)
 
 MIT Licensed — Forever free for the community
 
