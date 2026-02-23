@@ -3,7 +3,7 @@ name: Release Workflow
 on:
   push:
     branches:
-      - main
+      - main-REMOVE
 #    tags:
 #      - 'v*.*.*'
         # Version must follow PEP 440 normalized format. 
@@ -54,7 +54,6 @@ jobs:
           echo "Got version: $VERSION"
 
       - name: Verify tag matches version
-        if: false
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           CLEAN_TAG_VERSION="${TAG_VERSION#v}"
@@ -65,11 +64,9 @@ jobs:
           echo "Tag version matches pyproject.toml version: ${{ env.PACKAGE_VERSION }}"
 
       - name: Build executable
-        if: false
         run: poetry run task build-exe
 
       - name: Upload executable to GitHub Releases
-        if: false
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -89,12 +86,3 @@ jobs:
           prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build package for PyPI
-        run: poetry build
-
-      - name: Publish to PyPI
-        ## if: success() && !contains(env.PACKAGE_VERSION, 'a') && !contains(env.PACKAGE_VERSION, 'b') && !contains(env.PACKAGE_VERSION, 'rc')
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/

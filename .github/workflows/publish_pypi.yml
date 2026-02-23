@@ -1,0 +1,74 @@
+name: Release Workflow
+
+on:
+  push:
+    branches:
+      - main
+#    tags:
+#      - 'v*.*.*'
+        # Version must follow PEP 440 normalized format. 
+        # Here are some examples of PEP 440 for some SemVer valid versions:
+        #   1.0.0-alpha.1 > 1.0.0a1 
+        #   1.0.0-beta.1 > 1.0.0b1 
+        #   1.0.0-rc.1 > 1.0.0rc1 
+
+jobs:
+  release:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies (including project itself)
+        run: poetry install --sync
+
+      - name: Run Unit Tests
+        run: poetry run pytest
+
+      - name: Get version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(poetry version --short)
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Got version: $VERSION"
+
+      - name: Verify tag matches version
+        if: false
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          CLEAN_TAG_VERSION="${TAG_VERSION#v}"
+          if [ "$CLEAN_TAG_VERSION" != "${{ env.PACKAGE_VERSION }}" ]; then
+            echo "Error: Git tag version ($CLEAN_TAG_VERSION) does not match pyproject.toml version (${{ env.PACKAGE_VERSION }})."
+            exit 1
+          fi
+          echo "Tag version matches pyproject.toml version: ${{ env.PACKAGE_VERSION }}"
+
+      - name: Build package for PyPI
+        run: poetry build
+
+      - name: Publish to PyPI
+        ## if: success() && !contains(env.PACKAGE_VERSION, 'a') && !contains(env.PACKAGE_VERSION, 'b') && !contains(env.PACKAGE_VERSION, 'rc')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
