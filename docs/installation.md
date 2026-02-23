@@ -48,8 +48,28 @@ If the command is not found, PATH is not set correctly (or the terminal session 
 
     As a temporary workaround, if you use one of the affected antivirus products, **disable it while using `kp.exe`**.
 
-### Option B: PyPI (coming soon)
-  Distribution via `pip` is in progress. This section will be expanded once the package is published and stabilized.
+### Option B: PyPI
+
+You can install KnitPkg from PyPI using `pip`. Python 3.13 is required.
+
+**(Optional)** Create a virtual environment first (recommended):
+
+```bash
+python -m venv knitpkg-env
+knitpkg-env\Scripts\activate
+```
+
+Then install the package:
+
+```bash
+pip install knitpkg-mt
+```
+
+Verify the installation:
+
+```bash
+kp --version
+```
 
 
 ## Beta note
