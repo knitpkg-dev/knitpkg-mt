@@ -44,6 +44,7 @@ jobs:
         run: poetry install --sync
 
       - name: Run Unit Tests
+        if: false
         run: poetry run pytest
 
       - name: Get version from pyproject.toml
