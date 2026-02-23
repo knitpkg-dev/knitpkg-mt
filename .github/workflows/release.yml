@@ -1,7 +1,14 @@
 name: Release Workflow
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+        # Version must follow PEP 440 normalized format. 
+        # Here are some examples of PEP 440 for some SemVer valid versions:
+        #   1.0.0-alpha.1 > 1.0.0a1 
+        #   1.0.0-beta.1 > 1.0.0b1 
+        #   1.0.0-rc.1 > 1.0.0rc1 
 
 jobs:
   publish_pypi:
