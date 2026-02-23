@@ -50,7 +50,7 @@ If the command is not found, PATH is not set correctly (or the terminal session 
 
 ### Option B: PyPI
 
-You can install KnitPkg from PyPI using `pip`. Python 3.13 is required.
+You can install KnitPkg from PyPI using `pip`. Windows and Python 3.13 or higher are required.
 
 **(Optional)** Create a virtual environment first (recommended):
 

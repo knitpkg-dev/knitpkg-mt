@@ -10,6 +10,9 @@ This module handles reading and writing user configuration stored in
 from pathlib import Path
 from typing import Any, Dict, Optional
 import yaml
+import os
+
+from knitpkg.core.global_config import get_global_default
 
 CONFIG_FILE = Path(".knitpkg/config.yaml")
 
@@ -24,7 +27,8 @@ class ProjectConfig:
         self.project_path = Path(project_path)
         self.config_file = self.project_path / CONFIG_FILE
         self._data: Optional[Dict[str, Any]] = None
-    
+        self.global_config_default: dict = get_global_default()
+        
     def load(self) -> Dict[str, Any]:
         """Load config data and cache it."""
         if not self.config_file.exists():
@@ -75,3 +79,28 @@ class ProjectConfig:
         data: Dict[str, Any] = self._data # type: ignore
 
         return data.copy()
+
+    def get_final(self, env_key: str, config_key: str, default: Optional[str]=None) -> Any:
+        """Get configuration value from environment variable, config file, or default."""
+
+        # Env has the highest priority
+        v = os.environ.get(env_key, None)
+        if v is not None:
+            return v
+        
+        # Then project-specific config file
+        v = self.get(config_key, None)
+        if v is not None:
+            return v
+        
+        # Finally global config or default value
+        v = self.global_config_default.get(config_key, default)
+        return v
+
+    def get_register_tos_agree(self) -> Any:
+        """Get registry Terms of Service consent value."""
+        return self.get_final("REGISTER_TOS_AGREE", "register-tos-agree", False) # type: ignore
+
+    def set_register_tos_agree(self, value: bool) -> None:
+        """Set registry Terms of Service consent value."""
+        self.save_if_changed("register-tos-agree", value)

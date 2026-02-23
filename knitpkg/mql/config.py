@@ -1,9 +1,7 @@
 # knitpkg/mql/config.py
-from typing import Optional, Any
+from typing import Optional
 from pathlib import Path
-import os
 
-from knitpkg.core.global_config import get_global_default
 
 """
 MQL-specific configuration options management.
@@ -26,24 +24,6 @@ class MQLProjectConfig(ProjectConfig):
 
     def __init__(self, project_path: Path):
         super().__init__(project_path)
-        self.global_config_default: dict = get_global_default()
-    
-    def get_final(self, env_key: str, config_key: str, default: Optional[str]=None) -> Any:
-        """Get configuration value from environment variable, config file, or default."""
-
-        # Env has the highest priority
-        v = os.environ.get(env_key, None)
-        if v is not None:
-            return v
-        
-        # Then project-specific config file
-        v = self.get(config_key, None)
-        if v is not None:
-            return v
-        
-        # Finally global config or default value
-        v = self.global_config_default.get(config_key, default)
-        return v
 
     def get_compiler_path(self, target: Target) -> str:
         """Get compiler path for specified MQL version."""

@@ -9,6 +9,7 @@ from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.project_register import ProjectRegister
 from knitpkg.mql.models import MQLKnitPkgManifest
 from knitpkg.core.exceptions import KnitPkgError, RegistryError
+from knitpkg.core.config import ProjectConfig
 
 # ==============================================================
 # COMMAND WRAPPER
@@ -50,19 +51,25 @@ def register(app):
         from knitpkg.core.console import ConsoleAware
         console_awr = ConsoleAware(console=console, verbose=True if verbose else False)
 
-        # Prompt for Terms of Service agreement
-        console_awr.print("\n[bold yellow]📋 Terms of Service[/bold yellow]")
-        console_awr.print("By registering your project, you agree to the Terms of Service at:")
-        console_awr.print("[cyan]https://docs.knitpkg.dev/terms-of-service/registry/[/cyan]\n")
-        
-        agree = typer.confirm("Do you agree to the Terms of Service?")
-        if not agree:
-            console_awr.print("\n[bold yellow]⚠️  Registration cancelled. Terms of Service not accepted.[/bold yellow]")
-            raise typer.Exit(code=0)
-
         try:
             console_awr.print("")
             project_dir = project_dir if project_dir is not None else Path.cwd()
+
+            config: ProjectConfig = ProjectConfig(project_dir)
+
+            if not config.get_register_tos_agree():
+                # Prompt for Terms of Service agreement
+                console_awr.print("\n[bold yellow]📋 Terms of Service[/bold yellow]")
+                console_awr.print("By registering your project, you agree to the Terms of Service at:")
+                console_awr.print("[cyan]https://docs.knitpkg.dev/terms-of-service/registry/[/cyan]\n")
+                
+                agree = typer.confirm("Do you agree to the Terms of Service?")
+                if not agree:
+                    console_awr.print("\n[bold yellow]⚠️  Registration cancelled. Terms of Service not accepted.[/bold yellow]")
+                    raise typer.Exit(code=0)
+                
+                config.set_register_tos_agree(True)
+
             register_command(project_dir, 
                             console=console, 
                             verbose=True if verbose else False)
