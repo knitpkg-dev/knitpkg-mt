@@ -116,5 +116,6 @@ By default, `kp install` uses the registry to resolve each dependency range to t
 
 For reproducible builds, KnitPkg can install using locked versions (for example with `kp install --locked`), ensuring the same dependency versions are used even if newer ones are published later. This workflow is referenced in package documentation as well.  
 
-## Future plans
-A simple web UI for browsing and searching projects in the registry is planned to be released soon.
+## Web browsing UI
+
+A web browsing UI is available at [registry.knitpkg.dev](https://registry.knitpkg.dev/) which provides the same search features as `kp search` and `kp info` commands. You can browse and explore public projects directly from your browser.
