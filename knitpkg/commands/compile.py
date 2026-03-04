@@ -1,100 +1,186 @@
 # knitpkg/commands/compile.py
 
 """
-KnitPkg for Metatrader compile command — compile MQL source files.
+KnitPkg compile command — compile MQL source files via MetaEditor compiler.
 
-This module handles compilation of MQL4/MQL5 source files using MetaEditor.
-The MQLCompiler class raises domain-specific exceptions instead of SystemExit,
-allowing proper separation between library code and CLI layer.
+Before invoking the MetaEditor compiler, this command automatically generates
+``knitpkg/build/BuildInfo.mqh`` from the project manifest and any
+``--define`` / ``-D`` flags supplied on the command line.
+
+Usage examples::
+
+    kp compile
+    kp compile --define FEATURE_X_ENABLED --define BUILD_TYPE=release
+    kp compile -D MAX_BARS=500 -D NIGHTLY
+    kp compile --verbose --define MY_FLAG
 """
-from typing import Optional
+
+from __future__ import annotations
+
+import re
 from pathlib import Path
-from rich.console import Console
+from typing import List, Optional, Dict
+
 import typer
+from rich.console import Console
 
-from knitpkg.mql.compile import MQLProjectCompiler
+from knitpkg.core.console import ConsoleAware
 from knitpkg.core.exceptions import KnitPkgError
+from knitpkg.mql.compile import MQLProjectCompiler
 
-# ==============================================================
-# COMMAND WRAPPER
-# ==============================================================
 
-def compile_command(project_dir: Path, inplace: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool):
-    """Command wrapper"""
+_VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
+
+def _parse_define(raw: str) -> tuple:
+    """
+    Parse a single ``--define`` / ``-D`` argument into a DefineEntry.
+
+    Accepted formats
+    ----------------
+    ``NAME``
+        Flag with no value → ``#define NAME``
+    ``NAME=value``
+        Valued constant   → ``#define NAME "value"``
+
+    Raises
+    ------
+    typer.BadParameter
+        If the name portion is not a valid C/MQL identifier.
+    """
+    name: str
+    value: Optional[str]
+
+    if "=" in raw:
+        name, _, value = raw.partition("=")
+        name  = name.strip()
+        value = value  # preserve intentional whitespace if any
+    else:
+        name  = raw.strip()
+        value = None
+
+    if not _VALID_C_IDENTIFIER.match(name):
+        raise typer.BadParameter(
+            f"'{name}' is not a valid C/MQL identifier. "
+            "Use only letters, digits and underscores; "
+            "must not start with a digit."
+        )
+
+    return (name, value)
+
+
+# Command wrapper (called by the CLI registration below)
+
+def compile_command(
+    project_dir: Path,
+    inplace: bool,
+    entrypoints_only: bool,
+    compile_only: bool,
+    cli_defines: Optional[Dict],
+    console: Console,
+    verbose: bool,
+) -> None:
+    """
+    Orchestrates the full compile flow:
+
+    1. Generate ``knitpkg/build/BuildInfo.mqh``  ← NEW STEP
+    2. Invoke MetaEditor via :class:`~knitpkg.mql.compile.MQLProjectCompiler`
+    """
     compiler = MQLProjectCompiler(project_dir, inplace, console, verbose)
+    compiler.compile(entrypoints_only, compile_only, cli_defines)
 
-    compiler.compile(entrypoints_only, compile_only)
 
-# ==============================================================
-# CLI REGISTRATION
-# ==============================================================
+# CLI registration
 
-def register(app):
+def register(app: typer.Typer) -> None:
+
     @app.command()
     def compile(
         project_dir: Optional[Path] = typer.Option(
             None,
-            "--project-dir",
-            "-d",
-            help="Project directory (default: current directory)"
+            "--project-dir", "-d",
+            help="Project directory (default: current directory).",
         ),
         inplace: Optional[bool] = typer.Option(
             False,
             "--in-place",
-            help="Keeps compiled binaries in place or move those to bin/"
+            help="Keep compiled binaries in place instead of moving them to bin/.",
         ),
         entrypoints_only: Optional[bool] = typer.Option(
             False,
             "--entrypoints-only",
-            help="Compile only entrypoints (skip compile list)"
+            help="Compile only entrypoints (skip the compile list).",
         ),
         compile_only: Optional[bool] = typer.Option(
             False,
             "--compile-only",
-            help="Compile only files in compile list (skip entrypoints)"
+            help="Compile only files in the compile list (skip entrypoints).",
+        ),
+        raw_defines: Optional[List[str]] = typer.Option(
+            None,
+            "--define", "-D",
+            help=(
+                "Add a constant to knitpkg/build/build_info.mqh. "
+                "Accepted formats: NAME (flag, no value) or NAME=value. "
+                "Can be repeated: -D FEATURE_X -D BUILD_TYPE=release"
+            ),
         ),
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
-            help="Show detailed output"
-        )
+            help="Show detailed output.",
+        ),
     ):
-        """Compile MQL source files via CLI."""
+        """Compile MQL source files via MetaEditor."""
 
-        if project_dir is None:
-            project_dir = Path.cwd()
-        else:
-            project_dir = Path(project_dir).resolve()
-            
-        console = Console(log_path=False)
+        # ── resolve project dir ───────────────────────────────────────────────
+        resolved_dir = Path(project_dir).resolve() if project_dir else Path.cwd()
 
-        from knitpkg.core.console import ConsoleAware
-        console_awr = ConsoleAware(console=console, verbose=True if verbose else False)
-        
+        # ── parse --define / -D arguments ────────────────────────────────────
+        cli_defines: dict = {}
+        for raw in raw_defines or []:
+            try:
+                name, value = _parse_define(raw)
+                cli_defines[name] = value
+            except typer.BadParameter as exc:
+                typer.echo(f"[error] Invalid --define argument: {exc}", err=True)
+                raise typer.Exit(code=1)
+
+        # ── set up console ────────────────────────────────────────────────────
+        console     = Console(log_path=False)
+        console_awr = ConsoleAware(console=console, verbose=bool(verbose))
+
+        # ── run ───────────────────────────────────────────────────────────────
         try:
             console_awr.print("")
-            compile_command(project_dir, \
-                            True if inplace else False, \
-                            True if entrypoints_only else False, \
-                            True if compile_only else False, \
-                            console, \
-                            True if verbose else False, \
-                            )
+            compile_command(
+                project_dir      = resolved_dir,
+                inplace          = bool(inplace),
+                entrypoints_only = bool(entrypoints_only),
+                compile_only     = bool(compile_only),
+                cli_defines      = cli_defines,
+                console          = console,
+                verbose          = bool(verbose),
+            )
             console_awr.print("")
 
         except KeyboardInterrupt:
-            console_awr.print("\n[bold yellow]⚠️  Compilation cancelled by user.[/bold yellow]")
+            console_awr.print(
+                "\n[bold yellow]⚠️  Compilation cancelled by user.[/bold yellow]"
+            )
             console_awr.print("")
             raise typer.Exit(code=1)
-        
-        except KnitPkgError as e:
-            console_awr.print(f"\n[bold red]❌ Compilation failed:[/bold red] {e}")
+
+        except KnitPkgError as exc:
+            console_awr.print(
+                f"\n[bold red]❌ Compilation failed:[/bold red] {exc}"
+            )
             console_awr.print("")
             raise typer.Exit(code=1)
-        
-        except Exception as e:
-            console_awr.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}")
+
+        except Exception as exc:
+            console_awr.print(
+                f"\n[bold red]❌ Unexpected error:[/bold red] {exc}"
+            )
             console_awr.print("")
             raise typer.Exit(code=1)
-        

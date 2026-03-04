@@ -22,6 +22,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+loaded_commands = set()
 
 # -------------------------------------------------------------------
 # Dynamic command loading utilities
@@ -40,11 +41,14 @@ def _load_commands_from_package(package_name: str) -> None:
 
     # Register all submodules
     for finder, mod_name, is_pkg in pkgutil.iter_modules(pkg.__path__, pkg.__name__ + "."):
+        if mod_name in loaded_commands:
+            continue
         try:
             mod = importlib.import_module(mod_name)
         except ImportError:
             continue
         _register_if_available(mod)
+        loaded_commands.add(mod_name)
 
 
 def _register_if_available(mod: ModuleType) -> None:
@@ -57,15 +61,14 @@ def _register_if_available(mod: ModuleType) -> None:
 
 
 # -------------------------------------------------------------------
-# Load standard commands
-# -------------------------------------------------------------------
-_load_commands_from_package("knitpkg.commands")
-
-# -------------------------------------------------------------------
 # Load optional PRO commands
 # -------------------------------------------------------------------
 _load_commands_from_package("knitpkg.commands.pro")
 
+# -------------------------------------------------------------------
+# Load standard commands
+# -------------------------------------------------------------------
+_load_commands_from_package("knitpkg.commands")
 
 # -------------------------------------------------------------------
 # Main callback (version)

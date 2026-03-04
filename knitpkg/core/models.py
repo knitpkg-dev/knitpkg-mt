@@ -124,7 +124,7 @@ class KnitPkgManifest(BaseModel):
 
     dependencies: Optional[Dict[str, str]] = Field(
         default_factory=dict,
-        description="Dependencies with Git URLs or local paths and version constraints"
+        description="Dependencies with SemVer ranges or local paths"
     )
 
     overrides: Dict[str, str] = Field(

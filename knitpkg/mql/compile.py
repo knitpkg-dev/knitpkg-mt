@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict
 from dataclasses import dataclass
 from enum import Enum
 
@@ -13,6 +13,12 @@ from knitpkg.mql.models import MQLKnitPkgManifest, Target
 from knitpkg.mql.constants import FLAT_DIR, COMPILE_LOGS_DIR, BIN_DIR
 from knitpkg.mql.mql_paths import find_mql_paths
 from knitpkg.mql.config import MQLProjectConfig
+
+from knitpkg.mql.build_header import ManifestHeaderGenerator
+from knitpkg.mql.models import MQLKnitPkgManifest
+
+from knitpkg.core.file_reading import load_knitpkg_manifest
+
 
 # Import MQL-specific exceptions
 from knitpkg.mql.exceptions import (
@@ -72,7 +78,8 @@ class MQLProjectCompiler(ConsoleAware):
     def compile(
         self,
         entrypoints_only: bool = False,
-        compile_only: bool = False
+        compile_only: bool = False,
+        cli_defines: Optional[Dict] = None
     ) -> None:
         """
         Compile MQL source files.
@@ -96,6 +103,8 @@ class MQLProjectCompiler(ConsoleAware):
             self.project_dir,
             manifest_class=MQLKnitPkgManifest
         )
+
+        self._generate_build_info_header(cli_defines)
 
         self.print(
             f"📦 [bold magenta]Compile[/] → "
@@ -128,6 +137,45 @@ class MQLProjectCompiler(ConsoleAware):
 
         # Print summary
         self._print_summary()
+
+    def _generate_build_info_header(
+        self,
+        cli_defines: Optional[Dict],
+    ) -> None:
+        """
+        Load the project manifest and write ``knitpkg/build/BuildInfo.mqh``.
+
+        This function is intentionally isolated so it can be unit-tested and
+        called from other commands (e.g. ``kp build``) without duplicating logic.
+
+        Parameters
+        ----------
+        project_dir:
+            Root directory of the KnitPkg project.
+        cli_defines:
+            Constants supplied via ``--define`` / ``-D`` on the command line.
+        console_awr:
+            Console wrapper for user-facing output.
+        """
+
+        # Skip generation if neither the manifest nor the CLI provides any defines.
+        has_manifest_defines = self.manifest.defines is not None
+        has_cli_defines      = len(cli_defines) > 0 if cli_defines else False
+
+        generator = ManifestHeaderGenerator(self.manifest, cli_defines)
+
+        if not has_manifest_defines and not has_cli_defines:
+            self.print("[dim]No defines configured — removing build info header.[/dim]")
+            generator.remove(self.project_dir)
+            return
+
+        output = generator.write(self.project_dir)
+
+        self.print(
+            f"[bold green]✔[/bold green] BuildInfo.mqh generated → "
+            f"[cyan]{output.relative_to(self.project_dir)}[/cyan]"
+        )
+
 
     def _prepare_compile_logs_dir(self) -> None:
         """
