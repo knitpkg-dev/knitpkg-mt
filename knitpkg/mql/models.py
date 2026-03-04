@@ -64,13 +64,13 @@ class ManifestDefines(BaseModel):
 
         defines:
           from_manifest:
-            version:      MANIFEST_VERSION   # manifest field → constant name
-            organization: MANIFEST_ORG
-            name:         PROJECT_NAME
+            MANIFEST_ORG: organization
+            MANIFEST_AUTHOR: author       
+            MANIFEST_DESCRIPTION: description
+            MANIFEST_VERSION: version
           extra:
-            - name: FEATURE_X_ENABLED         # flag — no value
-            - name: BUILD_TIMESTAMP
-              value: "20260304"
+            MQL_STORE_VERSION: '2.1'
+            X_FEATURE_ENABLED: null
 
     Rules
     -----
@@ -98,10 +98,8 @@ class ManifestDefines(BaseModel):
     }
 
     from_manifest: Optional[Dict[str, str]] = None
-    # key   = C constant name      (e.g. "MANIFEST_VERSION")
-    # value = manifest field name  (e.g. "version")
 
-    extra: Optional[Dict[str, str]] = None
+    extra: Optional[Dict[str, Optional[str]]] = None
 
     @field_validator("from_manifest")
     @classmethod
