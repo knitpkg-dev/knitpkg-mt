@@ -35,8 +35,8 @@ _FIELD_ACCESSORS = {
     "organization": lambda m: str(m.organization),
     "name":         lambda m: str(m.name),
     "description":  lambda m: str(m.description)    if m.description else None,
-    "author":       lambda m: str(m.author)         if m.author      else None,
-    "license":      lambda m: str(m.license)        if m.license     else None,
+    "author":       lambda m: str(m.author)         if m.author      else None, # Optional
+    "license":      lambda m: str(m.license)        if m.license     else None, # Optional
     "type":         lambda m: str(m.type.value)     if m.type        else None,
     "target":       lambda m: str(m.target.value)   if m.target      else None,
 }

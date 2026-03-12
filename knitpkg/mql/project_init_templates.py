@@ -2,6 +2,7 @@
 GITIGNORE_PACKAGE = """
 .knitpkg/
 knitpkg/autocomplete/
+knitpkg/build/
 knitpkg/flat/
 bin/
 target/
@@ -17,6 +18,7 @@ GETTING_STARTED
 GITIGNORE_DEFAULT = """
 .knitpkg/
 knitpkg/autocomplete/
+knitpkg/build/
 knitpkg/flat/
 knitpkg/include
 bin/
@@ -70,12 +72,16 @@ TEMPLATE_PACKAGE_UNITTESTS = """//+---------------------------------------------
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
 #property description "Description: Unit tests for package {{name}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"
@@ -197,14 +203,18 @@ TEMPLATE_EXPERT = """//+--------------------------------------------------------
 //+------------------------------------------------------------------+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
-#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property version     (string)MQL_STORE_VERSION
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
-#property description "Description: {{description}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Description: " + MANIFEST_DESCRIPTION
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"
@@ -443,14 +453,18 @@ TEMPLATE_INDICATOR_BARS_MQL5 = """//+-------------------------------------------
 //+------------------------------------------------------------------+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
-#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property version     (string)MQL_STORE_VERSION
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
-#property description "Description: {{description}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Description: " + MANIFEST_DESCRIPTION
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"
@@ -498,14 +512,18 @@ TEMPLATE_INDICATOR_BARS_MQL4 = """//+-------------------------------------------
 //+------------------------------------------------------------------+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
-#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property version     (string)MQL_STORE_VERSION
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
-#property description "Description: {{description}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Description: " + MANIFEST_DESCRIPTION
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"
@@ -553,14 +571,18 @@ TEMPLATE_INDICATOR_SERIES = """//+----------------------------------------------
 //+------------------------------------------------------------------+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
-#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property version     (string)MQL_STORE_VERSION
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
-#property description "Description: {{description}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Description: " + MANIFEST_DESCRIPTION
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"
@@ -756,14 +778,18 @@ TEMPLATE_SCRIPT = """//+--------------------------------------------------------
 //+------------------------------------------------------------------+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
-#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property version     (string)MQL_STORE_VERSION
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
-#property description "Description: {{description}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Description: " + MANIFEST_DESCRIPTION
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"
@@ -945,14 +971,18 @@ TEMPLATE_LIBRARY = """//+-------------------------------------------------------
 #property library
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
-#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property version     (string)MQL_STORE_VERSION
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
-#property description "Description: {{description}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Description: " + MANIFEST_DESCRIPTION
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"
@@ -1134,14 +1164,18 @@ TEMPLATE_SERVICE = """//+-------------------------------------------------------
 #property service
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
-#property version     "" // If needed for MQL5 Market, add version number formatted as "X.Y"
+#property version     (string)MQL_STORE_VERSION
 #property description ""
-#property description "Version: {{version}}"
+#property description "Version: " + MANIFEST_VERSION
 #property description ""
-#property description "Description: {{description}}"
-#property description "Organization: {{organization}}"
-#property description "Author: {{author}}"
-#property description "License: {{license}}"
+#property description "Description: " + MANIFEST_DESCRIPTION
+#property description "Organization: " + MANIFEST_ORG
+#ifdef MANIFEST_AUTHOR
+#property description "Author: " + MANIFEST_AUTHOR
+#endif
+#ifdef MANIFEST_LICENSE
+#property description "License: " + MANIFEST_LICENSE
+#endif
 #property description ""
 #property description "Powered by KnitPkg for MetaTrader"
 #property description "https://knitpkg.dev"

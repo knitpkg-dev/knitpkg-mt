@@ -113,7 +113,7 @@ class KnitPkgManifest(BaseModel):
     )
 
     license: Optional[str] = Field(
-        default="MIT",
+        default=None,
         description="License identifier"
     )
 

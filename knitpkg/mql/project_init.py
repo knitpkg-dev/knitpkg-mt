@@ -531,6 +531,16 @@ class ProjectInitializer(ConsoleAware):
 
         return Confirm.ask("Proceed with project creation?", default=True)
 
+    def mql_store_version(self) -> str:
+        """Get the current version of the MQL Store package."""
+        if self.version is None:
+            return ""
+        
+        v_split = self.version.split('.')
+        if len(v_split) < 2:
+            return ""
+        return f"{v_split[0]}.{v_split[1]}"
+
     def create_artifacts(self) -> None:
         """Create all project artifacts (directories, files, git repo)."""
         project_root: Path = self.project_root  # type: ignore
@@ -593,6 +603,22 @@ class ProjectInitializer(ConsoleAware):
             manifest_data["include_mode"] = self.include_mode.value
         if self.entrypoints:
             manifest_data["entrypoints"] = self.entrypoints
+
+        manifest_data["defines"] = {
+            "from_manifest": {
+                "MANIFEST_ORG": "organization",
+                "MANIFEST_NAME": "name",
+                "MANIFEST_TYPE": "type",
+                "MANIFEST_TARGET": "target",
+                "MANIFEST_AUTHOR": "author",
+                "MANIFEST_DESCRIPTION": "description",
+                "MANIFEST_VERSION": "version",
+                "MANIFEST_LICENSE": "license"
+            },
+            "extra": {
+                "MQL_STORE_VERSION": self.mql_store_version()
+            }
+        }
 
         manifest_data["compile"] = self.compile
 
