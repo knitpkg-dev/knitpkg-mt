@@ -34,11 +34,11 @@ _FIELD_ACCESSORS = {
     "version":      lambda m: str(m.version),
     "organization": lambda m: str(m.organization),
     "name":         lambda m: str(m.name),
-    "description":  lambda m: str(m.description)    if m.description else None,
+    "description":  lambda m: str(m.description),
     "author":       lambda m: str(m.author)         if m.author      else None, # Optional
     "license":      lambda m: str(m.license)        if m.license     else None, # Optional
-    "type":         lambda m: str(m.type.value)     if m.type        else None,
-    "target":       lambda m: str(m.target.value)   if m.target      else None,
+    "type":         lambda m: str(m.type),
+    "target":       lambda m: str(m.target),
 }
 
 def _format_define(name: str, value: Optional[str]) -> str:

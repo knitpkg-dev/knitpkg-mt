@@ -69,6 +69,8 @@ TEMPLATE_PACKAGE_UNITTESTS = """//+---------------------------------------------
 //| {{header_name}}
 //| {{header_organization}}
 //+------------------------------------------------------------------+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property description ""
@@ -201,6 +203,8 @@ TEMPLATE_EXPERT = """//+--------------------------------------------------------
 //| {{header_name}}
 //| {{header_organization}}
 //+------------------------------------------------------------------+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property version     (string)MQL_STORE_VERSION
@@ -451,6 +455,8 @@ TEMPLATE_INDICATOR_BARS_MQL5 = """//+-------------------------------------------
 //| {{header_name}}
 //| {{header_organization}}
 //+------------------------------------------------------------------+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property version     (string)MQL_STORE_VERSION
@@ -510,6 +516,8 @@ TEMPLATE_INDICATOR_BARS_MQL4 = """//+-------------------------------------------
 //| {{header_name}}
 //| {{header_organization}}
 //+------------------------------------------------------------------+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property version     (string)MQL_STORE_VERSION
@@ -569,6 +577,8 @@ TEMPLATE_INDICATOR_SERIES = """//+----------------------------------------------
 //| {{header_name}}
 //| {{header_organization}}
 //+------------------------------------------------------------------+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property version     (string)MQL_STORE_VERSION
@@ -776,6 +786,8 @@ TEMPLATE_SCRIPT = """//+--------------------------------------------------------
 //| {{header_name}}
 //| {{header_organization}}
 //+------------------------------------------------------------------+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property version     (string)MQL_STORE_VERSION
@@ -969,6 +981,9 @@ TEMPLATE_LIBRARY = """//+-------------------------------------------------------
 //| {{header_organization}}
 //+------------------------------------------------------------------+
 #property library
+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property version     (string)MQL_STORE_VERSION
@@ -1162,6 +1177,9 @@ TEMPLATE_SERVICE = """//+-------------------------------------------------------
 //| {{header_organization}}
 //+------------------------------------------------------------------+
 #property service
+
+#include "../knitpkg/build/BuildInfo.mqh"
+
 #property copyright   "<Add copyright here>"
 #property link        "<Add link here>"
 #property version     (string)MQL_STORE_VERSION
