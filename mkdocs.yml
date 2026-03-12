@@ -131,6 +131,7 @@ nav:
     - Manifest: concepts/manifest.md
     - KnitPkg Directives: concepts/directives.md
     - Install and Compile: concepts/install-and-compile.md
+    - Build info: concepts/build-info.md
     - Include vs Flat Modes: concepts/include-vs-flat-modes.md
     - Projects vs Packages: concepts/projects-vs-packages.md
     - Composite Packages: concepts/composite-packages.md
@@ -147,6 +148,7 @@ nav:
     - Registry: user-guide/registry.md
     - Revision: user-guide/revisions.md
     - Creating Projects: user-guide/creating-projects.md
+    - Build Info: user-guide/build-info.md
     - Target Platforms: user-guide/target-platforms.md
     - Configuration: user-guide/configuration.md
   - Reference:

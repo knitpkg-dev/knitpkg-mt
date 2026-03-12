@@ -1,5 +1,5 @@
 # knitpkg/commands/build.py
-from typing import Optional
+from typing import Optional, List, Dict
 from pathlib import Path
 from rich.console import Console
 import typer
@@ -8,16 +8,21 @@ from knitpkg.core.console import ConsoleAware
 
 from knitpkg.commands.install import install_command
 from knitpkg.commands.checkinstall import checkinstall_command
-from knitpkg.commands.compile import compile_command
 
 from knitpkg.core.file_reading import load_knitpkg_manifest
 from knitpkg.mql.models import MQLKnitPkgManifest, MQLProjectType
 from knitpkg.core.exceptions import KnitPkgError, RegistryError
+from knitpkg.mql.compile import MQLProjectCompiler, parse_defines_cli
 
 # ==============================================================
 # COMMAND WRAPPER
 # ==============================================================
-def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace: bool, entrypoints_only: bool, compile_only: bool, console: Console, verbose: bool) -> None:
+def build_command(project_dir: Path, 
+                  locked_mode: bool, 
+                  show_tree: bool, 
+                  inplace: bool, entrypoints_only: bool, compile_only: bool, 
+                  cli_defines: Optional[Dict], 
+                  console: Console, verbose: bool) -> None:
     """
     Main logic for the `kp build` command.
 
@@ -50,7 +55,8 @@ def build_command(project_dir: Path, locked_mode: bool, show_tree: bool, inplace
         install_command(project_dir, locked_mode, show_tree, console, verbose)
 
     console_awr.print("\n[cyan]▶️  Compiling project...[/cyan]")
-    compile_command(project_dir, inplace, entrypoints_only, compile_only, console, verbose)
+    compiler = MQLProjectCompiler(project_dir, inplace, console, verbose)
+    compiler.compile(entrypoints_only, compile_only, cli_defines)
 
     console_awr.print("[bold green]✅ Build completed successfully![/bold green]")
 
@@ -99,6 +105,15 @@ def register(app):
             "--compile-only",
             help="Compile only files in compile list (skip entrypoints)"
         ),
+        raw_defines: Optional[List[str]] = typer.Option(
+            None,
+            "--define", "-D",
+            help=(
+                "Add a constant to BuildInfo in addition to those declared in the manifest with `defines`. "
+                "Accepted formats: NAME (flag, no value) or NAME=value. "
+                "Can be repeated: -D FEATURE_X -D BUILD_TYPE=release"
+            ),
+        ),
         verbose: Optional[bool] = typer.Option(
             False,
             "--verbose",
@@ -117,14 +132,20 @@ def register(app):
 
         try:
             console_awr.print("")
+
+            # parse --define / -D arguments 
+            cli_defines: Optional[dict] = parse_defines_cli(raw_defines)
+
             build_command(project_dir, 
                         True if locked else False, 
                         False if no_tree else True, 
                         True if inplace else False, 
                         True if entrypoints_only else False, 
                         True if compile_only else False, 
+                        cli_defines,
                         console,
                         True if verbose else False)
+            
             from knitpkg.core.telemetry import print_telemetry_warning
             print_telemetry_warning(project_dir)
             console_awr.print("")

@@ -17,7 +17,6 @@ Usage examples::
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import List, Optional, Dict
 
@@ -26,48 +25,7 @@ from rich.console import Console
 
 from knitpkg.core.console import ConsoleAware
 from knitpkg.core.exceptions import KnitPkgError
-from knitpkg.mql.compile import MQLProjectCompiler
-
-
-_VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
-
-
-def _parse_define(raw: str) -> tuple:
-    """
-    Parse a single ``--define`` / ``-D`` argument into a DefineEntry.
-
-    Accepted formats
-    ----------------
-    ``NAME``
-        Flag with no value → ``#define NAME``
-    ``NAME=value``
-        Valued constant   → ``#define NAME "value"``
-
-    Raises
-    ------
-    typer.BadParameter
-        If the name portion is not a valid C/MQL identifier.
-    """
-    name: str
-    value: Optional[str]
-
-    if "=" in raw:
-        name, _, value = raw.partition("=")
-        name  = name.strip()
-        value = value  # preserve intentional whitespace if any
-    else:
-        name  = raw.strip()
-        value = None
-
-    if not _VALID_C_IDENTIFIER.match(name):
-        raise typer.BadParameter(
-            f"'{name}' is not a valid C/MQL identifier. "
-            "Use only letters, digits and underscores; "
-            "must not start with a digit."
-        )
-
-    return (name, value)
-
+from knitpkg.mql.compile import MQLProjectCompiler, parse_defines_cli
 
 # Command wrapper (called by the CLI registration below)
 
@@ -120,7 +78,7 @@ def register(app: typer.Typer) -> None:
             None,
             "--define", "-D",
             help=(
-                "Add a constant to knitpkg/build/build_info.mqh. "
+                "Add a constant to BuildInfo in addition to those declared in the manifest with `defines`. "
                 "Accepted formats: NAME (flag, no value) or NAME=value. "
                 "Can be repeated: -D FEATURE_X -D BUILD_TYPE=release"
             ),
@@ -133,26 +91,20 @@ def register(app: typer.Typer) -> None:
     ):
         """Compile MQL source files via MetaEditor."""
 
-        # ── resolve project dir ───────────────────────────────────────────────
+        # resolve project dir 
         resolved_dir = Path(project_dir).resolve() if project_dir else Path.cwd()
 
-        # ── parse --define / -D arguments ────────────────────────────────────
-        cli_defines: dict = {}
-        for raw in raw_defines or []:
-            try:
-                name, value = _parse_define(raw)
-                cli_defines[name] = value
-            except typer.BadParameter as exc:
-                typer.echo(f"[error] Invalid --define argument: {exc}", err=True)
-                raise typer.Exit(code=1)
-
-        # ── set up console ────────────────────────────────────────────────────
+        # set up console 
         console     = Console(log_path=False)
         console_awr = ConsoleAware(console=console, verbose=bool(verbose))
 
-        # ── run ───────────────────────────────────────────────────────────────
+        # run 
         try:
             console_awr.print("")
+
+            # parse --define / -D arguments 
+            cli_defines: Optional[dict] = parse_defines_cli(raw_defines)
+
             compile_command(
                 project_dir      = resolved_dir,
                 inplace          = bool(inplace),

@@ -367,12 +367,12 @@ class DependencyDownloader(ConsoleAware):
         else:
             self._handle_remote_dependency(dep_name, specifier, overrides, parent)
 
-    def _resolve_local_path(self, dep_name: str, dep_path: Path) -> Path:
+    def _resolve_local_path(self, dep_name: str, dep_path: Path, parent_resolved_path: Path) -> Path:
         """Resolve local dependency path."""
         if dep_path.is_absolute() and dep_path.exists():
             return dep_path.resolve()
         
-        resolved_path = self.project_dir / dep_path
+        resolved_path = parent_resolved_path / dep_path
         if resolved_path.exists():
             return resolved_path.resolve()
         
@@ -396,7 +396,7 @@ class DependencyDownloader(ConsoleAware):
         else:
             dep_path = Path(specifier)
 
-        resolved_path = self._resolve_local_path(dep_name, dep_path)
+        resolved_path = self._resolve_local_path(dep_name, dep_path, parent.resolved_path)
 
         self.log(f"[bold magenta]Local[/] {dep_name}")
 

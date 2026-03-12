@@ -99,7 +99,7 @@ class ManifestDefines(BaseModel):
 
     from_manifest: Optional[Dict[str, str]] = None
 
-    extra: Optional[Dict[str, Optional[str]]] = None
+    extra: Optional[Dict[str, Optional[Any]]] = None
 
     @field_validator("from_manifest")
     @classmethod
@@ -116,6 +116,41 @@ class ManifestDefines(BaseModel):
                     f"{sorted(ManifestDefines.EXPORTABLE_MANIFEST_FIELDS)}"
                 )
             _check_constant_identifier(const_name, f"from_manifest['{field_name}']")
+        return v
+
+    @field_validator("extra")
+    @classmethod
+    def validate_extra_keys_and_values(
+        cls, v: Optional[Dict[str, str]]
+    ) -> Optional[Dict[str, str]]:
+        if v is None:
+            return v
+        for const_name, const_value in v.items():
+            if const_value is None:
+                continue
+            try:
+                str(const_value)
+                continue
+            except ValueError:
+                ...
+            try:
+                int(const_value)
+                continue
+            except ValueError:
+                ...
+            try:
+                float(const_value)
+                continue
+            except ValueError:
+                ...
+            try:
+                bool(const_value)
+                continue
+            except ValueError:
+                ...
+            raise ValueError(f"'extra': '{const_name}' has invalid value {const_value!r}. "
+                "Must be a string, number, boolean or null."
+            )
         return v
 
     @model_validator(mode="after")

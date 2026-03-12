@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
 
@@ -59,6 +59,61 @@ class CompilationResult:
         if self.messages is None:
             self.messages = []
 
+
+
+# ==============================================================
+# HELPER TO PARSE CLI DEFINES
+# ==============================================================
+
+_VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+def parse_defines_cli(raw_defines: Optional[List[str]]) -> Optional[Dict]:
+    if raw_defines is None:
+        return None
+
+    cli_defines = {}
+    for raw in raw_defines or []:
+        name: str
+        value: Optional[Any]
+
+        if "=" in raw:
+            name, _, value_str = raw.partition("=")
+            name  = name.strip()
+
+            # Convert value to narrowest type
+            value = value_str.strip()
+            
+            # Try bool
+            if value.lower() in ('true', 'false'):
+                value = value.lower() == 'true'
+            # Null
+            elif value.lower() in ('null'):
+                value = None
+            # Try int
+            elif value.lstrip('-').isdigit():
+                value = int(value)
+            # Try float
+            else:
+                try:
+                    value = float(value)
+                except ValueError:
+                    # Keep as string
+                    pass
+
+        else:
+            name  = raw.strip()
+            value = None
+
+        if not _VALID_C_IDENTIFIER.match(name):
+            raise InvalidUsageError(
+                f"'{name}' is not a valid C/MQL identifier. "
+                "Use only letters, digits and underscores; "
+                "must not start with a digit."
+            )
+
+        cli_defines[name] = value
+
+    return cli_defines
 
 # ==============================================================
 # MQL PROJECT COMPILER CLASS
