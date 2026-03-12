@@ -45,6 +45,10 @@ This site is structured to take you from “first install” to “deep referenc
 - **Reference**: exact specs (manifest format, directives, SemVer rules, layouts, CLI)
 - **Contributing**: how to participate in the CLI and ecosystem
 
+## Learn more
+
+- [KnitPkg for MetaTrader: A Modern Package Manager for MQL5/MQL4](https://www.mql5.com/en/articles/21429) - In-depth article by the author published on MQL5.com
+
 ---
 
 **KnitPkg — The dependency manager MQL5 always needed.**
