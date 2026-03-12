@@ -81,7 +81,9 @@ jobs:
             - Via PyPI: see [Installation instructions](https://docs.knitpkg.dev/installation/#option-b-pypi)
 
             ### Changelog
-            Release available via PyPi
+            - 1.0.0 Release is out!
+            - BuildInfo feature implemented, see https://docs.knitpkg.dev/concepts/build-info/ and https://docs.knitpkg.dev/user-guide/build-info/
+            - Bugfix: when dealing with local dependencies, local project path is resolved relative to the project being installed, not the root project.
           draft: false
           prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
         env:

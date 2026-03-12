@@ -76,8 +76,3 @@ Verify the installation:
 ```bash
 kp --version
 ```
-
-
-## Beta note
-
-KnitPkg is currently in **Beta**. Expect occasional breaking changes and keep an eye on release notes when updating.
