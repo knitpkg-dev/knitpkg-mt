@@ -117,10 +117,12 @@ kp compile [options]
 | `--in-place` | Keep binaries in place | `False` |
 | `--entrypoints-only` | Compile only entrypoints | `False` |
 | `--compile-only` | Compile only compile list | `False` |
+| `--define`, `-D` | Add a constant to BuildInfo (format: `NAME` or `NAME=value`). Can be repeated. | `None` |
 
 **Example:**
 ```bash
 kp compile
+kp compile -D DEBUG_MODE -D MAX_RETRIES=5
 ```
 
 ---
@@ -144,10 +146,12 @@ kp build [options]
 | `--in-place` | Keep binaries in place | `False` |
 | `--entrypoints-only` | Compile only entrypoints | `False` |
 | `--compile-only` | Compile only compile list | `False` |
+| `--define`, `-D` | Add a constant to BuildInfo (format: `NAME` or `NAME=value`). Can be repeated. | `None` |
 
 **Example:**
 ```bash
 kp build
+kp build -D DEBUG_MODE -D MAX_RETRIES=5
 ```
 
 ---

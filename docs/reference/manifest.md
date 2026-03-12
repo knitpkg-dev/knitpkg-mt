@@ -235,6 +235,82 @@ entrypoints:
 
 ---
 
+### `defines` (optional)
+
+- **Type:** object with two optional subsections: `from_manifest` and `extra`
+- **Meaning:** Declares compile-time constants that will be exported to `knitpkg/build/BuildInfo.mqh` as `#define` directives.
+- **When to use:** To keep EA metadata (version, author, description) in sync with the manifest, or to define feature flags and build-time constants.
+
+**Subsections:**
+
+#### `from_manifest`
+
+- **Type:** map of `CONSTANT_NAME -> manifest_field`
+- **Meaning:** Maps constant names to manifest fields. The value of the manifest field will be exported as a `#define`.
+- **Allowed manifest fields:** `version`, `organization`, `name`, `description`, `author`, `license`, `type`, `target`
+
+Example:
+
+```yaml
+defines:
+  from_manifest:
+    MANIFEST_VERSION: version
+    MANIFEST_ORG: organization
+    MANIFEST_AUTHOR: author
+    MANIFEST_DESCRIPTION: description
+```
+
+This generates:
+
+```mql5
+#define MANIFEST_VERSION "1.0.0"
+#define MANIFEST_ORG "douglasrechia"
+#define MANIFEST_AUTHOR "Douglas Rechia"
+#define MANIFEST_DESCRIPTION "My project description"
+```
+
+#### `extra`
+
+- **Type:** map of `CONSTANT_NAME -> value`
+- **Meaning:** Defines additional constants with explicit values.
+- **Allowed values:** strings, numbers, booleans, or `null` (for flag-only defines)
+
+Example:
+
+```yaml
+defines:
+  extra:
+    MQL_STORE_VERSION: '2.1'
+    MAX_BARS: 500
+    DEBUG_MODE: true
+    FEATURE_X_ENABLED: null
+```
+
+This generates:
+
+```mql5
+#define MQL_STORE_VERSION "2.1"
+#define MAX_BARS 500
+#define DEBUG_MODE true
+#define FEATURE_X_ENABLED
+```
+
+**Constraints:**
+
+- Constant names must be valid C/MQL identifiers (letters, digits, underscores; cannot start with a digit)
+- At least one of `from_manifest` or `extra` must be present if `defines` section exists
+- Values in `extra` must be strings, numbers, booleans, or `null`
+
+**Priority:** If the same constant name appears in multiple places, the resolution order is:
+
+1. CLI `--define` / `-D` flags (highest priority)
+2. `extra`
+3. `from_manifest` (lowest priority)
+
+See [Build Info](../user-guide/build-info.md) for detailed usage examples.
+
+---
+
 ## Summary: required fields
 
 In practice, a valid manifest must include at least:
