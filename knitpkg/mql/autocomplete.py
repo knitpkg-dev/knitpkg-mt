@@ -35,8 +35,8 @@ class MQLAutocompleteCompiler(MQLProjectCompiler):
         return self.compile_files
     
     @override
-    def _format_log_line(self, line: str) -> str:
-        line = super()._format_log_line(line)
+    def _format_log_line(self, line: str, compiler_path: Path) -> str:
+        line = super()._format_log_line(line, compiler_path)
         return line.removeprefix('knitpkg/autocomplete/')
 
 # ==============================================================
