@@ -1,3 +1,4 @@
+import subprocess
 import os
 import re
 import shutil
@@ -545,9 +546,11 @@ class MQLProjectCompiler(ConsoleAware):
 
         try:
             os.chdir(compiler_path.parent)
-            import subprocess
-            subprocess.run(my_system.get_compile_cmd(compiler_path, src_file_path, inc_path, log_file), shell=True, stdout=subprocess.PIPE)
-            #os.system(my_system.get_compile_cmd(compiler_path, src_file_path, inc_path, log_file))
+            subprocess.run(
+                my_system.get_compile_cmd(compiler_path, src_file_path, inc_path, log_file), 
+                shell=True, 
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
         except Exception as e:
             raise CompilationExecutionError(f"Failed to execute compilation command: {e}")
 
