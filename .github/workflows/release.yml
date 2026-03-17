@@ -77,19 +77,19 @@ jobs:
             This release includes the latest features and bug fixes.
 
             ### Download
-            - [kp.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp.exe)
+            - [kp.exe for Windows](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp.exe)
+            - [kp binary for linux](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp)
             - Via PyPI: see [Installation instructions](https://docs.knitpkg.dev/installation/#option-b-pypi)
 
             ### Changelog
-            - 1.0.0 Release is out!
-            - BuildInfo feature implemented, see https://docs.knitpkg.dev/concepts/build-info/ and https://docs.knitpkg.dev/user-guide/build-info/
-            - Bugfix: when dealing with local dependencies, local project path is resolved relative to the project being installed, not the root project.
+            - 1.0.1 Release is out!
+            - Linux/wine are supported now!
           draft: false
           prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish_pypi:
+  release_linux_publish_pypi:
     needs: release_windows
     defaults:
       run:
@@ -117,6 +117,9 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Install build dependencies
+        run: sudo apt-get install -y python3.13-dev patchelf zlib1g-dev
+
       - name: Install dependencies (including project itself)
         run: poetry install --sync
 
@@ -136,6 +139,18 @@ jobs:
             exit 1
           fi
           echo "Tag version matches pyproject.toml version: ${{ env.PACKAGE_VERSION }}"
+
+      - name: Build executable
+        run: poetry run task build-linux
+
+      - name: Upload executable to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/kp
+          draft: false
+          prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build package for PyPI
         run: poetry build
