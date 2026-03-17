@@ -14,10 +14,7 @@ data folder paths.
 from knitpkg.core.config import ProjectConfig
 from knitpkg.mql.models import Target
 from knitpkg.mql.exceptions import UnsupportedTargetError
-
-# Default compiler paths for MetaTrader
-DEFAULT_MQL5_COMPILER = r"C:\Program Files\MetaTrader 5\MetaEditor64.exe"
-DEFAULT_MQL4_COMPILER = r"C:\Program Files (x86)\MetaTrader 4\metaeditor.exe"
+from knitpkg.core.system import my_system
 
 class MQLProjectConfig(ProjectConfig):
     """MQL-specific configuration options handler."""
@@ -28,26 +25,18 @@ class MQLProjectConfig(ProjectConfig):
     def get_compiler_path(self, target: Target) -> str:
         """Get compiler path for specified MQL version."""
         if target == Target.mql4:
-            return self.get_final("MQL4_COMPILER_PATH", "mql4-compiler-path", DEFAULT_MQL4_COMPILER)
+            return self.get_final("MQL4_COMPILER_PATH", "mql4-compiler-path", my_system.get_default_mql4_compiler())
         elif target == Target.mql5:
-            return self.get_final("MQL5_COMPILER_PATH", "mql5-compiler-path", DEFAULT_MQL5_COMPILER)
+            return self.get_final("MQL5_COMPILER_PATH", "mql5-compiler-path", my_system.get_default_mql5_compiler())
         else:
             raise UnsupportedTargetError(target)
     
     def set_compiler_path(self, path: str, target: Target):
         """Set compiler path for specified MQL version."""
-        if target == Target.mql4:
+        if target in [Target.mql4, Target.mql5]:
             compiler_path: Path = Path(path)
             if compiler_path.is_dir():
-                compiler_path = compiler_path / "metaeditor.exe"
-            if not compiler_path.exists():
-                raise FileNotFoundError(f"Compiler not found at {compiler_path}")
-            self.save_if_changed("mql4-compiler-path", str(compiler_path))
-        
-        elif target == Target.mql5:
-            compiler_path: Path = Path(path)
-            if compiler_path.is_dir():
-                compiler_path = compiler_path / "MetaEditor64.exe"
+                compiler_path = compiler_path / ("MetaEditor64.exe" if target == Target.mql5 else "metaeditor.exe")
             if not compiler_path.exists():
                 raise FileNotFoundError(f"Compiler not found at {compiler_path}")
             self.save_if_changed("mql5-compiler-path", str(compiler_path))

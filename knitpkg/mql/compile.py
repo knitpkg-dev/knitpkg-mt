@@ -18,7 +18,7 @@ from knitpkg.mql.build_header import ManifestHeaderGenerator
 from knitpkg.mql.models import MQLKnitPkgManifest
 
 from knitpkg.core.file_reading import load_knitpkg_manifest
-
+from knitpkg.core.system import my_system
 
 # Import MQL-specific exceptions
 from knitpkg.mql.exceptions import (
@@ -271,15 +271,15 @@ class MQLProjectCompiler(ConsoleAware):
             CompilerNotFoundError: If the compiler executable does not exist
         """
         config: MQLProjectConfig = MQLProjectConfig(self.project_dir)
-        compiler_path: Path = Path(config.get_compiler_path(Target(self.manifest.target)))
-
+        compiler_path_str: str = config.get_compiler_path(Target(self.manifest.target))
+        compiler_path: Path = Path(compiler_path_str)
         if not compiler_path.exists():
             raise CompilerNotFoundError(
-                str(compiler_path),
+                compiler_path_str,
                 self.manifest.target
             )
 
-        return compiler_path
+        return Path(compiler_path_str)
 
     def _collect_files(
         self,
@@ -543,14 +543,11 @@ class MQLProjectCompiler(ConsoleAware):
         # when invoked via os.subprocess.run(). Workaround: navigate to the compiler 
         # directory and invoke via os.system() instead.
 
-        cmd = f'{compiler_path.name} /compile:"{src_file_path}" /log:"{log_file}"'
-
-        if inc_path:
-            cmd += f' /inc:"{inc_path}"'
-            
         try:
             os.chdir(compiler_path.parent)
-            os.system(cmd)
+            import subprocess
+            subprocess.run(my_system.get_compile_cmd(compiler_path, src_file_path, inc_path, log_file), shell=True, stdout=subprocess.PIPE)
+            #os.system(my_system.get_compile_cmd(compiler_path, src_file_path, inc_path, log_file))
         except Exception as e:
             raise CompilationExecutionError(f"Failed to execute compilation command: {e}")
 

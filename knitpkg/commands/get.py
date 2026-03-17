@@ -7,7 +7,7 @@ from knitpkg.core.registry import Registry
 from knitpkg.core.global_config import get_registry_url
 from knitpkg.core.project_get import ProjectGet
 from knitpkg.core.exceptions import KnitPkgError, RegistryError, InvalidUsageError
-from knitpkg.mql.mql_paths import find_mql_paths, get_mql_target_paths, is_valid_target_path
+from knitpkg.mql.mql_paths import find_mql_paths, is_valid_target_path
 from knitpkg.mql.models import Target
 
 # ==============================================================
