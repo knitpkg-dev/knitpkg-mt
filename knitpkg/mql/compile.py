@@ -361,7 +361,7 @@ class MQLProjectCompiler(ConsoleAware):
         # 1. Check for configured data folder path
         if mql_data_folder_path_str:
             configured_path = Path(mql_data_folder_path_str)
-            configured_path_include = configured_path / self.manifest.target / "Include"
+            configured_path_include = configured_path / self.manifest.target.upper() / "Include"
             if configured_path_include.exists() and configured_path_include.is_dir():
                 return configured_path_include.parent
             else:
