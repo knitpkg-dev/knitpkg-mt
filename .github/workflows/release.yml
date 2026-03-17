@@ -118,7 +118,7 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Install build dependencies
-        run: sudo apt-get install -y python3.13-dev patchelf zlib1g-dev
+        run: sudo apt-get install -y python-dev patchelf zlib1g-dev
 
       - name: Install dependencies (including project itself)
         run: poetry install --sync
@@ -151,6 +151,9 @@ jobs:
           prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove non-Python artifacts from dist/, otherwise publish to PyPI fails
+        run: rm -Rf dist
 
       - name: Build package for PyPI
         run: poetry build
