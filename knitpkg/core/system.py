@@ -65,8 +65,7 @@ class WindowsSystem(System):
                     target_paths.append(mql_path)
 
                 # Also consider the terminal ID path itself if it contains all required dirs;
-                # this handles cases where the terminal ID folder itself has the MQL structure,
-                # this happens when Data folder is under 'C:\Program Files\MetaTrader 5'.
+                # this handles cases when Data folder is under 'C:\Program Files\MetaTrader 5'.
                 if System.is_valid_target_path(terminal_id_path):
                     target_paths.append(terminal_id_path)
 
@@ -184,8 +183,7 @@ class PosixWineSystem(System):
                     target_paths.append(mql_path)
                 
                 # Also consider the terminal ID path itself if it contains all required dirs;
-                # this handles cases where the terminal ID folder itself has the MQL structure,
-                # this happens when Data folder is under 'C:\Program Files\MetaTrader 5'.
+                # this handles cases when Data folder is under 'C:\Program Files\MetaTrader 5'.
                 if System.is_valid_target_path(terminal_id_path):
                     target_paths.append(terminal_id_path)
                 
