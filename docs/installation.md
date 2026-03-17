@@ -2,7 +2,7 @@
 
 This guide explains how to install the **KnitPkg CLI for MetaTrader** (`kp`).
 
-> KnitPkg is currently **Windows-first**, because MetaTrader and MetaEditor are typically used on Windows.
+ KnitPkg is **Windows-first**, because MetaTrader and MetaEditor run natively on Windows. **Linux** is also supported via Wine.
 
 ---
 
@@ -10,28 +10,25 @@ This guide explains how to install the **KnitPkg CLI for MetaTrader** (`kp`).
 
 Before installing `kp`, make sure you have:
 
-1. **(Updated) Windows Terminal**  
-   Windows 11 already includes it. On older Windows versions, you may need the newer terminal to correctly render the CLI’s UTF-8 symbols and formatting. Available in Microsoft Store: [https://aka.ms/terminal](https://aka.ms/terminal). For other installation methods see [https://github.com/microsoft/terminal](https://github.com/microsoft/terminal).
+1. **MetaTrader 4 and/or MetaTrader 5**.
+     Available at: [https://www.mql5.com/](https://www.mql5.com/).
 
-2. **Git client**  
-   KnitPkg *leverages Git* for MetaTrader package & project management, so a Git client is essential. Available at: [https://git-scm.com/](https://git-scm.com/).
+2. **Git client**.
+     KnitPkg *leverages Git* for MetaTrader package & project management, so a Git client is essential. Available at: [https://git-scm.com/](https://git-scm.com/).
 
-3. **MetaTrader 4 and/or MetaTrader 5**
-    Available at: [https://www.mql5.com/](https://www.mql5.com/).
+3. **Windows Terminal updated (applicable for Windows only)**.
+     Windows 11 already includes it. On older Windows versions, you may need the newer terminal to correctly render the CLI’s UTF-8 symbols and formatting. Available in Microsoft Store: [https://aka.ms/terminal](https://aka.ms/terminal). For other installation methods see [https://github.com/microsoft/terminal](https://github.com/microsoft/terminal).
 
 ---
 
-## Install the CLI (`kp`)
+## Option A: Using the prebuilt executable
 
-### Option A: download the prebuilt executable
+### Windows native installation
 
 1. Download the latest `kp.exe` from the project’s [**GitHub Releases**](https://github.com/knitpkg-dev/knitpkg-mt/releases).
 2. Put `kp.exe` in a folder you control (example: `C:\tools\knitpkg\`).
 3. Add that folder to your **PATH** so `kp` can be called from any terminal.
-
-### Verify the installation
-
-Open a new terminal and run:
+4. Verify the installation. Open a new terminal and run:
 
 ```bash
 kp --version
@@ -48,16 +45,78 @@ If the command is not found, PATH is not set correctly (or the terminal session 
 
     **As a temporary workaround**, if you use one of the affected antivirus products, **disable it while using `kp.exe`** or follow **Option B (PyPI)** below, which installs KnitPkg via `pip` and does not trigger antivirus warnings.
 
-### Option B: PyPI
+---
 
-You can install KnitPkg from PyPI using `pip`. Windows and [Python 3.13](https://www.python.org/downloads/) or higher are required.
+### Linux Installation (via Wine)
+
+KnitPkg supports Linux by running MetaEditor compiler through Wine. The `kp` binary runs natively on Linux and invokes the MetaEditor compiler via your Wine/MetaTrader environment.
+
+##### Prerequisites
+
+- **Wine** with a working MetaTrader 5 (or MetaTrader 4) installation inside a Wine prefix. Should you follow the instructions at [MetaTrader 5 on Linux](https://www.mql5.com/en/articles/625?utm_source=www.metatrader5.com&utm_campaign=download.mt5.linux), you already have it.
+- **Git client** available at: [https://git-scm.com/](https://git-scm.com/).
+
+##### Step 1: Download the prebuilt binary
+
+1. Download the latest `kp` (Linux binary) from the project's [**GitHub Releases**](https://github.com/knitpkg-dev/knitpkg-mt/releases).
+2. Put `kp` in a folder you control (example: `~/bin/knitpkg/`).
+3. Make it executable:
+
+```bash
+chmod +x ~/bin/knitpkg/kp
+```
+
+##### Step 2: Set environment variables
+
+Add the following to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+
+```bash
+export WINEPREFIX=/home/<user>/.mt5
+export PATH="$PATH:/home/<user>/bin/knitpkg"
+```
+
+- `WINEPREFIX` must point to the Wine prefix where MetaTrader is installed.
+- Add the folder containing `kp` to `PATH` so it can be called from any terminal.
+
+Reload your shell or run `source ~/.bashrc` (or equivalent) to apply the changes.
+
+##### Step 3: Configure KnitPkg
+
+On Linux, all paths passed to `kp config` or `kp globalconfig` must be **POSIX paths** (forward slashes), even when pointing to files inside the Wine prefix. For example:
+
+```bash
+kp config --mql5-compiler-path "/home/<user>/.mt5/drive_c/Program Files/MetaTrader 5/MetaEditor64.exe"
+```
+
+```bash
+kp config --mql5-data-folder-path "/home/<user>/.mt5/drive_c/Program Files/MetaTrader 5/"
+```
+
+##### Verify the installation
+
+```bash
+kp --version
+```
+
+---
+
+## Option B: Via PyPI
+
+You can install KnitPkg from PyPI using `pip`. Windows or Linux with [Python 3.13](https://www.python.org/downloads/) or higher are required.
 
 **(Optional, recommended)** Create a virtual environment first:
 
-```bash
-python -m venv knitpkg-env
-knitpkg-env\Scripts\activate
-```
+=== "Windows"
+    ```bash
+    python -m venv knitpkg-env
+    knitpkg-env\Scripts\activate
+    ```
+
+=== "Linux"
+    ```bash
+    python3.13 -m venv knitpkg-env
+    source ./knitpkg-env/bin/activate
+    ```
 
 Then install the package:
 
@@ -76,3 +135,5 @@ Verify the installation:
 ```bash
 kp --version
 ```
+!!! note
+     [Step3](#step-3-configure-knitpkg) above applies if you're installing KnitPkg on Linux via PyPI.

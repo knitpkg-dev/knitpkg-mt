@@ -415,6 +415,16 @@ kp config [options]
 | `--mql4-data-folder-path` | MQL4 data folder path | `None` |
 | `--list`, `-l` | List current config | `False` |
 
+!!! note
+     On Linux/wine, all paths must be **POSIX paths** (forward slashes), even when pointing to files inside the Wine prefix. For example:
+
+     ```bash
+     kp config --mql5-compiler-path "/home/<user>/.mt5/drive_c/Program Files/MetaTrader 5/MetaEditor64.exe"
+     ```
+
+     ```bash
+     kp config --mql5-data-folder-path "/home/<user>/.mt5/drive_c/Program Files/MetaTrader 5/"
+     ```
 ---
 
 ### `kp globalconfig`
@@ -435,6 +445,17 @@ kp globalconfig [options]
 | `--mql5-data-folder-path` | MQL5 data folder path | `None` |
 | `--mql4-data-folder-path` | MQL4 data folder path | `None` |
 | `--set-registry` | Set default registry URL | `None` |
+
+!!! note
+     On Linux/wine, all paths must be **POSIX paths** (forward slashes), even when pointing to files inside the Wine prefix. For example:
+
+     ```bash
+     kp globalconfig --mql5-compiler-path "/home/<user>/.mt5/drive_c/Program Files/MetaTrader 5/MetaEditor64.exe"
+     ```
+
+     ```bash
+     kp globalconfig --mql5-data-folder-path "/home/<user>/.mt5/drive_c/Program Files/MetaTrader 5/"
+     ```
 
 ---
 
