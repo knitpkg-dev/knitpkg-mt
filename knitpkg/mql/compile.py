@@ -391,7 +391,7 @@ class MQLProjectCompiler(ConsoleAware):
 
         return found_mql_paths[0]
 
-    def _parse_compilation_log(self, log_path: Path, src_file_path: Path) -> CompilationResult:
+    def _parse_compilation_log(self, log_path: Path, src_file_path: Path, compiler_path: Path) -> CompilationResult:
         """Parse MetaEditor compilation log."""
         if not log_path.exists():
             raise CompilationLogNotFoundError(str(log_path))
@@ -450,11 +450,11 @@ class MQLProjectCompiler(ConsoleAware):
         # Format messages
         messages = []
         for line in error_lines:
-            formatted = self._format_log_line(line)
+            formatted = self._format_log_line(line, compiler_path)
             messages.append(f"[red]{formatted}[/]")
 
         for line in warning_lines:
-            formatted = self._format_log_line(line)
+            formatted = self._format_log_line(line, compiler_path)
             messages.append(f"[yellow]{formatted}[/]")
 
         return CompilationResult(
@@ -465,7 +465,7 @@ class MQLProjectCompiler(ConsoleAware):
             messages=messages
         )
 
-    def _format_log_line(self, line: str) -> str:
+    def _format_log_line(self, line: str, compiler_path: Path) -> str:
         r"""
         Format a compiler log line to show path relative to project directory.
 
@@ -477,6 +477,7 @@ class MQLProjectCompiler(ConsoleAware):
 
         Args:
             line: Full compiler log line with absolute path
+            compiler_path: Path to the compiler executable (used for normalization)
 
         Returns:
             Formatted line with relative POSIX path from project root
@@ -512,6 +513,12 @@ class MQLProjectCompiler(ConsoleAware):
 
         try:
             file_path = Path(file_path_str)
+
+            # Posix systems file_path is relative to the compiler  directory; if that's the case, normalize it.
+            if not file_path.is_absolute():
+                file_path_try = (compiler_path.parent / file_path).resolve()
+                if file_path_try.exists():
+                    file_path = file_path_try
 
             # Try to make relative to project directory
             if file_path.is_absolute():
@@ -555,7 +562,7 @@ class MQLProjectCompiler(ConsoleAware):
             raise CompilationExecutionError(f"Failed to execute compilation command: {e}")
 
         # Parse log to determine actual result
-        result = self._parse_compilation_log(log_file, src_file_path)
+        result = self._parse_compilation_log(log_file, src_file_path, compiler_path)
 
         # Show immediate feedback
         if result.status == CompilationStatus.SUCCESS:
