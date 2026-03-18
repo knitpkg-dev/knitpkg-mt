@@ -10,15 +10,33 @@ We’ll walk through:
 
 ---
 
-## Opening Windows Terminal in the MetaTrader Data Folder
+## Opening Terminal in the MetaTrader Data Folder
 
-Open MetaTrader and go to **File > Open Data Folder**. Then right-click inside the folder and select **Open in Terminal**:
+=== "Windows"
 
-![alt text](images/explorer-open-in-terminal.png)
+     Open MetaTrader and go to **File > Open Data Folder**. Then right-click inside the folder and select **Open in Terminal**:
 
-You should now see the Terminal open in the MetaTrader Data folder:
+     ![alt text](images/explorer-open-in-terminal.png)
 
-![alt text](images/terminal-in-data-folder.png)
+     You should now see the Terminal open in the MetaTrader Data folder:
+
+     ![alt text](images/terminal-in-data-folder.png)
+
+=== "Linux"
+
+     Open MetaTrader and go to **File > Open Data Folder**. Click on "Location" input text to discover the local wine MetaTrader home directory. 
+     In this case, it is located at `C:\Program Files\MetaTrader 5`: 
+
+     ![alt text](images/wine-explorer-in-data-folder.png)
+     
+     Open your favorite console and cd (change directory) to your wine prefix installation. Then cd to your MetaTrader data folder:
+
+     ```bash
+     cd $WINEPREFIX
+     cd drive_c/Program\ Files/MetaTrader\ 5/
+     ```
+
+     ![alt text](images/linux-console-cd-metatrader.png)
 
 ---
 
