@@ -152,6 +152,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Remove non-Python artifacts from dist/, otherwise publish to PyPI fails
+        run: rm -Rf dist
+
       - name: Build package for PyPI
         run: poetry build
 
