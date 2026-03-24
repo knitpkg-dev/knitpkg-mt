@@ -77,13 +77,13 @@ jobs:
             This release includes the latest features and bug fixes.
 
             ### Download
-            - [kp.exe for Windows](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp.exe)
-            - [kp binary for linux](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp)
+            - [kp.exe — Windows 64-bit (Intel/AMD)](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp.exe)
+            - [kp — Linux 64-bit (Intel/AMD)](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kp)
             - Via PyPI: see [Installation instructions](https://docs.knitpkg.dev/installation/#option-b-pypi)
 
             ### Changelog
-            - 1.0.1 Release is out!
-            - Linux/wine are supported now!
+            - 1.1.0 Release
+            - Introduced @knitpkg:wired directive
           draft: false
           prerelease: ${{ contains(env.PACKAGE_VERSION, 'a') || contains(env.PACKAGE_VERSION, 'b') || contains(env.PACKAGE_VERSION, 'rc') }}
         env:
