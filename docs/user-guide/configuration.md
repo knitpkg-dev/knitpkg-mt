@@ -44,18 +44,36 @@ If a value is not found in any of the above, KnitPkg falls back to the default v
 
 ## Default Values
 
-- **MQL5 Compiler Path**:  
-  `C:\Program Files\MetaTrader 5\MetaEditor64.exe`
+=== "Windows"
 
-- **MQL4 Compiler Path**:  
-  `C:\Program Files (x86)\MetaTrader 4\metaeditor.exe`
+    - **MQL5 Compiler Path**:  
+      `C:\Program Files\MetaTrader 5\MetaEditor64.exe`
 
-- **MQL5/MQL4 Data Folder**:  
-  If not explicitly configured or if the path is invalid, KnitPkg will attempt to auto-detect a valid MetaTrader installation in the following locations:
+    - **MQL4 Compiler Path**:  
+      `C:\Program Files (x86)\MetaTrader 4\metaeditor.exe`
 
-    - `%USERPROFILE%\AppData\Roaming\MetaQuotes\Terminal`
-    - `C:\Program Files\MetaTrader 5\Terminal` (for MQL5)
-    - `C:\Program Files (x86)\MetaTrader 4\Terminal` (for MQL4)
+    - **MQL5/MQL4 Data Folder**:  
+      If not explicitly configured or if the path is invalid, KnitPkg will attempt to auto-detect a valid MetaTrader installation in the following locations:
+
+        - `%USERPROFILE%\AppData\Roaming\MetaQuotes\Terminal`
+        - `C:\Program Files\MetaTrader 5` (for MQL5)
+        - `C:\Program Files (x86)\MetaTrader 4` (for MQL4)
+
+=== "Linux"
+
+    - **MQL5 Compiler Path**:  
+      `~/.mt5/drive_c/Program Files/MetaTrader 5/MetaEditor64.exe`
+
+    - **MQL4 Compiler Path**:  
+      `~/.mt5/drive_c/Program Files/MetaTrader 5/metaeditor.exe`
+
+    - **MQL5/MQL4 Data Folder**:  
+      If not explicitly configured or if the path is invalid, KnitPkg will attempt to auto-detect a valid MetaTrader installation in the following locations:
+
+        - `%USERPROFILE%/AppData/Roaming/MetaQuotes/Terminal`
+        - `~/.mt5/drive_c/Program Files/MetaTrader 5` (for MQL5)
+        - `~/.mt5/drive_c/Program Files (x86)/MetaTrader 4` (for MQL4)
+
 
 - **Registry**:  
   `https://api.registry.knitpkg.dev`
@@ -66,33 +84,63 @@ If a value is not found in any of the above, KnitPkg falls back to the default v
 
 Use the following CLI commands to configure KnitPkg:
 
-### Project-Specific Configuration
+=== "Windows"
+    ### Project-Specific Configuration
 
-Use [`kp config`](../reference/cli.md/#kp-config) to configure settings for the current project:
+    Use [`kp config`](../reference/cli.md/#kp-config) to configure settings for the current project:
 
-```bash
-kp config --mql5-data-folder-path C:\Users\dougl\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075
-```
+    ```bash
+    kp config --mql5-data-folder-path C:\Users\dougl\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075
+    ```
 
-### Global Configuration
+    ### Global Configuration
 
-Use [`kp globalconfig`](../reference/cli.md/#kp-globalconfig) to configure settings globally:
+    Use [`kp globalconfig`](../reference/cli.md/#kp-globalconfig) to configure settings globally:
 
-```bash
-kp globalconfig --mql5-data-folder-path C:\Users\dougl\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075
-```
+    ```bash
+    kp globalconfig --mql5-data-folder-path C:\Users\dougl\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075
+    ```
 
-Set the MQL4 compiler path globally:
+    Set the MQL4 compiler path globally:
 
-```bash
-kp globalconfig --mql4-compiler-path "C:\Program Files (x86)\MetaTrader - Acme\metaeditor.exe"
-```
+    ```bash
+    kp globalconfig --mql4-compiler-path "C:\Program Files (x86)\MetaTrader - Acme\metaeditor.exe"
+    ```
 
-Enable telemetry globally:
+    Enable telemetry globally:
 
-```bash
-kp telemetry on
-```
+    ```bash
+    kp telemetry on
+    ```
+
+=== "Linux"
+    ### Project-Specific Configuration
+
+    Use [`kp config`](../reference/cli.md/#kp-config) to configure settings for the current project:
+
+    ```bash
+    kp config --mql5-data-folder-path "/home/myuser/.mt5/drive_c/Program Files/MetaTrader 5"
+    ```
+
+    ### Global Configuration
+
+    Use [`kp globalconfig`](../reference/cli.md/#kp-globalconfig) to configure settings globally:
+
+    ```bash
+    kp globalconfig --mql5-data-folder-path "/home/myuser/.mt5/drive_c/Program Files/MetaTrader 5"
+    ```
+
+    Set the MQL4 compiler path globally:
+
+    ```bash
+    kp globalconfig --mql4-compiler-path "/home/myuser/.mt4/drive_c/Program Files/MetaTrader - Acme/metaeditor.exe"
+    ```
+
+    Enable telemetry globally:
+
+    ```bash
+    kp telemetry on
+    ```
 
 ---
 

@@ -166,7 +166,7 @@ class PosixWineSystem(System):
         return str(Path.home()) + r"/.mt5/drive_c/Program Files/MetaTrader 5/MetaEditor64.exe"
     
     def get_default_mql4_compiler(self) -> str:
-        return str(Path.home()) + r"/.mt5/drive_c/Program Files/MetaTrader 5/metaeditor.exe"
+        return str(Path.home()) + r"/.mt5/drive_c/Program Files (x86)/MetaTrader 4/metaeditor.exe"
     
     def _get_mql_target_paths(self, target: Target, base_path: Path) -> List[Path]:
         target_paths = []
