@@ -98,5 +98,17 @@ class LockFile:
         if dep_name not in data["dependencies"]:
             data["dependencies"][dep_name] = {}
         
-        data["dependencies"][dep_name][key] = value 
+        data["dependencies"][dep_name][key] = value
+
+    def prune(self, dep_names: list[str]) -> None:
+        """Remove lockfile entries not present in dep_names and save if changed."""
+        if self._data is None:
+            self.load()
+
+        deps: Dict = self._data["dependencies"] # type: ignore
+        stale = [k for k in deps if k not in dep_names]
+        if stale:
+            for k in stale:
+                del deps[k]
+            self.save()
 

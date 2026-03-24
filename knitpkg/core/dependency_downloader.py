@@ -197,6 +197,11 @@ class DependencyDownloader(ConsoleAware):
         
         root.status = DependencyDownloader._get_project_node_status( \
             DependencyDownloader._check_repo_integrity(None, self.project_dir, root_project_info_commit))
+        
+        if not self.locked_mode:
+            dependencies_names = [dep.name for dep in root.resolved_nodes(add_root=False)]
+            lockfile: LockFile = LockFile(self.project_dir)
+            lockfile.prune(dependencies_names)
 
         return root
     

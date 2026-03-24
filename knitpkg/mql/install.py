@@ -47,15 +47,17 @@ class ResolveKnitPkgIncludePattern:
         self.pattern = re.compile(
             r'^\s*#\s*include\s+"(?P<include_path>[^"]+)"\s*$'
             r'|'
-            r'^\s*/\*\s*@knitpkg:(?P<directive>\w+(?:-\w+)*)\s+"(?P<directive_path>[^"]+)"\s*\*/\s*$',
+            r'^\s*/\*\s*@knitpkg:(?P<directive>\w+(?:-\w+)*)\s+"(?P<directive_path>[^"]+)"\s*\*/\s*$'
+            r'|'
+            r'^\s*#\s*include\s+"(?P<wired_path>[^"]+)"\s*/\*\s*@knitpkg:(?P<wired_directive>\w+(?:-\w+)*)\s*\*/\s*$',
             re.MULTILINE
         )
 
     def extract_groups(self, match: re.Match) -> None:
         """Extract named groups from regex match and store in instance variables."""
         self.include_path = match.group("include_path")
-        self.directive = match.group("directive")
-        self.directive_path = match.group("directive_path")
+        self.directive = match.group("directive") or match.group("wired_directive")
+        self.directive_path = match.group("directive_path") or match.group("wired_path")
 
 # ==============================================================
 # INCLUDE MODE PROCESSOR CLASS
@@ -129,6 +131,16 @@ class IncludeModeDelegate(ConsoleAware):
                         lines[i] = (
                             f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / directive_path).as_posix()}" '
                             f'/*** ← dependence added by KnitPkg ***/'
+                        )
+                        modified = True
+                    elif directive == 'wired' and directive_path is not None: # handles @knitpkg:wired directive
+                        directive_path_posix = Path(directive_path).as_posix()
+                        if '/autocomplete/knitpkg/include/' not in directive_path_posix:
+                            raise InvalidDirectiveError(f'@knitpkg:wired must point to a header inside "autocomplete" directory: {line}')
+                        directive_path_posix_inc = directive_path_posix[directive_path_posix.find('/autocomplete/knitpkg/include/')+len('/autocomplete/knitpkg/include/'):]
+                        lines[i] = (
+                            f'#include "{navigate_path(mqh_file.parent, self.project_dir / INCLUDE_DIR / directive_path_posix_inc).as_posix()}" '
+                            f'/*** ← dependence resolved by KnitPkg ***/'
                         )
                         modified = True
                     elif include_path is not None and '/autocomplete/autocomplete.mqh' in Path(include_path).as_posix(): # neutralize autocomplete
@@ -287,18 +299,25 @@ class FlatModeDelegate(ConsoleAware):
 
             inc_file = None
             inc_path = None
-            if directive is None and include_path is not None:
+            if directive is None and include_path is not None: # normal #include
                 inc_file = include_path.strip()
                 if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
                     return f"// Ignoring autocomplete.mqh\n"
                 
                 inc_path = self._find_include_file_local(inc_file, base_path)
 
-            elif directive == 'include' and directive_path is not None:
+            elif directive == 'include' and directive_path is not None: # handles @knitpkg:include
                 inc_file = directive_path.strip()
-                if '/autocomplete/autocomplete.mqh' in Path(inc_file).as_posix():
-                    return f"// Ignoring autocomplete.mqh\n"
-                
+                inc_path = self._find_include_file_deps(inc_file, resolved_deps)
+                self.log(f"[dim]@knitpkg:include found:[/] '{inc_file}'")
+
+            elif directive == 'wired' and directive_path is not None: # handles @knitpkg:wired directive
+                directive_path_posix = Path(directive_path).as_posix()
+                if '/autocomplete/knitpkg/include/' not in directive_path_posix:
+                    raise InvalidDirectiveError(f'@knitpkg:wired must point to a header inside "autocomplete" directory: "{directive_path}"')
+                directive_path_posix_inc = directive_path_posix[directive_path_posix.find('/autocomplete/knitpkg/include/')+len('/autocomplete/knitpkg/include/'):]
+
+                inc_file = directive_path_posix_inc.strip()
                 inc_path = self._find_include_file_deps(inc_file, resolved_deps)
                 self.log(f"[dim]@knitpkg:include found:[/] '{inc_file}'")
 
@@ -355,7 +374,6 @@ class ProjectInstaller(ConsoleAware):
         registry_url = get_registry_url()
         self.downloader = MQLDependencyDownloader(project_dir, registry_url, locked_mode,
                                                   MQLKnitPkgManifest, console, verbose)
-        self.locked_mode: bool = locked_mode
 
     def install(self, show_tree: bool = True) -> None:
         """

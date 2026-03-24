@@ -14,3 +14,12 @@ Those `@knitpkg:include` directives are the missing link: they point to headers 
 
     Important: KnitPkg only recognizes a directive when it is **the only thing on the line**. If there is **anything** before the opening `/*` or **anything** after the closing `*/`, KnitPkg will **not** recognize that directive.
 
+## The @knitpkg:wired directive *(v1.1.0+)*
+
+Introduced in KnitPkg v1.1.0, the `@knitpkg:wired` directive is used while coding a **composite package** to mark an `#include` that was wired by KnitPkg and should be treated accordingly during install.
+
+```mql5
+#include "../../../autocomplete/knitpkg/include/douglasrechia/bar/TimeSeries.mqh"   /* @knitpkg:wired */
+```
+
+For more details, see [Composite Packages](composite-packages.md).
